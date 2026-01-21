@@ -20,7 +20,8 @@ const SKIP_TAGS = new Set([
 ]);
 
 // Max text length for elements to process (partial replacement handles surrounding text)
-const MAX_PURE_PRICE_LENGTH = 120;
+// 500 chars covers tweets (280 standard, 4000 premium) and most common text blocks
+const MAX_PURE_PRICE_LENGTH = 500;
 
 export interface WalkResult {
   node: Element;
