@@ -138,6 +138,34 @@ export function parseNumber(str: string): number | null {
   const lastComma = cleaned.lastIndexOf(',');
   const lastDot = cleaned.lastIndexOf('.');
 
+  // Multiple commas with no dot = US thousand separators only (e.g., "150,000,000")
+  if (commaCount > 1 && dotCount === 0) {
+    cleaned = cleaned.replace(/,/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }
+
+  // Multiple dots with no comma = EU thousand separators only (e.g., "150.000.000")
+  if (dotCount > 1 && commaCount === 0) {
+    cleaned = cleaned.replace(/\./g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }
+
+  // Multiple dots + one comma = EU format with decimal (e.g., "1.234.567,89")
+  if (dotCount > 1 && commaCount === 1) {
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }
+
+  // Multiple commas + one dot = US format with decimal (e.g., "1,234,567.89")
+  if (commaCount > 1 && dotCount === 1) {
+    cleaned = cleaned.replace(/,/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }
+
   // Handle ambiguous single-separator cases like "1,234" or "1.234"
   // If exactly one separator with exactly 3 digits after it, it's a thousand separator
   if (commaCount + dotCount === 1) {

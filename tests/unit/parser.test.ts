@@ -13,6 +13,17 @@ describe('parseNumber', () => {
     expect(parseNumber('1,234,567.89')).toBe(1234567.89);
   });
 
+  it('parses large numbers with multiple commas (no decimal)', () => {
+    expect(parseNumber('150,000,000')).toBe(150000000);
+    expect(parseNumber('1,000,000')).toBe(1000000);
+    expect(parseNumber('10,000')).toBe(10000);
+  });
+
+  it('parses large EU numbers with multiple dots (no decimal)', () => {
+    expect(parseNumber('150.000.000')).toBe(150000000);
+    expect(parseNumber('1.000.000')).toBe(1000000);
+  });
+
   it('parses EU format (dot thousands, comma decimal)', () => {
     expect(parseNumber('1.234')).toBe(1234);
     expect(parseNumber('1.234,56')).toBe(1234.56);
