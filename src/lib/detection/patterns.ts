@@ -73,6 +73,7 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
 ];
 
 // Simple combined pattern for quick detection
+// Requires digit after currency symbol to avoid matching cashtags like $BTC
 // Includes European formats: ",-", "btw", "euro", decimal prices, and k/M/B/T suffixes
-export const QUICK_DETECT_PATTERN = /[$€£¥₩₹]|(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\d,-|\bbtw\b|\beuro\b|\d,\d{2}\b|\d[kKMBT]\b/i;
+export const QUICK_DETECT_PATTERN = /[$€£¥₩₹]\s*\d|(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\d,-|\bbtw\b|\beuro\b|\d,\d{2}\b|\d[kKMBT]\b/i;
 
