@@ -9,6 +9,7 @@ let pollInterval: number | null = null;
 
 export function startObserver(rates: RatesData, settings: Settings): void {
   if (observer) return;
+  if (!document.body) return; // No body element (e.g., API endpoints)
 
   observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
@@ -74,7 +75,9 @@ export function startObserver(rates: RatesData, settings: Settings): void {
   // Polling fallback for slider updates and other dynamic content
   // that MutationObserver might miss (e.g., React state changes without DOM mutations)
   pollInterval = window.setInterval(() => {
-    convertPricesInNode(document.body, rates, settings);
+    if (document.body) {
+      convertPricesInNode(document.body, rates, settings);
+    }
   }, 2000);
 }
 
@@ -83,7 +86,7 @@ function processPendingNodes(rates: RatesData, settings: Settings): void {
   pendingRoots.clear();
 
   for (const root of roots) {
-    if (document.body.contains(root)) {
+    if (document.body?.contains(root)) {
       convertPricesInNode(root, rates, settings);
     }
   }

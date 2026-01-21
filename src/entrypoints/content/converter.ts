@@ -9,6 +9,7 @@ const CONVERTED_MARKER = 'zentat-processed';
 export function convertPricesInDocument(rates: RatesData, settings: Settings): number {
   if (!settings.enabled) return 0;
   if (Object.keys(rates.rates).length === 0) return 0;
+  if (!document.body) return 0;
 
   return convertPricesInNode(document.body, rates, settings);
 }
