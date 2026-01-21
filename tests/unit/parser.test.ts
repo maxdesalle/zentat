@@ -24,9 +24,10 @@ describe('parseNumber', () => {
     expect(parseNumber('1.000.000')).toBe(1000000);
   });
 
-  it('parses numbers with k/M/B/T suffixes', () => {
+  it('parses numbers with k/m/M/B/T suffixes', () => {
     expect(parseNumber('69k')).toBe(69000);
     expect(parseNumber('100K')).toBe(100000);
+    expect(parseNumber('5m')).toBe(5000000);
     expect(parseNumber('2.5M')).toBe(2500000);
     expect(parseNumber('1.5B')).toBe(1500000000);
     expect(parseNumber('2T')).toBe(2000000000000);

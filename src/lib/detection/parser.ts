@@ -129,10 +129,11 @@ function extractPriceFromMatch(
   };
 }
 
-// Multipliers for k/M/B/T suffixes
+// Multipliers for k/m/M/B/T suffixes
 const SUFFIX_MULTIPLIERS: Record<string, number> = {
   k: 1_000,
   K: 1_000,
+  m: 1_000_000,
   M: 1_000_000,
   B: 1_000_000_000,
   T: 1_000_000_000_000,

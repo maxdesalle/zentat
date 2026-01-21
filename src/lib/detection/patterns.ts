@@ -11,8 +11,8 @@ export interface CurrencyPattern {
 }
 
 // Number pattern: 1,234.56 or 1.234,56 or 1234.56 or 69k or 2.5M or 150B or 2T
-// Supports k/K (thousand), M (million), B (billion), T (trillion) suffixes
-const NUM = String.raw`(\d{1,3}(?:[,.\s]\d{3})*(?:[.,]\d{1,2})?[kKMBT]?|\d+(?:[.,]\d{1,2})?[kKMBT]?)`;
+// Supports k/K (thousand), m/M (million), B (billion), T (trillion) suffixes
+const NUM = String.raw`(\d{1,3}(?:[,.\s]\d{3})*(?:[.,]\d{1,2})?[kKmMBT]?|\d+(?:[.,]\d{1,2})?[kKmMBT]?)`;
 
 // Build currency patterns
 function buildPattern(symbols: string[], code: string): RegExp {
@@ -74,6 +74,6 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
 
 // Simple combined pattern for quick detection
 // Requires digit after currency symbol to avoid matching cashtags like $BTC
-// Includes European formats: ",-", "btw", "euro", decimal prices, and k/M/B/T suffixes
-export const QUICK_DETECT_PATTERN = /[$€£¥₩₹]\s*\d|(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\d,-|\bbtw\b|\beuro\b|\d,\d{2}\b|\d[kKMBT]\b/i;
+// Includes European formats: ",-", "btw", "euro", decimal prices, and k/m/M/B/T suffixes
+export const QUICK_DETECT_PATTERN = /[$€£¥₩₹]\s*\d|(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\d,-|\bbtw\b|\beuro\b|\d,\d{2}\b|\d[kKmMBT]\b/i;
 
