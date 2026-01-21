@@ -40,8 +40,24 @@ describe('formatZec', () => {
 });
 
 describe('formatZecWithSymbol', () => {
-  it('appends ZEC suffix', () => {
+  it('appends ZEC suffix for small amounts', () => {
     expect(formatZecWithSymbol(100)).toBe('100.00 ZEC');
     expect(formatZecWithSymbol(0.001234)).toBe('0.001234 ZEC');
+  });
+
+  it('uses million for amounts >= 1M', () => {
+    expect(formatZecWithSymbol(1234567)).toBe('1.235 million ZEC');
+    expect(formatZecWithSymbol(12345678)).toBe('12.35 million ZEC');
+    expect(formatZecWithSymbol(123456789)).toBe('123.5 million ZEC');
+  });
+
+  it('uses billion for amounts >= 1B', () => {
+    expect(formatZecWithSymbol(1234567890)).toBe('1.235 billion ZEC');
+    expect(formatZecWithSymbol(5466000000)).toBe('5.466 billion ZEC');
+  });
+
+  it('uses trillion for amounts >= 1T', () => {
+    expect(formatZecWithSymbol(1234567890000)).toBe('1.235 trillion ZEC');
+    expect(formatZecWithSymbol(2000000000000)).toBe('2.000 trillion ZEC');
   });
 });

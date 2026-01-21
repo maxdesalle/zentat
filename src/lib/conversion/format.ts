@@ -54,6 +54,51 @@ export function formatZec(amount: number, precision: Precision = 'auto'): string
   return amount.toFixed(decimalsNeeded);
 }
 
+/**
+ * Format ZEC amount with symbol, using human-readable units for large amounts.
+ *
+ * Examples:
+ * - 1.234           → "1.2340 ZEC"
+ * - 1234567         → "1.235 million ZEC"
+ * - 1234567890      → "1.235 billion ZEC"
+ * - 1234567890000   → "1.235 trillion ZEC"
+ */
 export function formatZecWithSymbol(amount: number, precision: Precision = 'auto'): string {
+  const absAmount = Math.abs(amount);
+
+  // Use units for large amounts to improve readability
+  if (absAmount >= 1_000_000_000_000) {
+    // Trillion
+    const scaled = amount / 1_000_000_000_000;
+    return `${formatScaledNumber(scaled)} trillion ZEC`;
+  } else if (absAmount >= 1_000_000_000) {
+    // Billion
+    const scaled = amount / 1_000_000_000;
+    return `${formatScaledNumber(scaled)} billion ZEC`;
+  } else if (absAmount >= 1_000_000) {
+    // Million
+    const scaled = amount / 1_000_000;
+    return `${formatScaledNumber(scaled)} million ZEC`;
+  }
+
+  // Standard format for smaller amounts
   return `${formatZec(amount, precision)} ZEC`;
+}
+
+/**
+ * Format scaled number with appropriate precision (3-4 significant figures).
+ */
+function formatScaledNumber(num: number): string {
+  const absNum = Math.abs(num);
+
+  if (absNum >= 100) {
+    // 100+ → show 1 decimal (e.g., 123.4)
+    return num.toFixed(1);
+  } else if (absNum >= 10) {
+    // 10-99 → show 2 decimals (e.g., 12.34)
+    return num.toFixed(2);
+  } else {
+    // 1-9 → show 3 decimals (e.g., 1.234)
+    return num.toFixed(3);
+  }
 }

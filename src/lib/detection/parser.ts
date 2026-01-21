@@ -129,9 +129,26 @@ function extractPriceFromMatch(
   };
 }
 
+// Multipliers for k/M/B/T suffixes
+const SUFFIX_MULTIPLIERS: Record<string, number> = {
+  k: 1_000,
+  K: 1_000,
+  M: 1_000_000,
+  B: 1_000_000_000,
+  T: 1_000_000_000_000,
+};
+
 export function parseNumber(str: string): number | null {
   // Remove spaces
   let cleaned = str.replace(/\s/g, '');
+
+  // Check for and extract suffix multiplier (k, K, M, B, T)
+  let multiplier = 1;
+  const lastChar = cleaned.slice(-1);
+  if (SUFFIX_MULTIPLIERS[lastChar]) {
+    multiplier = SUFFIX_MULTIPLIERS[lastChar];
+    cleaned = cleaned.slice(0, -1);
+  }
 
   const commaCount = (cleaned.match(/,/g) || []).length;
   const dotCount = (cleaned.match(/\./g) || []).length;
@@ -142,28 +159,28 @@ export function parseNumber(str: string): number | null {
   if (commaCount > 1 && dotCount === 0) {
     cleaned = cleaned.replace(/,/g, '');
     const num = parseFloat(cleaned);
-    return isNaN(num) ? null : num;
+    return isNaN(num) ? null : num * multiplier;
   }
 
   // Multiple dots with no comma = EU thousand separators only (e.g., "150.000.000")
   if (dotCount > 1 && commaCount === 0) {
     cleaned = cleaned.replace(/\./g, '');
     const num = parseFloat(cleaned);
-    return isNaN(num) ? null : num;
+    return isNaN(num) ? null : num * multiplier;
   }
 
   // Multiple dots + one comma = EU format with decimal (e.g., "1.234.567,89")
   if (dotCount > 1 && commaCount === 1) {
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');
     const num = parseFloat(cleaned);
-    return isNaN(num) ? null : num;
+    return isNaN(num) ? null : num * multiplier;
   }
 
   // Multiple commas + one dot = US format with decimal (e.g., "1,234,567.89")
   if (commaCount > 1 && dotCount === 1) {
     cleaned = cleaned.replace(/,/g, '');
     const num = parseFloat(cleaned);
-    return isNaN(num) ? null : num;
+    return isNaN(num) ? null : num * multiplier;
   }
 
   // Handle ambiguous single-separator cases like "1,234" or "1.234"
@@ -175,7 +192,7 @@ export function parseNumber(str: string): number | null {
       // Single separator with 3 digits = thousand separator
       cleaned = cleaned.replace(/[,.]/, '');
       const num = parseFloat(cleaned);
-      return isNaN(num) ? null : num;
+      return isNaN(num) ? null : num * multiplier;
     }
   }
 
@@ -189,5 +206,5 @@ export function parseNumber(str: string): number | null {
   }
 
   const num = parseFloat(cleaned);
-  return isNaN(num) ? null : num;
+  return isNaN(num) ? null : num * multiplier;
 }
