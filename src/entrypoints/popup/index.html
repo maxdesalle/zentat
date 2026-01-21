@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zentat</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="popup">
+      <header class="header">
+        <h1 class="title">Zentat</h1>
+        <label class="toggle">
+          <input type="checkbox" id="enabled" />
+          <span class="slider"></span>
+        </label>
+      </header>
+
+      <div class="rate-section">
+        <div class="rate-display">
+          <span class="rate-label">1 USD =</span>
+          <span class="rate-value" id="rate-value">--</span>
+          <span class="rate-unit">ZEC</span>
+        </div>
+        <div class="rate-meta">
+          <span id="source">--</span>
+          <span class="separator">·</span>
+          <span id="updated">--</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="refresh" class="btn btn-secondary">
+          <span class="btn-icon">↻</span>
+          Refresh
+        </button>
+        <button id="options" class="btn btn-primary">
+          <span class="btn-icon">⚙</span>
+          Options
+        </button>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

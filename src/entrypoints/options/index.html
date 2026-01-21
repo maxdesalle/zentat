@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zentat Options</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>Zentat Options</h1>
+        <p class="subtitle">Configure your fiat-to-ZEC conversion preferences</p>
+      </header>
+
+      <main class="main">
+        <section class="section">
+          <h2>Currencies</h2>
+          <p class="section-desc">Select which currencies to detect and convert</p>
+          <div class="currency-grid" id="currencies"></div>
+        </section>
+
+        <section class="section">
+          <h2>Precision</h2>
+          <p class="section-desc">How many decimal places to show</p>
+          <div class="precision-options">
+            <label class="radio-option">
+              <input type="radio" name="precision" value="auto" />
+              <span class="radio-label">Auto (4 significant figures)</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="precision" value="2" />
+              <span class="radio-label">2 decimals</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="precision" value="4" />
+              <span class="radio-label">4 decimals</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="precision" value="6" />
+              <span class="radio-label">6 decimals</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="precision" value="8" />
+              <span class="radio-label">8 decimals</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Site Filtering</h2>
+          <p class="section-desc">Control which sites the extension runs on</p>
+
+          <div class="site-mode">
+            <label class="radio-option">
+              <input type="radio" name="siteMode" value="blocklist" />
+              <span class="radio-label">Run everywhere except blocked sites</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="siteMode" value="allowlist" />
+              <span class="radio-label">Only run on allowed sites</span>
+            </label>
+          </div>
+
+          <div class="site-lists">
+            <div class="site-list" id="blocklist-container">
+              <label for="blockedSites">Blocked Sites</label>
+              <textarea
+                id="blockedSites"
+                placeholder="example.com&#10;*.example.org"
+                rows="4"
+              ></textarea>
+            </div>
+
+            <div class="site-list" id="allowlist-container">
+              <label for="allowedSites">Allowed Sites</label>
+              <textarea
+                id="allowedSites"
+                placeholder="amazon.com&#10;ebay.com"
+                rows="4"
+              ></textarea>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span class="status" id="status"></span>
+        <button class="btn btn-primary" id="save">Save Changes</button>
+      </footer>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

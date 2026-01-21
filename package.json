@@ -1,0 +1,28 @@
+{
+  "name": "zentat",
+  "description": "Convert fiat prices to ZEC inline with zero FOUC",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "postinstall": "wxt prepare",
+    "test": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "webextension-polyfill": "^0.12.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.1",
+    "@types/webextension-polyfill": "^0.12.1",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.4",
+    "wxt": "^0.20.13"
+  }
+}
