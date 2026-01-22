@@ -12,7 +12,8 @@ export interface CurrencyPattern {
 
 // Number pattern: 1,234.56 or 1.234,56 or 1234.56 or 69k or 2.5M or 150B or 2T
 // Supports k/K (thousand), m/M (million), B (billion), T (trillion) suffixes
-const NUM = String.raw`(\d{1,3}(?:[,.\s]\d{3})*(?:[.,]\d{1,2})?[kKmMBT]?|\d+(?:[.,]\d{1,2})?[kKmMBT]?)`;
+// First alternation requires thousand separators (+ not *), second handles plain numbers
+const NUM = String.raw`(\d{1,3}(?:[,.\s]\d{3})+(?:[.,]\d{1,2})?[kKmMBT]?|\d+(?:[.,]\d{1,2})?[kKmMBT]?)`;
 
 // Build currency patterns
 function buildPattern(symbols: string[], code: string): RegExp {
