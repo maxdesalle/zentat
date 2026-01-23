@@ -6,7 +6,7 @@ export default defineConfig({
   manifest: {
     name: 'Zentat',
     description: 'Convert fiat prices to ZEC inline',
-    permissions: ['storage', 'alarms'],
+    permissions: ['storage', 'alarms', 'offscreen'],
     host_permissions: [
       '<all_urls>',
       'https://api.coingecko.com/*',

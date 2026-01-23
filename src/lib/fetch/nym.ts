@@ -1,8 +1,6 @@
 import type { Fetcher, FetcherResponse, NymStatus } from './types';
 
-type MixFetch = (url: string, init?: RequestInit) => Promise<Response>;
-
-let mixFetchInstance: MixFetch | null = null;
+let offscreenCreated = false;
 let nymStatus: NymStatus = 'disconnected';
 let statusListeners: Set<(status: NymStatus) => void> = new Set();
 
@@ -21,52 +19,69 @@ export function watchNymStatus(callback: (status: NymStatus) => void): () => voi
   return () => statusListeners.delete(callback);
 }
 
-async function initMixFetch(): Promise<MixFetch> {
-  if (mixFetchInstance) {
-    return mixFetchInstance;
+async function ensureOffscreenDocument(): Promise<void> {
+  if (offscreenCreated) {
+    return;
+  }
+
+  // Check if offscreen document already exists
+  const existingContexts = await chrome.runtime.getContexts({
+    contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
+  });
+
+  if (existingContexts.length > 0) {
+    offscreenCreated = true;
+    return;
   }
 
   setStatus('connecting');
 
   try {
-    // Lazy load the Nym SDK - only loads when called
-    const { mixFetch } = await import('@nymproject/mix-fetch-full-fat');
-    mixFetchInstance = mixFetch;
+    await chrome.offscreen.createDocument({
+      url: 'offscreen.html',
+      reasons: [chrome.offscreen.Reason.WORKERS],
+      justification: 'Run Nym mixnet SDK which requires window object',
+    });
+    offscreenCreated = true;
     setStatus('connected');
-    return mixFetch;
   } catch (error) {
     setStatus('error');
     throw error;
   }
 }
 
+interface NymFetchResponse {
+  success: boolean;
+  data?: unknown;
+  status?: number;
+  error?: string;
+}
+
 export function createNymFetcher(timeoutMs: number = 60000): Fetcher {
   return {
-    async fetch(url: string, init?: RequestInit): Promise<FetcherResponse> {
-      const mixFetch = await initMixFetch();
+    async fetch(url: string): Promise<FetcherResponse> {
+      await ensureOffscreenDocument();
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const response = (await chrome.runtime.sendMessage({
+        type: 'nymFetch',
+        url,
+        timeoutMs,
+      })) as NymFetchResponse;
 
-      try {
-        const response = await mixFetch(url, {
-          ...init,
-          signal: controller.signal,
-        });
-
-        return {
-          ok: response.ok,
-          status: response.status,
-          json: () => response.json(),
-        };
-      } finally {
-        clearTimeout(timeoutId);
+      if (!response.success) {
+        throw new Error(response.error || 'Nym fetch failed');
       }
+
+      return {
+        ok: true,
+        status: response.status || 200,
+        json: async () => response.data,
+      };
     },
   };
 }
 
 export function resetNymConnection() {
-  mixFetchInstance = null;
+  offscreenCreated = false;
   setStatus('disconnected');
 }

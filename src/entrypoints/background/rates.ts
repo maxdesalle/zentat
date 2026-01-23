@@ -26,7 +26,6 @@ export async function refreshRates(force: boolean = false): Promise<boolean> {
       return true;
     }
 
-    console.error('Zentat: Failed to fetch rates', result.errors);
     return false;
   } catch (error) {
     console.error('Zentat: Rate refresh error', error);
