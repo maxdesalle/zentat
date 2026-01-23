@@ -139,15 +139,44 @@ const SUFFIX_MULTIPLIERS: Record<string, number> = {
   T: 1_000_000_000_000,
 };
 
+// Spelled-out multipliers
+const WORD_MULTIPLIERS: Record<string, number> = {
+  thousand: 1_000,
+  million: 1_000_000,
+  billion: 1_000_000_000,
+  trillion: 1_000_000_000_000,
+};
+
 export function parseNumber(str: string): number | null {
-  // Remove spaces
-  let cleaned = str.replace(/\s/g, '');
+  let cleaned = str.trim();
+
+  // Check for spelled-out multipliers first (e.g., "10 million", "5 hundred thousand")
+  let multiplier = 1;
+  const lowerStr = cleaned.toLowerCase();
+
+  // Handle "hundred thousand" = 100,000
+  if (/hundred\s+thousand/i.test(lowerStr)) {
+    multiplier = 100_000;
+    cleaned = cleaned.replace(/\s*hundred\s+thousand\s*/i, '');
+  } else {
+    // Check for single word multipliers
+    for (const [word, mult] of Object.entries(WORD_MULTIPLIERS)) {
+      const wordPattern = new RegExp(`\\s*${word}\\s*$`, 'i');
+      if (wordPattern.test(cleaned)) {
+        multiplier = mult;
+        cleaned = cleaned.replace(wordPattern, '');
+        break;
+      }
+    }
+  }
+
+  // Remove remaining spaces
+  cleaned = cleaned.replace(/\s/g, '');
 
   // Check for and extract suffix multiplier (k, K, M, B, T)
-  let multiplier = 1;
   const lastChar = cleaned.slice(-1);
   if (SUFFIX_MULTIPLIERS[lastChar]) {
-    multiplier = SUFFIX_MULTIPLIERS[lastChar];
+    multiplier *= SUFFIX_MULTIPLIERS[lastChar];
     cleaned = cleaned.slice(0, -1);
   }
 

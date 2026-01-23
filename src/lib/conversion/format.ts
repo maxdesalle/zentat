@@ -58,10 +58,11 @@ export function formatZec(amount: number, precision: Precision = 'auto'): string
  * Format ZEC amount with symbol, using human-readable units for large amounts.
  *
  * Examples:
- * - 1.234           → "1.2340 ZEC"
- * - 1234567         → "1.235 million ZEC"
- * - 1234567890      → "1.235 billion ZEC"
- * - 1234567890000   → "1.235 trillion ZEC"
+ * - 1.234              → "1.2340 ZEC"
+ * - 27150              → "27.15 thousand ZEC"
+ * - 1234567            → "1.235 million ZEC"
+ * - 1234567890         → "1.235 billion ZEC"
+ * - 1234567890000      → "1.235 trillion ZEC"
  */
 export function formatZecWithSymbol(amount: number, precision: Precision = 'auto'): string {
   const absAmount = Math.abs(amount);
@@ -79,6 +80,10 @@ export function formatZecWithSymbol(amount: number, precision: Precision = 'auto
     // Million
     const scaled = amount / 1_000_000;
     return `${formatScaledNumber(scaled)} million ZEC`;
+  } else if (absAmount >= 1_000) {
+    // Thousand - use this for amounts >= 1000 for better readability
+    const scaled = amount / 1_000;
+    return `${formatScaledNumber(scaled)} thousand ZEC`;
   }
 
   // Standard format for smaller amounts
