@@ -18,6 +18,7 @@ const CURRENCIES = [
 const currenciesContainer = document.getElementById('currencies')!;
 const displayCurrencySelect = document.getElementById('displayCurrency') as HTMLSelectElement;
 const precisionRadios = document.querySelectorAll<HTMLInputElement>('input[name="precision"]');
+const nymEnabledCheckbox = document.getElementById('nymEnabled') as HTMLInputElement;
 const saveBtn = document.getElementById('save') as HTMLButtonElement;
 const statusEl = document.getElementById('status')!;
 
@@ -58,6 +59,9 @@ function populateForm(settings: Settings) {
   precisionRadios.forEach((radio) => {
     radio.checked = radio.value === precisionValue;
   });
+
+  // Nym settings
+  nymEnabledCheckbox.checked = settings.nymEnabled;
 }
 
 function getFormValues(): Partial<Settings> {
@@ -76,6 +80,7 @@ function getFormValues(): Partial<Settings> {
     currencies,
     displayCurrency,
     precision,
+    nymEnabled: nymEnabledCheckbox.checked,
   };
 }
 

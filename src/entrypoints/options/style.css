@@ -196,3 +196,91 @@ body {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 51px;
+  height: 31px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #3a3a3c;
+  border-radius: 31px;
+  transition: background-color 0.3s;
+}
+
+.slider::before {
+  position: absolute;
+  content: '';
+  height: 27px;
+  width: 27px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle input:checked + .slider {
+  background-color: #6b4eff;
+}
+
+.toggle input:checked + .slider::before {
+  transform: translateX(20px);
+}
+
+/* Nym section */
+.section-nym {
+  background: linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%);
+  border: 1px solid #3a3a3c;
+}
+
+.nym-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.nym-info {
+  flex: 1;
+}
+
+.nym-info h2 {
+  margin-bottom: 4px;
+}
+
+.nym-info .section-desc {
+  margin-bottom: 0;
+}
+
+.nym-note {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #3a3a3c;
+  font-size: 9px;
+  color: #636366;
+}
+
+.nym-note a {
+  color: #8e8e93;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.nym-note a:hover {
+  color: #ffffff;
+}

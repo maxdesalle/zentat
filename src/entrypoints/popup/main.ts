@@ -8,6 +8,7 @@ const fiatZecLabel = document.getElementById('fiat-zec-label')!;
 const fiatZecValue = document.getElementById('fiat-zec-value')!;
 const sourceEl = document.getElementById('source')!;
 const updatedEl = document.getElementById('updated')!;
+const nymStatusEl = document.getElementById('nym-status')!;
 const refreshBtn = document.getElementById('refresh') as HTMLButtonElement;
 const optionsBtn = document.getElementById('options')!;
 
@@ -34,10 +35,12 @@ async function init() {
   enabledCheckbox.checked = settings.enabled;
   updateRateDisplay(rates, settings.displayCurrency);
   populateSiteFiltering(settings);
+  updateNymStatus(settings.nymEnabled);
 
   // Watch for changes
   watchSettings((s) => {
     enabledCheckbox.checked = s.enabled;
+    updateNymStatus(s.nymEnabled);
     if (s.displayCurrency !== currentDisplayCurrency) {
       currentDisplayCurrency = s.displayCurrency;
       if (currentRates) {
@@ -106,6 +109,19 @@ function updateSiteListVisibility() {
   const selectedMode = document.querySelector<HTMLInputElement>('input[name="siteMode"]:checked')?.value;
   blocklistContainer.classList.toggle('active', selectedMode === 'blocklist');
   allowlistContainer.classList.toggle('active', selectedMode === 'allowlist');
+}
+
+function updateNymStatus(nymEnabled: boolean) {
+  nymStatusEl.classList.remove('connecting', 'connected', 'error', 'inactive');
+  nymStatusEl.classList.add('visible');
+
+  if (nymEnabled) {
+    nymStatusEl.classList.add('connected');
+    nymStatusEl.textContent = 'Nym active';
+  } else {
+    nymStatusEl.classList.add('inactive');
+    nymStatusEl.textContent = 'Nym inactive';
+  }
 }
 
 function debouncedSave() {

@@ -11,6 +11,7 @@ export default defineConfig({
       '<all_urls>',
       'https://api.coingecko.com/*',
       'https://api.kraken.com/*',
+      'wss://*.nymtech.net/*',
     ],
     icons: {
       16: 'icons/icon-16.png',
@@ -26,6 +27,9 @@ export default defineConfig({
         },
         description: 'Toggle price conversion',
       },
+    },
+    content_security_policy: {
+      extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';",
     },
   },
   webExt: {

@@ -8,6 +8,8 @@ export interface Settings {
   allowedSites: string[];
   siteMode: 'blocklist' | 'allowlist';
   displayCurrency: string;
+  nymEnabled: boolean;
+  nymTimeoutMs: number;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -18,6 +20,8 @@ const DEFAULT_SETTINGS: Settings = {
   allowedSites: [],
   siteMode: 'blocklist',
   displayCurrency: 'USD',
+  nymEnabled: false,
+  nymTimeoutMs: 60000,
 };
 
 const settingsItem = storage.defineItem<Settings>('sync:settings', {

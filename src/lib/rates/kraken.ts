@@ -1,4 +1,10 @@
+import type { Fetcher } from '../fetch';
 import type { RatesData } from '../storage/rates';
+
+interface KrakenResponse {
+  error?: string[];
+  result?: Record<string, { c: [string, string] }>;
+}
 
 const KRAKEN_API = 'https://api.kraken.com/0/public/Ticker';
 
@@ -8,17 +14,17 @@ const KRAKEN_PAIRS: Record<string, string> = {
   EUR: 'ZECEUR',
 };
 
-export async function fetchFromKraken(): Promise<RatesData> {
+export async function fetchFromKraken(fetcher: Fetcher): Promise<RatesData> {
   const pairs = Object.values(KRAKEN_PAIRS).join(',');
-  const response = await fetch(`${KRAKEN_API}?pair=${pairs}`);
+  const response = await fetcher.fetch(`${KRAKEN_API}?pair=${pairs}`);
 
   if (!response.ok) {
     throw new Error(`Kraken API error: ${response.status}`);
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as KrakenResponse;
 
-  if (data.error?.length > 0) {
+  if (data.error?.length) {
     throw new Error(`Kraken API error: ${data.error.join(', ')}`);
   }
 
@@ -26,7 +32,7 @@ export async function fetchFromKraken(): Promise<RatesData> {
 
   for (const [currency, pair] of Object.entries(KRAKEN_PAIRS)) {
     // Kraken uses different key formats, try both
-    const tickerData = data.result[pair] || data.result[`X${pair}`];
+    const tickerData = data.result?.[pair] || data.result?.[`X${pair}`];
     if (tickerData) {
       // 'c' is the last trade closed [price, lot volume]
       const price = parseFloat(tickerData.c[0]);
