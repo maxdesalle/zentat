@@ -1,9 +1,11 @@
 import { getSettings, setSettings, watchSettings, type Settings } from '../../lib/storage/settings';
-import { getRates, watchRates } from '../../lib/storage/rates';
+import { getRates, watchRates, type RatesData } from '../../lib/storage/rates';
 
 const enabledCheckbox = document.getElementById('enabled') as HTMLInputElement;
-const zecUsdValue = document.getElementById('zec-usd-value')!;
-const usdZecValue = document.getElementById('usd-zec-value')!;
+const zecFiatValue = document.getElementById('zec-fiat-value')!;
+const zecFiatUnit = document.getElementById('zec-fiat-unit')!;
+const fiatZecLabel = document.getElementById('fiat-zec-label')!;
+const fiatZecValue = document.getElementById('fiat-zec-value')!;
 const sourceEl = document.getElementById('source')!;
 const updatedEl = document.getElementById('updated')!;
 const refreshBtn = document.getElementById('refresh') as HTMLButtonElement;
@@ -20,22 +22,33 @@ const blocklistContainer = document.getElementById('blocklist-container')!;
 const allowlistContainer = document.getElementById('allowlist-container')!;
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+let currentDisplayCurrency = 'USD';
+let currentRates: RatesData | null = null;
 
 async function init() {
   // Load initial state
   const [settings, rates] = await Promise.all([getSettings(), getRates()]);
 
+  currentDisplayCurrency = settings.displayCurrency;
+  currentRates = rates;
   enabledCheckbox.checked = settings.enabled;
-  updateRateDisplay(rates.rates.USD, rates.source, rates.updatedAt);
+  updateRateDisplay(rates, settings.displayCurrency);
   populateSiteFiltering(settings);
 
   // Watch for changes
   watchSettings((s) => {
     enabledCheckbox.checked = s.enabled;
+    if (s.displayCurrency !== currentDisplayCurrency) {
+      currentDisplayCurrency = s.displayCurrency;
+      if (currentRates) {
+        updateRateDisplay(currentRates, currentDisplayCurrency);
+      }
+    }
   });
 
   watchRates((r) => {
-    updateRateDisplay(r.rates.USD, r.source, r.updatedAt);
+    currentRates = r;
+    updateRateDisplay(r, currentDisplayCurrency);
   });
 
   // Event listeners
@@ -44,15 +57,14 @@ async function init() {
   });
 
   refreshBtn.addEventListener('click', async () => {
-    refreshBtn.classList.add('loading');
     refreshBtn.disabled = true;
 
     try {
       await browser.runtime.sendMessage({ type: 'refreshRates' });
       const rates = await getRates();
-      updateRateDisplay(rates.rates.USD, rates.source, rates.updatedAt);
+      currentRates = rates;
+      updateRateDisplay(rates, currentDisplayCurrency);
     } finally {
-      refreshBtn.classList.remove('loading');
       refreshBtn.disabled = false;
     }
   });
@@ -119,20 +131,26 @@ async function saveSiteFiltering() {
   await setSettings({ siteMode, blockedSites, allowedSites });
 }
 
-function updateRateDisplay(usdRate: number | undefined, source: string, updatedAt: number) {
-  if (usdRate !== undefined) {
-    // USD→ZEC rate (what we get from API)
-    usdZecValue.textContent = formatRate(usdRate);
-    // ZEC→USD rate (inverse)
-    const zecToUsd = 1 / usdRate;
-    zecUsdValue.textContent = formatUsdPrice(zecToUsd);
+function updateRateDisplay(rates: RatesData, currency: string) {
+  const rate = rates.rates[currency];
+
+  // Update currency labels
+  zecFiatUnit.textContent = currency;
+  fiatZecLabel.textContent = `1 ${currency} =`;
+
+  if (rate !== undefined) {
+    // Fiat→ZEC rate (what we get from API)
+    fiatZecValue.textContent = formatRate(rate);
+    // ZEC→Fiat rate (inverse)
+    const zecToFiat = 1 / rate;
+    zecFiatValue.textContent = formatFiatPrice(zecToFiat, currency);
   } else {
-    zecUsdValue.textContent = '--';
-    usdZecValue.textContent = '--';
+    zecFiatValue.textContent = '--';
+    fiatZecValue.textContent = '--';
   }
 
-  sourceEl.textContent = source || '--';
-  updatedEl.textContent = updatedAt ? formatRelativeTime(updatedAt) : '--';
+  sourceEl.textContent = rates.source || '--';
+  updatedEl.textContent = rates.updatedAt ? formatRelativeTime(rates.updatedAt) : '--';
 }
 
 function formatRate(rate: number): string {
@@ -142,10 +160,14 @@ function formatRate(rate: number): string {
   return rate.toPrecision(4);
 }
 
-function formatUsdPrice(price: number): string {
+function formatFiatPrice(price: number, currency: string): string {
+  // Currencies that typically don't use decimals
+  const noDecimalCurrencies = ['JPY', 'KRW'];
+  const decimals = noDecimalCurrencies.includes(currency) ? 0 : 2;
+
   return price.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   });
 }
 

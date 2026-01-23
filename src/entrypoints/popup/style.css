@@ -284,10 +284,6 @@ body {
   transform: scale(0.98);
 }
 
-.btn-icon {
-  font-size: 14px;
-}
-
 .btn-primary {
   background: #6b4eff;
   color: #ffffff;
@@ -301,18 +297,4 @@ body {
 .btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-/* Loading state */
-.loading .btn-icon {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }

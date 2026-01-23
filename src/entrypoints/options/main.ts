@@ -16,6 +16,7 @@ const CURRENCIES = [
 ];
 
 const currenciesContainer = document.getElementById('currencies')!;
+const displayCurrencySelect = document.getElementById('displayCurrency') as HTMLSelectElement;
 const precisionRadios = document.querySelectorAll<HTMLInputElement>('input[name="precision"]');
 const saveBtn = document.getElementById('save') as HTMLButtonElement;
 const statusEl = document.getElementById('status')!;
@@ -49,6 +50,9 @@ function populateForm(settings: Settings) {
     cb.checked = settings.currencies.includes(cb.value);
   });
 
+  // Display currency
+  displayCurrencySelect.value = settings.displayCurrency;
+
   // Precision
   const precisionValue = settings.precision === 'auto' ? 'auto' : String(settings.precision);
   precisionRadios.forEach((radio) => {
@@ -61,12 +65,16 @@ function getFormValues(): Partial<Settings> {
   const checkboxes = currenciesContainer.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked');
   const currencies = Array.from(checkboxes).map((cb) => cb.value);
 
+  // Display currency
+  const displayCurrency = displayCurrencySelect.value;
+
   // Precision
   const precisionRadio = document.querySelector<HTMLInputElement>('input[name="precision"]:checked');
   const precision = precisionRadio?.value === 'auto' ? 'auto' : parseInt(precisionRadio?.value || '2', 10);
 
   return {
     currencies,
+    displayCurrency,
     precision,
   };
 }

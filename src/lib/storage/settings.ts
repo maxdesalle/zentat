@@ -7,6 +7,7 @@ export interface Settings {
   blockedSites: string[];
   allowedSites: string[];
   siteMode: 'blocklist' | 'allowlist';
+  displayCurrency: string;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: Settings = {
   blockedSites: [],
   allowedSites: [],
   siteMode: 'blocklist',
+  displayCurrency: 'USD',
 };
 
 const settingsItem = storage.defineItem<Settings>('sync:settings', {

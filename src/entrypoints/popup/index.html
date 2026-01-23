@@ -20,12 +20,12 @@
         <div class="rate-row">
           <div class="rate-display">
             <span class="rate-label">1 ZEC =</span>
-            <span class="rate-value" id="zec-usd-value">--</span>
-            <span class="rate-unit rate-unit-usd">USD</span>
+            <span class="rate-value" id="zec-fiat-value">--</span>
+            <span class="rate-unit rate-unit-fiat" id="zec-fiat-unit">USD</span>
           </div>
           <div class="rate-display rate-display-small">
-            <span class="rate-label">1 USD =</span>
-            <span class="rate-value-small" id="usd-zec-value">--</span>
+            <span class="rate-label" id="fiat-zec-label">1 USD =</span>
+            <span class="rate-value-small" id="fiat-zec-value">--</span>
             <span class="rate-unit">ZEC</span>
           </div>
         </div>
@@ -72,14 +72,8 @@
       </div>
 
       <div class="actions">
-        <button id="refresh" class="btn btn-secondary">
-          <span class="btn-icon">↻</span>
-          Refresh
-        </button>
-        <button id="options" class="btn btn-primary">
-          <span class="btn-icon">⚙</span>
-          Options
-        </button>
+        <button id="refresh" class="btn btn-secondary">Refresh</button>
+        <button id="options" class="btn btn-primary">Options</button>
       </div>
     </div>
     <script type="module" src="./main.ts"></script>
