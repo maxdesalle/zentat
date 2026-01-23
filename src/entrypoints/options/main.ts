@@ -17,11 +17,6 @@ const CURRENCIES = [
 
 const currenciesContainer = document.getElementById('currencies')!;
 const precisionRadios = document.querySelectorAll<HTMLInputElement>('input[name="precision"]');
-const siteModeRadios = document.querySelectorAll<HTMLInputElement>('input[name="siteMode"]');
-const blockedSitesTextarea = document.getElementById('blockedSites') as HTMLTextAreaElement;
-const allowedSitesTextarea = document.getElementById('allowedSites') as HTMLTextAreaElement;
-const blocklistContainer = document.getElementById('blocklist-container')!;
-const allowlistContainer = document.getElementById('allowlist-container')!;
 const saveBtn = document.getElementById('save') as HTMLButtonElement;
 const statusEl = document.getElementById('status')!;
 
@@ -44,10 +39,6 @@ async function init() {
   populateForm(currentSettings);
 
   // Event listeners
-  siteModeRadios.forEach((radio) => {
-    radio.addEventListener('change', updateSiteListVisibility);
-  });
-
   saveBtn.addEventListener('click', save);
 }
 
@@ -63,24 +54,6 @@ function populateForm(settings: Settings) {
   precisionRadios.forEach((radio) => {
     radio.checked = radio.value === precisionValue;
   });
-
-  // Site mode
-  siteModeRadios.forEach((radio) => {
-    radio.checked = radio.value === settings.siteMode;
-  });
-
-  // Site lists
-  blockedSitesTextarea.value = settings.blockedSites.join('\n');
-  allowedSitesTextarea.value = settings.allowedSites.join('\n');
-
-  updateSiteListVisibility();
-}
-
-function updateSiteListVisibility() {
-  const selectedMode = document.querySelector<HTMLInputElement>('input[name="siteMode"]:checked')?.value;
-
-  blocklistContainer.classList.toggle('active', selectedMode === 'blocklist');
-  allowlistContainer.classList.toggle('active', selectedMode === 'allowlist');
 }
 
 function getFormValues(): Partial<Settings> {
@@ -92,28 +65,9 @@ function getFormValues(): Partial<Settings> {
   const precisionRadio = document.querySelector<HTMLInputElement>('input[name="precision"]:checked');
   const precision = precisionRadio?.value === 'auto' ? 'auto' : parseInt(precisionRadio?.value || '2', 10);
 
-  // Site mode
-  const siteMode = document.querySelector<HTMLInputElement>('input[name="siteMode"]:checked')?.value as
-    | 'blocklist'
-    | 'allowlist';
-
-  // Site lists
-  const blockedSites = blockedSitesTextarea.value
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const allowedSites = allowedSitesTextarea.value
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
   return {
     currencies,
     precision,
-    siteMode,
-    blockedSites,
-    allowedSites,
   };
 }
 

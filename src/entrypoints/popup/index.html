@@ -17,15 +17,57 @@
       </header>
 
       <div class="rate-section">
-        <div class="rate-display">
-          <span class="rate-label">1 USD =</span>
-          <span class="rate-value" id="rate-value">--</span>
-          <span class="rate-unit">ZEC</span>
+        <div class="rate-row">
+          <div class="rate-display">
+            <span class="rate-label">1 ZEC =</span>
+            <span class="rate-value" id="zec-usd-value">--</span>
+            <span class="rate-unit rate-unit-usd">USD</span>
+          </div>
+          <div class="rate-display rate-display-small">
+            <span class="rate-label">1 USD =</span>
+            <span class="rate-value-small" id="usd-zec-value">--</span>
+            <span class="rate-unit">ZEC</span>
+          </div>
         </div>
         <div class="rate-meta">
           <span id="source">--</span>
           <span class="separator">·</span>
           <span id="updated">--</span>
+        </div>
+      </div>
+
+      <div class="site-filter-section">
+        <button class="site-filter-toggle" id="site-filter-toggle">
+          <span>Site Filtering</span>
+          <span class="toggle-icon" id="toggle-icon">▼</span>
+        </button>
+        <div class="site-filter-content" id="site-filter-content">
+          <div class="site-mode">
+            <label class="radio-option">
+              <input type="radio" name="siteMode" value="blocklist" />
+              <span class="radio-label">Everywhere except blocked</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="siteMode" value="allowlist" />
+              <span class="radio-label">Only on allowed sites</span>
+            </label>
+          </div>
+          <div class="site-lists">
+            <div class="site-list" id="blocklist-container">
+              <textarea
+                id="blockedSites"
+                placeholder="Blocked sites (one per line)&#10;example.com"
+                rows="3"
+              ></textarea>
+            </div>
+            <div class="site-list" id="allowlist-container">
+              <textarea
+                id="allowedSites"
+                placeholder="Allowed sites (one per line)&#10;amazon.com"
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
         </div>
       </div>
 
