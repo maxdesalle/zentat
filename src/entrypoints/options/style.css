@@ -155,18 +155,16 @@ body {
 
 /* Footer */
 .footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 16px;
-  margin-top: 32px;
+  margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid #3a3a3c;
+  text-align: center;
 }
 
-.status {
-  font-size: 13px;
-  color: #30d158;
+.footer-quote {
+  font-size: 12px;
+  font-style: italic;
+  color: #636366;
 }
 
 .btn {
@@ -283,4 +281,26 @@ body {
 
 .nym-note a:hover {
   color: #ffffff;
+}
+
+/* About section */
+.about {
+  margin-top: 4px;
+  text-align: center;
+}
+
+.about-text {
+  font-size: 13px;
+  color: #8e8e93;
+  line-height: 1.6;
+}
+
+.about-text a {
+  color: #f5f5f7;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.about-text a:hover {
+  color: #6b4eff;
 }

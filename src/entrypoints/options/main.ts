@@ -19,10 +19,9 @@ const currenciesContainer = document.getElementById('currencies')!;
 const displayCurrencySelect = document.getElementById('displayCurrency') as HTMLSelectElement;
 const precisionRadios = document.querySelectorAll<HTMLInputElement>('input[name="precision"]');
 const nymEnabledCheckbox = document.getElementById('nymEnabled') as HTMLInputElement;
-const saveBtn = document.getElementById('save') as HTMLButtonElement;
-const statusEl = document.getElementById('status')!;
 
 let currentSettings: Settings;
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
 async function init() {
   // Build currency checkboxes
@@ -40,8 +39,16 @@ async function init() {
   currentSettings = await getSettings();
   populateForm(currentSettings);
 
-  // Event listeners
-  saveBtn.addEventListener('click', save);
+  // Auto-save on any change
+  currenciesContainer.addEventListener('change', debouncedSave);
+  displayCurrencySelect.addEventListener('change', debouncedSave);
+  precisionRadios.forEach((radio) => radio.addEventListener('change', debouncedSave));
+  nymEnabledCheckbox.addEventListener('change', debouncedSave);
+}
+
+function debouncedSave() {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(save, 300);
 }
 
 function populateForm(settings: Settings) {
@@ -85,23 +92,12 @@ function getFormValues(): Partial<Settings> {
 }
 
 async function save() {
-  saveBtn.disabled = true;
-  statusEl.textContent = '';
-
   try {
     const values = getFormValues();
     await setSettings(values);
     currentSettings = await getSettings();
-
-    statusEl.textContent = 'Saved!';
-    setTimeout(() => {
-      statusEl.textContent = '';
-    }, 2000);
   } catch (error) {
-    statusEl.textContent = 'Error saving settings';
     console.error('Save error:', error);
-  } finally {
-    saveBtn.disabled = false;
   }
 }
 
