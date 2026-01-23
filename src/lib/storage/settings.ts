@@ -25,7 +25,9 @@ const settingsItem = storage.defineItem<Settings>('sync:settings', {
 });
 
 export async function getSettings(): Promise<Settings> {
-  return settingsItem.getValue();
+  const stored = await settingsItem.getValue();
+  // Merge with defaults to handle missing fields from older versions
+  return { ...DEFAULT_SETTINGS, ...stored };
 }
 
 export async function setSettings(settings: Partial<Settings>): Promise<void> {
