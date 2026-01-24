@@ -3,6 +3,7 @@ import type { Settings } from '../../lib/storage/settings';
 import { convertPrice } from '../../lib/conversion/convert';
 import { detectPrices } from './detector';
 import { bolPriceContainerSet } from '../../lib/detection/walker';
+import type { ParsedPrice } from '../../lib/detection/parser';
 
 const CONVERTED_MARKER = 'zentat-processed';
 
@@ -22,37 +23,14 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
     // Skip if already processed
     if (node.closest(`.${CONVERTED_MARKER}`)) continue;
 
-    const originalText = node.textContent || '';
-    const trimmedOriginal = originalText.trim();
+    if (!node.hasAttribute('data-zentat-original')) {
+      node.setAttribute('data-zentat-original', node.innerHTML);
+    }
 
-    // Determine if we can use partial replacement:
-    // Only if the element's trimmed content matches exactly what we parsed
-    // Complex structures (like Amazon .a-price with multiple children) have
-    // textContent that concatenates all child text, so partial replacement would corrupt them
-    const canUsePartialReplacement = trimmedOriginal === text;
-
-    let newText = originalText;
     let converted = false;
 
-    if (canUsePartialReplacement && prices.length > 0) {
-      // Calculate offset for leading whitespace
-      const trimStart = originalText.indexOf(text);
-      const offset = trimStart >= 0 ? trimStart : 0;
-
-      // Replace all prices in reverse order (to preserve indices)
-      for (let i = prices.length - 1; i >= 0; i--) {
-        const parsed = prices[i];
-        const result = convertPrice(parsed, rates, settings.precision);
-        if (result) {
-          const start = parsed.startIndex + offset;
-          const end = parsed.endIndex + offset;
-          newText = newText.slice(0, start) + result.formatted + newText.slice(end);
-          converted = true;
-        }
-      }
-    } else {
-      // For complex structures or when text doesn't match exactly,
-      // convert all prices and join them (typically just one price)
+    // Bol.com special handling: replace entire container, hide visual price spans
+    if (bolPriceContainerSet.has(node)) {
       const convertedPrices: string[] = [];
       for (const parsed of prices) {
         const result = convertPrice(parsed, rates, settings.precision);
@@ -62,17 +40,7 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
         }
       }
       if (converted) {
-        newText = convertedPrices.join(' ');
-      }
-    }
-
-    if (converted) {
-      if (!node.hasAttribute('data-zentat-original')) {
-        node.setAttribute('data-zentat-original', node.innerHTML);
-      }
-
-      // Bol.com special handling: replace entire container, hide visual price spans
-      if (bolPriceContainerSet.has(node)) {
+        const newText = convertedPrices.join(' ');
         // Hide aria-hidden visual spans and update accessibility text
         const visualSpans = node.querySelectorAll('[aria-hidden="true"]');
         for (const span of visualSpans) {
@@ -82,21 +50,76 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
         const accessibilitySpan = node.querySelector('span[style*="position: absolute"]');
         if (accessibilitySpan) {
           accessibilitySpan.textContent = newText;
-          // Make it visible
           (accessibilitySpan as HTMLElement).style.cssText = '';
           (accessibilitySpan as HTMLElement).style.fontWeight = 'bold';
         }
-      } else {
-        node.textContent = newText;
       }
+    } else {
+      // Replace prices within text nodes to preserve HTML structure (links, etc.)
+      converted = replacePricesInTextNodes(node, prices, rates, settings);
+    }
 
+    if (converted) {
       node.classList.add(CONVERTED_MARKER);
+      const originalText = node.textContent || '';
       node.setAttribute('title', `Original: ${originalText}`);
       convertedCount++;
     }
   }
 
   return convertedCount;
+}
+
+/**
+ * Replace prices within text nodes of an element, preserving HTML structure.
+ * This prevents destroying links, sup tags, etc. when replacing prices.
+ */
+function replacePricesInTextNodes(
+  element: Element,
+  prices: ParsedPrice[],
+  rates: RatesData,
+  settings: Settings
+): boolean {
+  // Build a map of price original text -> converted text
+  const replacements = new Map<string, string>();
+  for (const parsed of prices) {
+    const result = convertPrice(parsed, rates, settings.precision);
+    if (result) {
+      replacements.set(parsed.original, result.formatted);
+    }
+  }
+
+  if (replacements.size === 0) return false;
+
+  // Walk all text nodes and replace prices
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+
+  let textNode: Text | null;
+  while ((textNode = walker.nextNode() as Text | null)) {
+    textNodes.push(textNode);
+  }
+
+  let anyReplaced = false;
+
+  for (const tNode of textNodes) {
+    let content = tNode.nodeValue || '';
+    let modified = false;
+
+    for (const [original, converted] of replacements) {
+      if (content.includes(original)) {
+        content = content.split(original).join(converted);
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      tNode.nodeValue = content;
+      anyReplaced = true;
+    }
+  }
+
+  return anyReplaced;
 }
 
 export function revertConversions(): void {
