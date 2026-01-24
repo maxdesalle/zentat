@@ -29,8 +29,15 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
 
     let converted = false;
 
-    // Bol.com special handling: replace entire container, hide visual price spans
-    if (bolPriceContainerSet.has(node)) {
+    // Check if this is a "simple" price container (Amazon .a-price, bol.com, etc.)
+    // These have structured child elements and need full textContent replacement
+    const isAmazonPrice = node.classList.contains('a-price');
+    const isBolPrice = bolPriceContainerSet.has(node);
+    const isSimplePriceContainer = isAmazonPrice || isBolPrice ||
+      (node.children.length === 0 && node.textContent?.trim() === text);
+
+    if (isSimplePriceContainer) {
+      // For structured price containers, replace entire content
       const convertedPrices: string[] = [];
       for (const parsed of prices) {
         const result = convertPrice(parsed, rates, settings.precision);
@@ -41,21 +48,26 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
       }
       if (converted) {
         const newText = convertedPrices.join(' ');
-        // Hide aria-hidden visual spans and update accessibility text
-        const visualSpans = node.querySelectorAll('[aria-hidden="true"]');
-        for (const span of visualSpans) {
-          (span as HTMLElement).style.display = 'none';
-        }
-        // Update the accessibility span text
-        const accessibilitySpan = node.querySelector('span[style*="position: absolute"]');
-        if (accessibilitySpan) {
-          accessibilitySpan.textContent = newText;
-          (accessibilitySpan as HTMLElement).style.cssText = '';
-          (accessibilitySpan as HTMLElement).style.fontWeight = 'bold';
+
+        if (isBolPrice) {
+          // Bol.com special handling: hide visual spans and update accessibility text
+          const visualSpans = node.querySelectorAll('[aria-hidden="true"]');
+          for (const span of visualSpans) {
+            (span as HTMLElement).style.display = 'none';
+          }
+          const accessibilitySpan = node.querySelector('span[style*="position: absolute"]');
+          if (accessibilitySpan) {
+            accessibilitySpan.textContent = newText;
+            (accessibilitySpan as HTMLElement).style.cssText = '';
+            (accessibilitySpan as HTMLElement).style.fontWeight = 'bold';
+          }
+        } else {
+          // Amazon and other simple containers: replace entire textContent
+          node.textContent = newText;
         }
       }
     } else {
-      // Replace prices within text nodes to preserve HTML structure (links, etc.)
+      // For complex content (Wikipedia, etc.), replace within text nodes to preserve HTML
       converted = replacePricesInTextNodes(node, prices, rates, settings);
     }
 
