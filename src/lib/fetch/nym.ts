@@ -138,4 +138,18 @@ export async function destroyNymConnection(): Promise<void> {
   } catch {
     // Document might not exist, ignore
   }
+
+  // Clear Nym's stored registration data so it can try gateways again
+  // The SDK stores data in IndexedDB under these database names
+  try {
+    const databases = await indexedDB.databases();
+    for (const db of databases) {
+      if (db.name && (db.name.includes('nym') || db.name.includes('wasm'))) {
+        indexedDB.deleteDatabase(db.name);
+        console.log(`Zentat: Cleared Nym database: ${db.name}`);
+      }
+    }
+  } catch {
+    // IndexedDB access might fail, ignore
+  }
 }

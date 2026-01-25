@@ -180,6 +180,17 @@ async function handleNymFetch(url: string, timeoutMs: number): Promise<NymFetchR
       clearTimeout(timeoutId);
       const errorMessage = error instanceof Error ? error.message : String(error);
 
+      // "No more gateways" means we need to clear stored data and fully restart
+      if (errorMessage.includes('no more new gateways')) {
+        console.log('Zentat: Exhausted all gateways, need full restart with data clear');
+        consecutiveFailures++;
+        return {
+          success: false,
+          error: errorMessage,
+          fatal: true,
+        };
+      }
+
       // If SDK lost its state, WebSocket died, or network error, reinitialize and retry once
       const needsReinit =
         errorMessage.includes("hasn't been initialised") ||
