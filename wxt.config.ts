@@ -3,10 +3,10 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   srcDir: 'src',
   outDir: 'dist',
-  manifest: {
+  manifest: ({ browser }) => ({
     name: 'Zentat',
     description: 'Convert fiat prices to ZEC inline',
-    permissions: ['storage', 'alarms', 'offscreen'],
+    permissions: browser === 'chrome' ? ['storage', 'alarms', 'offscreen'] : ['storage', 'alarms'],
     host_permissions: [
       '<all_urls>',
       'https://api.coingecko.com/*',
@@ -31,7 +31,7 @@ export default defineConfig({
     content_security_policy: {
       extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';",
     },
-  },
+  }),
   webExt: {
     startUrls: ['https://www.amazon.com'],
   },

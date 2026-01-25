@@ -1,7 +1,8 @@
 import type { Fetcher, FetcherResponse, NymStatus } from './types';
 
-let offscreenCreated = false;
-let creatingPromise: Promise<void> | null = null;
+// Detect environment: Firefox has window in background, Chrome needs offscreen
+const isFirefox = typeof window !== 'undefined' && typeof chrome?.offscreen === 'undefined';
+
 let nymStatus: NymStatus = 'disconnected';
 let statusListeners: Set<(status: NymStatus) => void> = new Set();
 
@@ -20,12 +21,75 @@ export function watchNymStatus(callback: (status: NymStatus) => void): () => voi
   return () => statusListeners.delete(callback);
 }
 
+// ============================================================================
+// Firefox: Direct Nym client (has window in background/event page)
+// ============================================================================
+
+let firefoxClientModule: typeof import('../nym/client') | null = null;
+
+async function getFirefoxClient() {
+  if (!firefoxClientModule) {
+    firefoxClientModule = await import('../nym/client');
+  }
+  return firefoxClientModule;
+}
+
+function createFirefoxNymFetcher(timeoutMs: number): Fetcher {
+  return {
+    async fetch(url: string): Promise<FetcherResponse> {
+      if (nymStatus === 'disconnected') {
+        setStatus('connecting');
+      }
+
+      const client = await getFirefoxClient();
+      const result = await client.nymFetch(url, timeoutMs);
+
+      if (result.success) {
+        setStatus('connected');
+        return {
+          ok: true,
+          status: result.status || 200,
+          json: async () => result.data,
+        };
+      }
+
+      if (result.fatal) {
+        console.log('Zentat: Fatal Nym error, destroying client');
+        await client.destroyNymClient();
+        setStatus('error');
+      }
+
+      throw new Error(result.error || 'Nym fetch failed');
+    },
+  };
+}
+
+async function destroyFirefoxNymConnection(): Promise<void> {
+  setStatus('disconnected');
+  if (firefoxClientModule) {
+    await firefoxClientModule.destroyNymClient();
+  }
+}
+
+function resetFirefoxNymConnection(): void {
+  setStatus('disconnected');
+  if (firefoxClientModule) {
+    firefoxClientModule.resetNymClient();
+  }
+}
+
+// ============================================================================
+// Chrome: Offscreen document (service worker has no window)
+// ============================================================================
+
+let offscreenCreated = false;
+let creatingPromise: Promise<void> | null = null;
+
 async function ensureOffscreenDocument(): Promise<void> {
   if (offscreenCreated) {
     return;
   }
 
-  // Prevent concurrent creation attempts
   if (creatingPromise) {
     return creatingPromise;
   }
@@ -39,7 +103,6 @@ async function ensureOffscreenDocument(): Promise<void> {
 }
 
 async function doCreateOffscreenDocument(): Promise<void> {
-  // Check if offscreen document already exists
   try {
     const existingContexts = await chrome.runtime.getContexts({
       contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
@@ -65,7 +128,6 @@ async function doCreateOffscreenDocument(): Promise<void> {
     offscreenCreated = true;
     setStatus('connected');
   } catch (error) {
-    // "Only a single offscreen document may be created" means it already exists
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (errorMessage.includes('single offscreen document')) {
       offscreenCreated = true;
@@ -86,7 +148,7 @@ interface NymFetchResponse {
   fatal?: boolean;
 }
 
-export function createNymFetcher(timeoutMs: number = 60000): Fetcher {
+function createChromeNymFetcher(timeoutMs: number): Fetcher {
   return {
     async fetch(url: string): Promise<FetcherResponse> {
       await ensureOffscreenDocument();
@@ -98,17 +160,14 @@ export function createNymFetcher(timeoutMs: number = 60000): Fetcher {
       })) as NymFetchResponse | undefined;
 
       if (!response) {
-        // No response usually means the offscreen document isn't listening
-        // Reset state so next attempt recreates it
         offscreenCreated = false;
         throw new Error('No response from Nym - connection may be stale');
       }
 
       if (!response.success) {
-        // Fatal error means WASM crashed - need full document restart
         if (response.fatal) {
           console.log('Zentat: Fatal Nym error, destroying offscreen document');
-          await destroyNymConnection();
+          await destroyChromeNymConnection();
         }
         throw new Error(response.error || 'Nym fetch failed');
       }
@@ -122,16 +181,15 @@ export function createNymFetcher(timeoutMs: number = 60000): Fetcher {
   };
 }
 
-export function resetNymConnection() {
+function resetChromeNymConnection(): void {
   offscreenCreated = false;
   setStatus('disconnected');
 }
 
-export async function destroyNymConnection(): Promise<void> {
+async function destroyChromeNymConnection(): Promise<void> {
   offscreenCreated = false;
   setStatus('disconnected');
 
-  // Close the offscreen document to fully reset WASM state
   try {
     await chrome.offscreen.closeDocument();
     console.log('Zentat: Offscreen document closed for full reset');
@@ -139,8 +197,6 @@ export async function destroyNymConnection(): Promise<void> {
     // Document might not exist, ignore
   }
 
-  // Clear Nym's stored registration data so it can try gateways again
-  // The SDK stores data in IndexedDB under these database names
   try {
     const databases = await indexedDB.databases();
     for (const db of databases) {
@@ -151,5 +207,35 @@ export async function destroyNymConnection(): Promise<void> {
     }
   } catch {
     // IndexedDB access might fail, ignore
+  }
+}
+
+// ============================================================================
+// Unified exports
+// ============================================================================
+
+export function createNymFetcher(timeoutMs: number = 60000): Fetcher {
+  if (isFirefox) {
+    console.log('Zentat: Using Firefox direct Nym client');
+    return createFirefoxNymFetcher(timeoutMs);
+  } else {
+    console.log('Zentat: Using Chrome offscreen Nym client');
+    return createChromeNymFetcher(timeoutMs);
+  }
+}
+
+export function resetNymConnection(): void {
+  if (isFirefox) {
+    resetFirefoxNymConnection();
+  } else {
+    resetChromeNymConnection();
+  }
+}
+
+export async function destroyNymConnection(): Promise<void> {
+  if (isFirefox) {
+    await destroyFirefoxNymConnection();
+  } else {
+    await destroyChromeNymConnection();
   }
 }

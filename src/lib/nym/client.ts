@@ -1,20 +1,13 @@
-// Offscreen document for Nym mixnet fetching
-// This runs in a context with `window` available
+// Shared Nym client logic - used by both Firefox background and Chrome offscreen document
 
 import { createMixFetch, disconnectMixFetch, type IMixFetch } from '@nymproject/mix-fetch-full-fat';
 
-interface NymFetchRequest {
-  type: 'nymFetch';
-  url: string;
-  timeoutMs: number;
-}
-
-interface NymFetchResponse {
+export interface NymFetchResult {
   success: boolean;
   data?: unknown;
   status?: number;
   error?: string;
-  fatal?: boolean; // Signals that offscreen document needs full recreation
+  fatal?: boolean;
 }
 
 let mixFetchInstance: IMixFetch | null = null;
@@ -23,33 +16,33 @@ let lastSuccessfulFetch: number = 0;
 let wasmCrashed: boolean = false;
 let consecutiveFailures: number = 0;
 
-// If no successful fetch in this time, proactively reconnect
-const STALE_CONNECTION_MS = 6 * 60 * 1000; // 6 minutes (slightly more than one refresh interval)
-const MAX_CONSECUTIVE_FAILURES = 3; // After this many failures, signal for full restart
+const STALE_CONNECTION_MS = 6 * 60 * 1000; // 6 minutes
+const MAX_CONSECUTIVE_FAILURES = 3;
 
-// Detect WASM/Go runtime crashes
-window.addEventListener('error', (event) => {
-  const msg = event.message || '';
-  if (msg.includes('Go program has already exited') || msg.includes('exit code')) {
-    console.error('Zentat: WASM runtime crashed, marking for full restart');
-    wasmCrashed = true;
-  }
-});
+// Set up WASM crash detection if window is available
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    const msg = event.message || '';
+    if (msg.includes('Go program has already exited') || msg.includes('exit code')) {
+      console.error('Zentat: WASM runtime crashed, marking for full restart');
+      wasmCrashed = true;
+    }
+  });
 
-window.addEventListener('unhandledrejection', (event) => {
-  const reason = String(event.reason || '');
-  if (reason.includes('Go program has already exited') || reason.includes('exit code')) {
-    console.error('Zentat: WASM runtime crashed (rejection), marking for full restart');
-    wasmCrashed = true;
-  }
-});
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = String(event.reason || '');
+    if (reason.includes('Go program has already exited') || reason.includes('exit code')) {
+      console.error('Zentat: WASM runtime crashed (rejection), marking for full restart');
+      wasmCrashed = true;
+    }
+  });
+}
 
 async function ensureInitialized(): Promise<IMixFetch> {
   if (mixFetchInstance) {
     return mixFetchInstance;
   }
 
-  // Prevent concurrent initialization
   if (initializingPromise) {
     return initializingPromise;
   }
@@ -71,7 +64,6 @@ async function ensureInitialized(): Promise<IMixFetch> {
 async function reinitialize(): Promise<IMixFetch> {
   console.log('Zentat: Reconnecting to Nym...');
 
-  // Clean up old instance
   try {
     await disconnectMixFetch();
   } catch {
@@ -84,36 +76,8 @@ async function reinitialize(): Promise<IMixFetch> {
   return ensureInitialized();
 }
 
-// Initialize Nym on load (don't block message listener setup)
-ensureInitialized().catch(() => {
-  // Initial setup failed - will retry on first fetch request
-});
-
-// Listen for messages from the background script
-chrome.runtime.onMessage.addListener(
-  (message: unknown, _sender, sendResponse: (response: NymFetchResponse) => void) => {
-    if (typeof message !== 'object' || message === null) {
-      return;
-    }
-
-    const msg = message as NymFetchRequest;
-
-    if (msg.type === 'nymFetch') {
-      handleNymFetch(msg.url, msg.timeoutMs)
-        .then(sendResponse)
-        .catch((error) => {
-          sendResponse({
-            success: false,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        });
-      return true; // Keep channel open for async response
-    }
-  }
-);
-
-async function handleNymFetch(url: string, timeoutMs: number): Promise<NymFetchResponse> {
-  // Check if WASM runtime has crashed - need full document restart
+export async function nymFetch(url: string, timeoutMs: number): Promise<NymFetchResult> {
+  // Check if WASM runtime has crashed
   if (wasmCrashed) {
     return {
       success: false,
@@ -122,10 +86,10 @@ async function handleNymFetch(url: string, timeoutMs: number): Promise<NymFetchR
     };
   }
 
-  // Too many consecutive failures - bad gateway, need full restart to pick new one
+  // Too many consecutive failures
   if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
     console.log(`Zentat: ${consecutiveFailures} consecutive failures, signaling for full restart`);
-    consecutiveFailures = 0; // Reset so next attempt after restart starts fresh
+    consecutiveFailures = 0;
     return {
       success: false,
       error: 'Too many consecutive failures',
@@ -135,24 +99,23 @@ async function handleNymFetch(url: string, timeoutMs: number): Promise<NymFetchR
 
   const now = Date.now();
 
-  // Proactively reconnect if connection is stale (no successful fetch recently)
-  // This handles the case where WebSocket died silently without throwing errors
+  // Proactively reconnect if connection is stale
   if (mixFetchInstance && lastSuccessfulFetch > 0 && now - lastSuccessfulFetch > STALE_CONNECTION_MS) {
     console.log('Zentat: Connection stale, proactively reconnecting...');
     await reinitialize();
   }
 
-  // Use Promise.race for timeout since AbortSignal can't be passed to Nym's internal Worker
+  // Timeout handling
   let timeoutId: ReturnType<typeof setTimeout>;
   let timedOut = false;
-  const timeoutPromise = new Promise<NymFetchResponse>((_, reject) => {
+  const timeoutPromise = new Promise<NymFetchResult>((_, reject) => {
     timeoutId = setTimeout(() => {
       timedOut = true;
       reject(new Error('Nym fetch timeout'));
     }, timeoutMs);
   });
 
-  const fetchPromise = (async (): Promise<NymFetchResponse> => {
+  const fetchPromise = (async (): Promise<NymFetchResult> => {
     try {
       const instance = await ensureInitialized();
       const response = await instance.mixFetch(url, {});
@@ -168,7 +131,6 @@ async function handleNymFetch(url: string, timeoutMs: number): Promise<NymFetchR
       }
 
       const data = await response.json();
-      // Track successful fetch
       lastSuccessfulFetch = Date.now();
       consecutiveFailures = 0;
       return {
@@ -191,7 +153,7 @@ async function handleNymFetch(url: string, timeoutMs: number): Promise<NymFetchR
         };
       }
 
-      // If SDK lost its state, WebSocket died, or network error, reinitialize and retry once
+      // Connection issues - reinitialize and retry once
       const needsReinit =
         errorMessage.includes("hasn't been initialised") ||
         errorMessage.includes('not initialised') ||
@@ -248,7 +210,6 @@ async function handleNymFetch(url: string, timeoutMs: number): Promise<NymFetchR
   } catch (error) {
     consecutiveFailures++;
 
-    // On timeout, check if WASM crashed during the fetch
     if (wasmCrashed) {
       console.log('Zentat: WASM crashed during fetch, signaling fatal');
       return {
@@ -258,10 +219,8 @@ async function handleNymFetch(url: string, timeoutMs: number): Promise<NymFetchR
       };
     }
 
-    // Otherwise, force reconnect for next attempt since connection is likely dead
     if (timedOut) {
       console.log('Zentat: Fetch timed out, will reconnect on next attempt');
-      // Don't await - just trigger reconnect in background
       reinitialize().catch(() => {});
     }
     return {
@@ -269,4 +228,42 @@ async function handleNymFetch(url: string, timeoutMs: number): Promise<NymFetchR
       error: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+export async function destroyNymClient(): Promise<void> {
+  console.log('Zentat: Destroying Nym client...');
+
+  try {
+    await disconnectMixFetch();
+  } catch {
+    // Ignore
+  }
+
+  mixFetchInstance = null;
+  initializingPromise = null;
+  wasmCrashed = false;
+  consecutiveFailures = 0;
+  lastSuccessfulFetch = 0;
+
+  // Clear Nym's stored registration data
+  if (typeof indexedDB !== 'undefined') {
+    try {
+      const databases = await indexedDB.databases();
+      for (const db of databases) {
+        if (db.name && (db.name.includes('nym') || db.name.includes('wasm'))) {
+          indexedDB.deleteDatabase(db.name);
+          console.log(`Zentat: Cleared Nym database: ${db.name}`);
+        }
+      }
+    } catch {
+      // IndexedDB access might fail, ignore
+    }
+  }
+}
+
+export function resetNymClient(): void {
+  mixFetchInstance = null;
+  initializingPromise = null;
+  wasmCrashed = false;
+  consecutiveFailures = 0;
 }
