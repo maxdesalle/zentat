@@ -90,16 +90,20 @@ function replacePricesInTextNodes(
   rates: RatesData,
   settings: Settings
 ): boolean {
-  // Build a map of price original text -> converted text
-  const replacements = new Map<string, string>();
+  // Build a list of replacements, sorted by original length (longest first)
+  // This prevents "$1" from being replaced before "$1,000,000,000"
+  const replacements: Array<{ original: string; converted: string }> = [];
   for (const parsed of prices) {
     const result = convertPrice(parsed, rates, settings.precision);
     if (result) {
-      replacements.set(parsed.original, result.formatted);
+      replacements.push({ original: parsed.original, converted: result.formatted });
     }
   }
 
-  if (replacements.size === 0) return false;
+  if (replacements.length === 0) return false;
+
+  // Sort by length descending - replace longest matches first
+  replacements.sort((a, b) => b.original.length - a.original.length);
 
   // Walk all text nodes and replace prices
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
@@ -116,7 +120,7 @@ function replacePricesInTextNodes(
     let content = tNode.nodeValue || '';
     let modified = false;
 
-    for (const [original, converted] of replacements) {
+    for (const { original, converted } of replacements) {
       if (content.includes(original)) {
         content = content.split(original).join(converted);
         modified = true;
