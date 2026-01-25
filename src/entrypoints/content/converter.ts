@@ -29,14 +29,12 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
 
     let converted = false;
 
-    // Check if this is a "simple" price container (Amazon .a-price, bol.com, etc.)
-    // These have structured child elements and need full textContent replacement
+    // Check if this is a special price container (Amazon .a-price, bol.com)
+    // These have structured child elements that need full textContent replacement
     const isAmazonPrice = node.classList.contains('a-price');
     const isBolPrice = bolPriceContainerSet.has(node);
-    const isSimplePriceContainer = isAmazonPrice || isBolPrice ||
-      (node.children.length === 0 && node.textContent?.trim() === text);
 
-    if (isSimplePriceContainer) {
+    if (isAmazonPrice || isBolPrice) {
       // For structured price containers, replace entire content
       const convertedPrices: string[] = [];
       for (const parsed of prices) {
@@ -62,7 +60,7 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
             (accessibilitySpan as HTMLElement).style.fontWeight = 'bold';
           }
         } else {
-          // Amazon and other simple containers: replace entire textContent
+          // Amazon: replace entire textContent
           node.textContent = newText;
         }
       }
