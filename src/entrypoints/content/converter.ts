@@ -19,9 +19,15 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
   const detections = detectPrices(root, settings.currencies);
   let convertedCount = 0;
 
+  const isCoolblue = window.location.hostname.includes('coolblue');
+
   for (const { node, text, prices } of detections) {
     // Skip if already processed
     if (node.closest(`.${CONVERTED_MARKER}`)) continue;
+
+    if (isCoolblue) {
+      console.log('Zentat converter:', { text, prices, ratesAvailable: Object.keys(rates.rates) });
+    }
 
     if (!node.hasAttribute('data-zentat-original')) {
       node.setAttribute('data-zentat-original', node.innerHTML);
@@ -29,12 +35,13 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
 
     let converted = false;
 
-    // Check if this is a special price container (Amazon .a-price, bol.com)
+    // Check if this is a special price container (Amazon .a-price, bol.com, Coolblue)
     // These have structured child elements that need full textContent replacement
     const isAmazonPrice = node.classList.contains('a-price');
     const isBolPrice = bolPriceContainerSet.has(node);
+    const isCoolbluePrice = window.location.hostname.includes('coolblue');
 
-    if (isAmazonPrice || isBolPrice) {
+    if (isAmazonPrice || isBolPrice || isCoolbluePrice) {
       // For structured price containers, replace entire content
       const convertedPrices: string[] = [];
       for (const parsed of prices) {
@@ -60,7 +67,7 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
             (accessibilitySpan as HTMLElement).style.fontWeight = 'bold';
           }
         } else {
-          // Amazon: replace entire textContent
+          // Amazon/Coolblue: replace entire textContent
           node.textContent = newText;
         }
       }

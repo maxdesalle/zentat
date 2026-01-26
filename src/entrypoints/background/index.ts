@@ -3,8 +3,11 @@ import { setupAlarms, handleAlarm } from './alarms';
 import { setSettings, getSettings } from '../../lib/storage/settings';
 
 export default defineBackground(() => {
+  console.log('Zentat: Background script starting...');
+
   // Initial rate fetch on install/startup
   browser.runtime.onInstalled.addListener(async () => {
+    console.log('Zentat: onInstalled event fired');
     await refreshRates(true);
     await setupAlarms();
   });
@@ -72,6 +75,13 @@ export default defineBackground(() => {
   });
 
   // Ensure alarms are set up (in case onInstalled/onStartup didn't fire)
+  console.log('Zentat: Setting up alarms and fetching rates...');
   setupAlarms();
-  refreshRates(false);
+  refreshRates(false).then((success) => {
+    console.log(`Zentat: Initial rate fetch ${success ? 'succeeded' : 'failed'}`);
+  }).catch((error) => {
+    console.error('Zentat: Initial rate fetch error:', error);
+  });
+
+  console.log('Zentat: Background script initialized');
 });

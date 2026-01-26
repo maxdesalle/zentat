@@ -108,7 +108,20 @@ function extractPriceFromMatch(
     numStr = numericGroups[0];
   }
 
-  const amount = parseNumber(numStr);
+  // Debug logging for Coolblue
+  const shouldDebug = hostname?.includes('coolblue');
+  if (shouldDebug) {
+    console.log('Zentat extractPrice:', {
+      original,
+      originalCharCodes: [...original].map(c => c.charCodeAt(0)),
+      numericGroups,
+      numStr,
+      patternCode: pattern.code,
+      patternSymbols: pattern.symbols,
+    });
+  }
+
+  const amount = parseNumber(numStr, shouldDebug);
   if (amount === null || amount < 0) return null;
 
   // Resolve currency - use locale for ambiguous symbols
@@ -147,8 +160,9 @@ const WORD_MULTIPLIERS: Record<string, number> = {
   trillion: 1_000_000_000_000,
 };
 
-export function parseNumber(str: string): number | null {
+export function parseNumber(str: string, debug: boolean = false): number | null {
   let cleaned = str.trim();
+  const original = cleaned;
 
   // Check for spelled-out multipliers first (e.g., "10 million", "5 hundred thousand")
   let multiplier = 1;
@@ -170,8 +184,8 @@ export function parseNumber(str: string): number | null {
     }
   }
 
-  // Remove remaining spaces
-  cleaned = cleaned.replace(/\s/g, '');
+  // Remove remaining spaces (including non-breaking spaces)
+  cleaned = cleaned.replace(/[\s\u00A0]/g, '');
 
   // Check for and extract suffix multiplier (k, K, M, B, T)
   const lastChar = cleaned.slice(-1);
@@ -218,10 +232,16 @@ export function parseNumber(str: string): number | null {
   if (commaCount + dotCount === 1) {
     const sepIndex = Math.max(lastComma, lastDot);
     const afterSep = cleaned.slice(sepIndex + 1);
+    if (debug) {
+      console.log('Zentat parseNumber:', { original, cleaned, sepIndex, afterSep, afterSepLen: afterSep.length });
+    }
     if (afterSep.length === 3 && /^\d{3}$/.test(afterSep)) {
       // Single separator with 3 digits = thousand separator
       cleaned = cleaned.replace(/[,.]/, '');
       const num = parseFloat(cleaned);
+      if (debug) {
+        console.log('Zentat parseNumber: treated as thousand separator:', { cleaned, num });
+      }
       return isNaN(num) ? null : num * multiplier;
     }
   }

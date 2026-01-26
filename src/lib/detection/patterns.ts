@@ -14,8 +14,9 @@ export interface CurrencyPattern {
 // Supports k/K (thousand), m/M (million), B (billion), T (trillion) suffixes
 // Also supports spelled-out: "10 million", "5 billion", "2 trillion", "hundred thousand"
 // First alternation requires thousand separators (+ not *), second handles plain numbers
-const NUM_SUFFIX = String.raw`[kKmMBT]?(?:\s+(?:hundred\s+)?(?:thousand|million|billion|trillion))?`;
-const NUM = String.raw`(\d{1,3}(?:[,.\s]\d{3})+(?:[.,]\d{1,2})?${NUM_SUFFIX}|\d+(?:[.,]\d{1,2})?${NUM_SUFFIX})`;
+// Note: \s doesn't match non-breaking space (\u00A0), so we explicitly include it
+const NUM_SUFFIX = String.raw`[kKmMBT]?(?:[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:thousand|million|billion|trillion))?`;
+const NUM = String.raw`(\d{1,3}(?:[,.\s\u00A0]\d{3})+(?:[.,]\d{1,2})?${NUM_SUFFIX}|\d+(?:[.,]\d{1,2})?${NUM_SUFFIX})`;
 
 // Build currency patterns
 function buildPattern(symbols: string[], code: string): RegExp {
@@ -35,7 +36,8 @@ function escapeRegex(str: string): string {
 
 // European price format: "339,-" or "1.299,-" (whole number with ,- suffix)
 // Handles whitespace/newlines between parts: "339 , -" or "339\n,\n-"
-const EUR_DASH_PATTERN = /(\d{1,3}(?:\.\d{3})*)\s*,\s*-/g;
+// Matches regular hyphen (U+002D), EN DASH (U+2013), and EM DASH (U+2014)
+const EUR_DASH_PATTERN = /(\d{1,3}(?:\.\d{3})*)\s*,\s*[\u002D\u2013\u2014]/g;
 
 // Dutch/Belgian format: "247,11 excl. btw" or "247,11 incl. btw"
 const EUR_BTW_PATTERN = /(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)\s*(?:excl|incl)\.?\s*btw/gi;
@@ -47,6 +49,10 @@ const EUR_WORD_PATTERN = /['"]?(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)['"]?\s*euro(?:
 // Bol.com decimal format: "149,00" or "53,95" (plain decimal, no symbol)
 // Only safe on bol.com where we know all prices are EUR
 const BOL_DECIMAL_PATTERN = /\b(\d{1,3}(?:\.\d{3})*,\d{2})\b/g;
+
+// Coolblue whole number format: "1.349" or "899" (no decimal, uses . as thousand separator)
+// Often the ",-" suffix is in a separate HTML element
+const COOLBLUE_WHOLE_PATTERN = /\b(\d{1,3}(?:\.\d{3})+)\b/g;
 
 // Sites that use EUR with regional price formats (no € symbol)
 const EUR_REGIONAL_SITES = ['coolblue.nl', 'coolblue.be', 'bol.com', 'mediamarkt.nl', 'mediamarkt.be'];
@@ -63,6 +69,8 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
   { code: 'EUR', symbols: ['euro'], regex: EUR_WORD_PATTERN, hostnames: EUR_REGIONAL_SITES },
   // Bol.com plain decimal format (e.g., "149,00", "53,95") - very restricted
   { code: 'EUR', symbols: [], regex: BOL_DECIMAL_PATTERN, hostnames: ['bol.com'] },
+  // Coolblue whole number format (e.g., "1.349", "899") - thousand separator with no decimal
+  { code: 'EUR', symbols: [], regex: COOLBLUE_WHOLE_PATTERN, hostnames: ['coolblue.nl', 'coolblue.be'] },
   { code: 'GBP', symbols: ['£'], regex: buildPattern(['£'], 'GBP') },
   { code: 'JPY', symbols: ['¥', '円'], regex: buildPattern(['¥', '円'], 'JPY') },
   { code: 'CAD', symbols: ['C$', 'CA$'], regex: buildPattern(['C$', 'CA$'], 'CAD') },
@@ -78,5 +86,7 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
 // Simple combined pattern for quick detection
 // Requires digit after currency symbol to avoid matching cashtags like $BTC
 // Includes European formats: ",-", "btw", "euro", decimal prices, k/m/M/B/T suffixes, and spelled-out multipliers
-export const QUICK_DETECT_PATTERN = /[$€£¥₩₹]\s*\d|(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\d,-|\bbtw\b|\beuro\b|\d,\d{2}\b|\d[kKmMBT]\b|\d\s+(?:hundred\s+)?(?:thousand|million|billion|trillion)\b/i;
+// Note: [\s\u00A0] includes non-breaking space for French number formatting
+// Also matches European thousand-separator format like "1.349" (used on Coolblue)
+export const QUICK_DETECT_PATTERN = /[$€£¥₩₹][\s\u00A0]*\d|\d[\s\u00A0]*[$€£¥₩₹]|(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\d,-|\bbtw\b|\beuro\b|\d,\d{2}\b|\d\.\d{3}\b|\d[kKmMBT]\b|\d[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:thousand|million|billion|trillion)\b/i;
 

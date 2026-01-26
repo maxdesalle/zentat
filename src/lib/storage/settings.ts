@@ -31,7 +31,25 @@ const settingsItem = storage.defineItem<Settings>('sync:settings', {
 export async function getSettings(): Promise<Settings> {
   const stored = await settingsItem.getValue();
   // Merge with defaults to handle missing fields from older versions
-  return { ...DEFAULT_SETTINGS, ...stored };
+  const merged = { ...DEFAULT_SETTINGS, ...stored };
+
+  // Ensure arrays aren't empty (could happen from corrupted/partial storage)
+  if (!merged.currencies || merged.currencies.length === 0) {
+    merged.currencies = DEFAULT_SETTINGS.currencies;
+  }
+  if (!merged.blockedSites) {
+    merged.blockedSites = [];
+  }
+  if (!merged.allowedSites) {
+    merged.allowedSites = [];
+  }
+
+  // Ensure precision has a valid value
+  if (merged.precision === undefined || merged.precision === null) {
+    merged.precision = DEFAULT_SETTINGS.precision;
+  }
+
+  return merged;
 }
 
 export async function setSettings(settings: Partial<Settings>): Promise<void> {

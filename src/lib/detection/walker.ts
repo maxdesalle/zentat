@@ -36,7 +36,7 @@ const NON_PRICE_PATTERNS = [
   /out of \d/i,           // "4.5 out of 5 stars"
   /\d+\s*stars?/i,        // "5 stars"
   /\d+[KMB]?\+?\s*(bought|sold|reviews?|ratings?)/i,  // "10K+ bought"
-  /^\d+(\.\d+)?$/,        // Just a plain number like "4.5"
+  /^\d+(\.\d{1,2})?$/,    // Just a plain number like "4.5" (but NOT "1.349" which is thousand-separated)
   /^\(\d/,                // Starts with "(1" like "(123 reviews)"
   /subscribe/i,           // Subscribe & save prices
 ];

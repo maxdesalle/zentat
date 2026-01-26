@@ -1,7 +1,25 @@
 import type { Fetcher, FetcherResponse, NymStatus } from './types';
 
 // Detect environment: Firefox has window in background, Chrome needs offscreen
-const isFirefox = typeof window !== 'undefined' && typeof chrome?.offscreen === 'undefined';
+// Check for Firefox by looking at the manifest version and offscreen API availability
+function detectFirefox(): boolean {
+  // In Firefox MV2, window exists and chrome.offscreen does not
+  // In Chrome MV3, we're in a service worker (no window) OR chrome.offscreen exists
+  if (typeof window === 'undefined') {
+    // Service worker context (Chrome MV3)
+    return false;
+  }
+  // Window exists - check if offscreen API is available
+  if (typeof chrome !== 'undefined' && chrome.offscreen) {
+    // Chrome with offscreen API
+    return false;
+  }
+  // Window exists but no offscreen API - Firefox or older Chrome
+  return true;
+}
+
+const isFirefox = detectFirefox();
+console.log(`Zentat: Browser detected as ${isFirefox ? 'Firefox' : 'Chrome'}`);
 
 let nymStatus: NymStatus = 'disconnected';
 let statusListeners: Set<(status: NymStatus) => void> = new Set();

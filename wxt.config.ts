@@ -7,6 +7,13 @@ export default defineConfig({
     name: 'Zentat',
     description: 'Convert fiat prices to ZEC inline',
     permissions: browser === 'chrome' ? ['storage', 'alarms', 'offscreen'] : ['storage', 'alarms'],
+    ...(browser === 'firefox' && {
+      browser_specific_settings: {
+        gecko: {
+          id: 'zentat@zentat.org',
+        },
+      },
+    }),
     host_permissions: [
       '<all_urls>',
       'https://api.coingecko.com/*',
