@@ -152,12 +152,30 @@ const SUFFIX_MULTIPLIERS: Record<string, number> = {
   T: 1_000_000_000_000,
 };
 
-// Spelled-out multipliers
+// Spelled-out multipliers (multilingual)
+// Includes English, French, German, Dutch, Spanish, Portuguese, Italian
 const WORD_MULTIPLIERS: Record<string, number> = {
+  // Thousand (10^3)
   thousand: 1_000,
+  mille: 1_000,      // FR, IT
+  tausend: 1_000,    // DE
+  duizend: 1_000,    // NL
+  mil: 1_000,        // ES, PT
+  // Million (10^6)
   million: 1_000_000,
+  millón: 1_000_000, // ES
+  milhão: 1_000_000, // PT
+  milione: 1_000_000, // IT
+  miljoen: 1_000_000, // NL
+  // Billion (10^9) - short scale
   billion: 1_000_000_000,
+  milliard: 1_000_000_000, // FR, DE (long scale billion)
+  miljard: 1_000_000_000,  // NL
+  miliardo: 1_000_000_000, // IT
+  // Trillion (10^12)
   trillion: 1_000_000_000_000,
+  bilhão: 1_000_000_000_000,  // PT (can mean 10^12)
+  biljoen: 1_000_000_000_000, // NL
 };
 
 export function parseNumber(str: string, debug: boolean = false): number | null {

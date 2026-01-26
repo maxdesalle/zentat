@@ -12,10 +12,11 @@ export interface CurrencyPattern {
 
 // Number pattern: 1,234.56 or 1.234,56 or 1234.56 or 69k or 2.5M or 150B or 2T
 // Supports k/K (thousand), m/M (million), B (billion), T (trillion) suffixes
-// Also supports spelled-out: "10 million", "5 billion", "2 trillion", "hundred thousand"
+// Also supports spelled-out multipliers in multiple languages
 // First alternation requires thousand separators (+ not *), second handles plain numbers
 // Note: \s doesn't match non-breaking space (\u00A0), so we explicitly include it
-const NUM_SUFFIX = String.raw`[kKmMBT]?(?:[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:thousand|million|billion|trillion))?`;
+const MULTIPLIER_WORDS = 'thousand|million|billion|trillion|mille|tausend|duizend|mil|millón|milhão|milione|miljoen|milliard|miljard|miliardo|bilhão|biljoen';
+const NUM_SUFFIX = String.raw`[kKmMBT]?(?:[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:${MULTIPLIER_WORDS}))?`;
 const NUM = String.raw`(\d{1,3}(?:[,.\s\u00A0]\d{3})+(?:[.,]\d{1,2})?${NUM_SUFFIX}|\d+(?:[.,]\d{1,2})?${NUM_SUFFIX})`;
 
 // Build currency patterns
@@ -88,5 +89,6 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
 // Includes European formats: ",-", "btw", "euro", decimal prices, k/m/M/B/T suffixes, and spelled-out multipliers
 // Note: [\s\u00A0] includes non-breaking space for French number formatting
 // Also matches European thousand-separator format like "1.349" (used on Coolblue)
-export const QUICK_DETECT_PATTERN = /[$€£¥₩₹][\s\u00A0]*\d|\d[\s\u00A0]*[$€£¥₩₹]|(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\d,-|\bbtw\b|\beuro\b|\d,\d{2}\b|\d\.\d{3}\b|\d[kKmMBT]\b|\d[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:thousand|million|billion|trillion)\b/i;
+// Multilingual multiplier words: EN, FR, DE, NL, ES, PT, IT
+export const QUICK_DETECT_PATTERN = /[$€£¥₩₹][\s\u00A0]*\d|\d[\s\u00A0]*[$€£¥₩₹]|(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\d,-|\bbtw\b|\beuro\b|\d,\d{2}\b|\d\.\d{3}\b|\d[kKmMBT]\b|\d[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:thousand|million|billion|trillion|mille|tausend|duizend|mil|millón|milhão|milione|miljoen|milliard|miljard|miliardo|bilhão|biljoen)\b/i;
 
