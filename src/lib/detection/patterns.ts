@@ -90,5 +90,6 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
 // Note: [\s\u00A0] includes non-breaking space for French number formatting
 // Also matches European thousand-separator format like "1.349" (used on Coolblue)
 // Multilingual multiplier words: EN, FR, DE, NL, ES, PT, IT
-export const QUICK_DETECT_PATTERN = /[$€£¥₩₹][\s\u00A0]*\d|\d[\s\u00A0]*[$€£¥₩₹]|(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\d,-|\bbtw\b|\beuro\b|\d,\d{2}\b|\d\.\d{3}\b|\d[kKmMBT]\b|\d[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:thousand|million|billion|trillion|mille|tausend|duizend|mil|millón|milhão|milione|miljoen|milliard|miljard|miliardo|bilhão|biljoen)\b/i;
+// Note: \d.*btw requires a number before "btw" to avoid matching labels like "BTW (V.A.T.)"
+export const QUICK_DETECT_PATTERN = /[$€£¥₩₹][\s\u00A0]*\d|\d[\s\u00A0]*[$€£¥₩₹]|(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\d,-|\d[.,\s\u00A0]*(?:excl|incl)\.?\s*btw\b|\beuro\b|\d,\d{2}\b|\d\.\d{3}\b|\d[kKmMBT]\b|\d[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:thousand|million|billion|trillion|mille|tausend|duizend|mil|millón|milhão|milione|miljoen|milliard|miljard|miliardo|bilhão|biljoen)\b/i;
 

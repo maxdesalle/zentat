@@ -35,13 +35,15 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
 
     let converted = false;
 
-    // Check if this is a special price container (Amazon .a-price, bol.com, Coolblue)
+    // Check if this is a special price container (Amazon .a-price, bol.com, Coolblue, DigitalOcean)
     // These have structured child elements that need full textContent replacement
     const isAmazonPrice = node.classList.contains('a-price');
     const isBolPrice = bolPriceContainerSet.has(node);
     const isCoolbluePrice = window.location.hostname.includes('coolblue');
+    const isDigitalOceanPrice = window.location.hostname.includes('digitalocean') &&
+      (node.classList.contains('pricing') || node.closest('.pricing') !== null);
 
-    if (isAmazonPrice || isBolPrice || isCoolbluePrice) {
+    if (isAmazonPrice || isBolPrice || isCoolbluePrice || isDigitalOceanPrice) {
       // For structured price containers, replace entire content
       const convertedPrices: string[] = [];
       for (const parsed of prices) {
