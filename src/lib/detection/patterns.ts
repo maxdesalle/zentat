@@ -19,15 +19,19 @@ const MULTIPLIER_WORDS = 'thousand|million|billion|trillion|mille|tausend|duizen
 const NUM_SUFFIX = String.raw`[kKmMBT]?(?:[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:${MULTIPLIER_WORDS}))?`;
 const NUM = String.raw`(\d{1,3}(?:[,.\s\u00A0]\d{3})+(?:[.,]\d{1,2})?${NUM_SUFFIX}|\d+(?:[.,]\d{1,2})?${NUM_SUFFIX})`;
 
+// All currency symbols for negative lookahead
+const ALL_SYMBOLS = '[$€£¥₩₹]';
+
 // Build currency patterns
 function buildPattern(symbols: string[], code: string): RegExp {
   const escapedSymbols = symbols.map((s) => escapeRegex(s)).join('|');
   // Match patterns:
-  // 1. symbol + number: $19.99, €1,299.00
+  // 1. optional CODE + symbol + number: EUR €1,299.00, $19.99 (captures "EUR €" together to avoid leaving "EUR" behind)
   // 2. number + symbol: 1 299,00 €, 19.99$
-  // 3. CODE + number: USD 19.99, EUR 1299
+  // 3. CODE + number: USD 19.99, EUR 1299 (but NOT "EUR €300" where symbol follows)
   // 4. number + CODE: 19.99 USD, 1299 EUR
-  const pattern = String.raw`(?:(${escapedSymbols})\s*${NUM}|${NUM}\s*(${escapedSymbols})|(?:^|\s)\b(${code})\b\s*${NUM}|${NUM}\s*\b(${code})\b)`;
+  // Note: Pattern 3 uses negative lookahead to avoid matching "EUR €300,000" where the symbol-based pattern should take precedence
+  const pattern = String.raw`(?:(?:\b${code}\b\s*)?(${escapedSymbols})\s*${NUM}|${NUM}\s*(${escapedSymbols})|(?:^|\s)\b(${code})\b\s*(?!${ALL_SYMBOLS})${NUM}|${NUM}\s*\b(${code})\b)`;
   return new RegExp(pattern, 'gi');
 }
 

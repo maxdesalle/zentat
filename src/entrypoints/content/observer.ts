@@ -1,6 +1,7 @@
 import type { RatesData } from '../../lib/storage/rates';
 import type { Settings } from '../../lib/storage/settings';
 import { convertPricesInNode } from './converter';
+import { isConverting } from './state';
 
 let observer: MutationObserver | null = null;
 let pendingRoots: Set<Element> = new Set();
@@ -36,7 +37,8 @@ export function startObserver(rates: RatesData, settings: Settings): void {
       }
 
       // Handle text changes - re-scan and re-convert even if already processed
-      if (mutation.type === 'characterData') {
+      // Skip if we're currently converting (to avoid re-processing our own changes)
+      if (mutation.type === 'characterData' && !isConverting) {
         const target = mutation.target;
         const element = target instanceof Element ? target : target.parentElement;
         if (element) {

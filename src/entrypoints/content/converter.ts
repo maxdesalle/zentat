@@ -4,6 +4,7 @@ import { convertPrice } from '../../lib/conversion/convert';
 import { detectPrices } from './detector';
 import { bolPriceContainerSet } from '../../lib/detection/walker';
 import type { ParsedPrice } from '../../lib/detection/parser';
+import { setConverting } from './state';
 
 const CONVERTED_MARKER = 'zentat-processed';
 
@@ -21,13 +22,12 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
 
   const isCoolblue = window.location.hostname.includes('coolblue');
 
-  for (const { node, text, prices } of detections) {
+  // Suppress observer during conversion to prevent re-processing our own changes
+  setConverting(true);
+  try {
+    for (const { node, text, prices } of detections) {
     // Skip if already processed
     if (node.closest(`.${CONVERTED_MARKER}`)) continue;
-
-    if (isCoolblue) {
-      console.log('Zentat converter:', { text, prices, ratesAvailable: Object.keys(rates.rates) });
-    }
 
     if (!node.hasAttribute('data-zentat-original')) {
       node.setAttribute('data-zentat-original', node.innerHTML);
@@ -85,6 +85,9 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
       convertedCount++;
     }
   }
+  } finally {
+    setConverting(false);
+  }
 
   return convertedCount;
 }
@@ -111,8 +114,16 @@ function replacePricesInTextNodes(
 
   if (replacements.length === 0) return false;
 
+  // Deduplicate replacements by original text (keep first occurrence)
+  const seen = new Set<string>();
+  const uniqueReplacements = replacements.filter(r => {
+    if (seen.has(r.original)) return false;
+    seen.add(r.original);
+    return true;
+  });
+
   // Sort by length descending - replace longest matches first
-  replacements.sort((a, b) => b.original.length - a.original.length);
+  uniqueReplacements.sort((a, b) => b.original.length - a.original.length);
 
   // Walk all text nodes and replace prices
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
@@ -129,7 +140,7 @@ function replacePricesInTextNodes(
     let content = tNode.nodeValue || '';
     let modified = false;
 
-    for (const { original, converted } of replacements) {
+    for (const { original, converted } of uniqueReplacements) {
       if (content.includes(original)) {
         content = content.split(original).join(converted);
         modified = true;
@@ -137,6 +148,8 @@ function replacePricesInTextNodes(
     }
 
     if (modified) {
+      // Clean up any duplicate "ZEC ZEC" that might occur from multiple replacements
+      content = content.replace(/\bZEC\s+ZEC\b/g, 'ZEC');
       tNode.nodeValue = content;
       anyReplaced = true;
     }

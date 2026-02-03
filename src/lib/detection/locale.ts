@@ -51,7 +51,8 @@ export function inferCurrencyFromHostname(hostname: string): string | null {
 }
 
 // For ambiguous symbols like "$", resolve based on context
-export function resolveAmbiguousSymbol(symbol: string, hostname: string): string {
+// Returns null for non-ambiguous symbols so pattern.code is preserved
+export function resolveAmbiguousSymbol(symbol: string, hostname: string): string | null {
   const inferredCurrency = inferCurrencyFromHostname(hostname);
 
   if (symbol === '$') {
@@ -68,5 +69,6 @@ export function resolveAmbiguousSymbol(symbol: string, hostname: string): string
     return 'JPY'; // Default
   }
 
-  return inferredCurrency || 'USD';
+  // Non-ambiguous symbols (€, £, ₩, ₹, etc.) - don't override pattern.code
+  return null;
 }

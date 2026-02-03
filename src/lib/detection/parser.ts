@@ -64,7 +64,50 @@ export function parsePrice(text: string, enabledCurrencies: string[], hostname?:
   }
 
   // Sort by position
-  return results.sort((a, b) => a.startIndex - b.startIndex);
+  results.sort((a, b) => a.startIndex - b.startIndex);
+
+  // Deduplicate prices with the same original text or overlapping positions
+  // Prefer currency that matches the symbol in the original text
+  const deduped: ParsedPrice[] = [];
+  for (const price of results) {
+    // Check for existing price with same original text
+    const sameTextIdx = deduped.findIndex(p => p.original === price.original);
+    if (sameTextIdx !== -1) {
+      // Prefer the currency that matches the symbol in the original
+      const existing = deduped[sameTextIdx];
+      const priceMatchesSymbol =
+        (price.original.includes('€') && price.currency === 'EUR') ||
+        (price.original.includes('$') && price.currency === 'USD') ||
+        (price.original.includes('£') && price.currency === 'GBP');
+      const existingMatchesSymbol =
+        (existing.original.includes('€') && existing.currency === 'EUR') ||
+        (existing.original.includes('$') && existing.currency === 'USD') ||
+        (existing.original.includes('£') && existing.currency === 'GBP');
+
+      if (priceMatchesSymbol && !existingMatchesSymbol) {
+        deduped[sameTextIdx] = price;
+      }
+      continue;
+    }
+
+    // Check for overlapping positions with same amount
+    const overlapIdx = deduped.findIndex(
+      (p) => Math.abs(p.amount - price.amount) < 0.01 &&
+        ((price.startIndex >= p.startIndex && price.startIndex < p.endIndex) ||
+         (price.endIndex > p.startIndex && price.endIndex <= p.endIndex))
+    );
+    if (overlapIdx !== -1) {
+      // Keep the longer (more specific) match
+      if (price.original.length > deduped[overlapIdx].original.length) {
+        deduped[overlapIdx] = price;
+      }
+      continue;
+    }
+
+    deduped.push(price);
+  }
+
+  return deduped;
 }
 
 function extractPriceFromMatch(
@@ -108,20 +151,7 @@ function extractPriceFromMatch(
     numStr = numericGroups[0];
   }
 
-  // Debug logging for Coolblue
-  const shouldDebug = hostname?.includes('coolblue');
-  if (shouldDebug) {
-    console.log('Zentat extractPrice:', {
-      original,
-      originalCharCodes: [...original].map(c => c.charCodeAt(0)),
-      numericGroups,
-      numStr,
-      patternCode: pattern.code,
-      patternSymbols: pattern.symbols,
-    });
-  }
-
-  const amount = parseNumber(numStr, shouldDebug);
+  const amount = parseNumber(numStr);
   if (amount === null || amount < 0) return null;
 
   // Resolve currency - use locale for ambiguous symbols
@@ -178,9 +208,8 @@ const WORD_MULTIPLIERS: Record<string, number> = {
   biljoen: 1_000_000_000_000, // NL
 };
 
-export function parseNumber(str: string, debug: boolean = false): number | null {
+export function parseNumber(str: string): number | null {
   let cleaned = str.trim();
-  const original = cleaned;
 
   // Check for spelled-out multipliers first (e.g., "10 million", "5 hundred thousand")
   let multiplier = 1;
@@ -250,16 +279,10 @@ export function parseNumber(str: string, debug: boolean = false): number | null 
   if (commaCount + dotCount === 1) {
     const sepIndex = Math.max(lastComma, lastDot);
     const afterSep = cleaned.slice(sepIndex + 1);
-    if (debug) {
-      console.log('Zentat parseNumber:', { original, cleaned, sepIndex, afterSep, afterSepLen: afterSep.length });
-    }
     if (afterSep.length === 3 && /^\d{3}$/.test(afterSep)) {
       // Single separator with 3 digits = thousand separator
       cleaned = cleaned.replace(/[,.]/, '');
       const num = parseFloat(cleaned);
-      if (debug) {
-        console.log('Zentat parseNumber: treated as thousand separator:', { cleaned, num });
-      }
       return isNaN(num) ? null : num * multiplier;
     }
   }
