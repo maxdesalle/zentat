@@ -9,7 +9,6 @@ Zentat
 </p>
 
 <p align="center">
-<a href="https://addons.mozilla.org/firefox/addon/zentat/"><img src="https://img.shields.io/badge/Firefox-Add--ons-orange?logo=firefox" alt="Firefox Add-ons"></a>
 <a href="https://chromewebstore.google.com/detail/zentat/"><img src="https://img.shields.io/badge/Chrome-Web%20Store-blue?logo=googlechrome" alt="Chrome Web Store"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="License"></a>
 </p>
@@ -31,6 +30,12 @@ Zentat automatically detects and converts fiat currency prices on any webpage to
 - Configurable precision (auto, whole numbers, or 2 decimal places)
 - Hover over converted prices to see the original amount
 - Works with complex price formats (thousand separators, European notation, etc.)
+
+## Installation
+
+**Chrome**: Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/zentat/).
+
+**Firefox**: Download `zentat-x.x.x-firefox.zip` from [GitHub Releases](https://github.com/maxdesalle/zentat/releases) and install manually. Firefox Add-ons doesn't support the Nym library due to file size limits.
 
 ## Privacy
 
