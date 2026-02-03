@@ -18,7 +18,7 @@ Zentat
 
 ## What is Zentat?
 
-Zentat automatically detects and converts fiat currency prices on any webpage to [Zcash (ZEC)](https://z.cash). Browse Amazon, eBay, news sites, or any website and see prices in ZEC instead of USD, EUR, GBP, and 10+ other currencies.
+Zentat automatically detects and converts fiat currency prices on any webpage to Zcash. Browse Amazon, eBay, news sites, or any website and see prices in ZEC instead of USD, EUR, GBP, and 10+ other currencies.
 
 <p align="center">
 <img src="assets/demo.gif" alt="Zentat demo - Before and After comparison" width="800">
@@ -27,7 +27,7 @@ Zentat automatically detects and converts fiat currency prices on any webpage to
 **Features:**
 - Real-time price conversion on any website
 - Supports 13 fiat currencies (USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, KRW, INR, BRL, MXN, and more)
-- Optional privacy-preserving exchange rate fetching via [Nym mixnet](https://nymtech.net)
+- Optional privacy-preserving exchange rate fetching via [Nym](https://nymtech.net)
 - Configurable precision (auto, whole numbers, or 2 decimal places)
 - Hover over converted prices to see the original amount
 - Works with complex price formats (thousand separators, European notation, etc.)
@@ -40,7 +40,7 @@ Zentat is designed with privacy as a core principle:
 - **No tracking**: No analytics, telemetry, or user tracking of any kind
 - **No external requests** (except rate fetching): All price detection and conversion happens locally in your browser
 - **Settings stored locally**: Your preferences never leave your device
-- **Optional Nym integration**: Exchange rate requests can be routed through the [Nym mixnet](https://nymtech.net) for network-level privacy, hiding your IP address from the exchange rate API
+- **Optional Nym integration**: Exchange rate requests can be routed through Nym for network-level privacy, hiding your IP address from the exchange rate API
 
 ## Support
 
