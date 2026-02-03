@@ -12,6 +12,7 @@ export default defineConfig({
         gecko: {
           id: 'zentat@zentat.org',
           data_collection_permissions: {
+            required: false,
             technicaldataAllowed: false,
             interactiondataAllowed: false,
           },
