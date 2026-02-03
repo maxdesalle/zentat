@@ -20,6 +20,10 @@ Zentat
 
 Zentat automatically detects and converts fiat currency prices on any webpage to [Zcash (ZEC)](https://z.cash). Browse Amazon, eBay, news sites, or any website and see prices in ZEC instead of USD, EUR, GBP, and 10+ other currencies.
 
+<p align="center">
+<img src="assets/demo.gif" alt="Zentat demo - Before and After comparison" width="800">
+</p>
+
 **Features:**
 - Real-time price conversion on any website
 - Supports 13 fiat currencies (USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, KRW, INR, BRL, MXN, and more)
