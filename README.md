@@ -32,8 +32,6 @@ Zentat automatically detects and converts fiat currency prices on any webpage to
 - Hover over converted prices to see the original amount
 - Works with complex price formats (thousand separators, European notation, etc.)
 
----
-
 ## Privacy
 
 Zentat is designed with privacy as a core principle:
@@ -44,13 +42,9 @@ Zentat is designed with privacy as a core principle:
 - **Settings stored locally**: Your preferences never leave your device
 - **Optional Nym integration**: Exchange rate requests can be routed through the [Nym mixnet](https://nymtech.net) for network-level privacy, hiding your IP address from the exchange rate API
 
----
-
 ## Support
 
 Found a bug? [Open an issue](https://github.com/maxdesalle/zentat/issues) or [reach out on Signal](https://signal.me/#eu/TST_2FkJznjly3Xkn2NnsNRDw32eoOTHwO0L9REt2N1A2fOQ_vdKEYb-C-KsvEW6).
-
----
 
 ## License
 
