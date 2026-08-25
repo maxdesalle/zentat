@@ -35,6 +35,25 @@ function usesDotDecimal(lang: string | undefined): boolean {
   return sep === '.';
 }
 
+/**
+ * Which of two overlapping matches to keep: the one that starts earlier, and
+ * on a tie the longer one.
+ *
+ * Exported and tested directly because the tie is not reachable through
+ * parsePrice with today's pattern list — every pair that can overlap starts at
+ * different offsets. That makes it exactly the rule most likely to be silently
+ * wrong when the next pattern is added.
+ */
+export function isBetterMatch(
+  candidate: Pick<ParsedPrice, 'startIndex' | 'endIndex'>,
+  existing: Pick<ParsedPrice, 'startIndex' | 'endIndex'>,
+): boolean {
+  if (candidate.startIndex !== existing.startIndex) {
+    return candidate.startIndex < existing.startIndex;
+  }
+  return candidate.endIndex - candidate.startIndex > existing.endIndex - existing.startIndex;
+}
+
 export function parsePrice(
   text: string,
   enabledCurrencies: string[],
@@ -109,18 +128,8 @@ export function parsePrice(
         if (overlapIndex === -1) {
           // No overlap, add new result
           results.push(price);
-        } else {
-          // Overlap found - prefer the match that starts earlier or is longer
-          const existing = results[overlapIndex];
-          const parsedLen = price.endIndex - price.startIndex;
-          const existingLen = existing.endIndex - existing.startIndex;
-
-          if (
-            price.startIndex < existing.startIndex
-            || (price.startIndex === existing.startIndex && parsedLen > existingLen)
-          ) {
-            results[overlapIndex] = price;
-          }
+        } else if (isBetterMatch(price, results[overlapIndex])) {
+          results[overlapIndex] = price;
         }
       }
     }

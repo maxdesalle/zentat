@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseNumber, parsePrice } from '../../src/lib/detection/parser';
+import { isBetterMatch, parseNumber, parsePrice } from '../../src/lib/detection/parser';
 
 // Spec: tests/trees/parser.tree
 // Bugs found in the field live in parser.regressions.test.ts alongside this.
@@ -133,6 +133,38 @@ describe('parseNumber', () => {
   });
 });
 
+describe('isBetterMatch', () => {
+  const span = (startIndex: number, endIndex: number) => ({ startIndex, endIndex });
+
+  describe('given the candidate starts earlier', () => {
+    it('wins', () => {
+      expect(isBetterMatch(span(0, 3), span(2, 9))).toBe(true);
+    });
+  });
+
+  describe('given the candidate starts later', () => {
+    it('loses', () => {
+      expect(isBetterMatch(span(2, 9), span(0, 3))).toBe(false);
+    });
+  });
+
+  describe('given both start at the same offset', () => {
+    describe('given the candidate is longer', () => {
+      it('wins', () => {
+        // The longer match is the more specific one: "$1,234.56" over "$1".
+        expect(isBetterMatch(span(0, 9), span(0, 2))).toBe(true);
+      });
+    });
+
+    describe('given the candidate is no longer', () => {
+      it('loses', () => {
+        expect(isBetterMatch(span(0, 2), span(0, 9))).toBe(false);
+        expect(isBetterMatch(span(0, 5), span(0, 5))).toBe(false);
+      });
+    });
+  });
+});
+
 describe('parsePrice', () => {
   describe('given a symbol before the amount', () => {
     it('reads a dollar sign', () => {
@@ -154,6 +186,26 @@ describe('parsePrice', () => {
       expect(results).toHaveLength(1);
       expect(results[0].amount).toBe(100);
       expect(results[0].currency).toBe('GBP');
+    });
+  });
+
+  describe('given the page declares a language', () => {
+    describe('given the language uses a comma decimal', () => {
+      it('reads the number that way', () => {
+        // Which separator a locale uses is asked of Intl rather than kept in a
+        // hand-list: es-ES uses a dot for thousands where es-AR uses a comma,
+        // and a hand-list gets that wrong.
+        expect(parsePrice('$3.499', ['USD'], 'shop.example.de', 'de-DE')[0]?.amount).toBe(3499);
+      });
+    });
+
+    describe('given the language tag is not one the browser knows', () => {
+      it('falls back to a dot decimal rather than failing', () => {
+        // A malformed lang attribute is a page authoring mistake, not a reason
+        // to stop converting the page.
+        expect(parsePrice('$3.499', ['USD'], 'shop.example.com', 'not a lang!!')[0]?.amount)
+          .toBe(3.499);
+      });
     });
   });
 
@@ -203,6 +255,24 @@ describe('parsePrice', () => {
   });
 
   describe('given an ambiguous symbol', () => {
+    describe('given the page states its own currency', () => {
+      it('beats the guess from the hostname', () => {
+        // A geo-priced .com is CAD about as often as it is USD, so the TLD is
+        // a guess. JSON-LD saying "CAD" is not.
+        const results = parsePrice('$19.99', ['USD', 'CAD'], 'shop.example.com', 'en', 'CAD');
+        expect(results[0]?.currency).toBe('CAD');
+      });
+
+      describe('given the page names a currency the symbol cannot mean', () => {
+        it('ignores the page and keeps the guess', () => {
+          // A page-wide currency declaration does not make a euro sign mean
+          // yen. Trusting it blindly would mislabel every price on the page.
+          const results = parsePrice('€49.99', ['EUR', 'JPY'], 'shop.example.com', 'en', 'JPY');
+          expect(results[0]?.currency).toBe('EUR');
+        });
+      });
+    });
+
     describe('given the hostname names a country', () => {
       it("resolves to that country's currency", () => {
         const results = parsePrice('$19.99', ['USD', 'CAD'], 'www.amazon.ca');
@@ -304,10 +374,20 @@ describe('parsePrice', () => {
       expect(results[0].original).toContain('1,234.56');
     });
 
-    it('discards the shorter one', () => {
-      const results = parsePrice('$10 million', enabledCurrencies);
+    it('keeps the one that starts earlier', () => {
+      // Two patterns claiming overlapping digits: "EUR 5" from index 0 and
+      // "5 $" from index 4. The earlier start is the real price.
+      const results = parsePrice('EUR 5 $', ['USD', 'EUR']);
       expect(results).toHaveLength(1);
-      expect(results[0].amount).toBe(10_000_000);
+      expect(results[0].currency).toBe('EUR');
+      expect(results[0].startIndex).toBe(0);
+    });
+
+    it('discards the shorter one', () => {
+      expect(parsePrice('$10 million', enabledCurrencies)).toHaveLength(1);
+      const trailing = parsePrice('$1,234.56 EUR', ['USD', 'EUR']);
+      expect(trailing).toHaveLength(1);
+      expect(trailing[0].currency).toBe('USD');
     });
 
     it('keeps the reading whose symbol is actually in the text', () => {
