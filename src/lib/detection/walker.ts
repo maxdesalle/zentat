@@ -34,6 +34,8 @@ export function isSkippedTag(tagName: string): boolean {
 const MAX_PURE_PRICE_LENGTH = 1000;
 
 export interface WalkResult {
+  /** True when a site adapter identified this element as a price container. */
+  inPriceContainer?: boolean;
   node: Element;
   text: string;
   // When set, only the element's DIRECT text-node children should be
@@ -156,7 +158,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
       if (!text || text.length > MAX_PURE_PRICE_LENGTH) continue;
       if (!QUICK_DETECT_PATTERN.test(text) || isNonPriceText(text)) continue;
 
-      results.push({ node: container, text });
+      results.push({ node: container, text, inPriceContainer: true });
       processedElements.add(container);
     }
   }

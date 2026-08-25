@@ -49,11 +49,18 @@ export function detectPrices(
     });
   }
 
-  for (const { node, text, directTextOnly } of walkPriceElements(root)) {
+  for (const { node, text, directTextOnly, inPriceContainer } of walkPriceElements(root)) {
     // Already answered authoritatively; do not let regex second-guess it.
     if (claimed.has(node) || [...claimed].some((el) => el.contains(node))) continue;
 
-    const prices = parsePrice(text, enabledCurrencies, hostname, documentLang, pageCurrency)
+    const prices = parsePrice(
+      text,
+      enabledCurrencies,
+      hostname,
+      documentLang,
+      pageCurrency,
+      inPriceContainer,
+    )
       .filter((price) => !claimed.has(node));
     if (prices.length > 0) {
       results.push({ node, text, prices, directTextOnly });

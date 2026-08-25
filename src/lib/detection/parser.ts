@@ -46,11 +46,20 @@ export function parsePrice(
    * CAD roughly as often as it is USD.
    */
   pageCurrency?: string | null,
+  /**
+   * Whether the text came from an element a site adapter identified as a price
+   * container. Patterns matching bare numbers only run when this is true.
+   */
+  inPriceContainer = false,
 ): ParsedPrice[] {
   const results: ParsedPrice[] = [];
   const enabledSet = new Set(enabledCurrencies.map((c) => c.toUpperCase()));
 
   for (const pattern of CURRENCY_PATTERNS) {
+    // A bare-number pattern with no currency evidence needs positional
+    // evidence instead, or it reads screen resolutions as prices.
+    if (pattern.requiresPriceContainer && !inPriceContainer) continue;
+
     // Skip patterns restricted to specific hostnames
     if (pattern.hostnames && hostname) {
       const matchesHost = pattern.hostnames.some(

@@ -8,6 +8,11 @@ export interface CurrencyPattern {
   regex: RegExp;
   // Optional: restrict this pattern to specific hostnames
   hostnames?: string[];
+  /**
+   * Only run inside an element the site adapter marked as a price container.
+   * Set on any pattern that matches a bare number with no currency evidence.
+   */
+  requiresPriceContainer?: boolean;
 }
 
 // Number pattern: 1,234.56 or 1.234,56 or 1234.56 or 69k or 2.5M or 150B or 2T
@@ -67,6 +72,16 @@ const EUR_WORD_PATTERN =
 
 // Bol.com decimal format: "149,00" or "53,95" (plain decimal, no symbol)
 // Only safe on bol.com where we know all prices are EUR
+// Bare-number patterns are a false-positive generator by construction: a
+// number with no currency evidence is as likely to be a screen resolution, a
+// battery capacity or a clock speed as a price. A hostname allowlist does not
+// change that — it only says WHICH page the wrong answer appears on.
+//
+// So these are marked, and the walker requires positional evidence before
+// running them: the element must sit inside something the site's adapter has
+// identified as a price container. That replaces "trust every number on this
+// host" with "trust numbers in these nodes on this host", which is the actual
+// claim we can support.
 const BOL_DECIMAL_PATTERN = /\b(\d{1,3}(?:\.\d{3})*,\d{2})\b/g;
 
 // Coolblue whole number format: "1.349" or "899" (no decimal, uses . as thousand separator)
@@ -93,12 +108,19 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
   // Dutch "euro" word format (e.g., "149 euro", "53,95 euro")
   { code: 'EUR', symbols: ['euro'], regex: EUR_WORD_PATTERN, hostnames: EUR_REGIONAL_SITES },
   // Bol.com plain decimal format (e.g., "149,00", "53,95") - very restricted
-  { code: 'EUR', symbols: [], regex: BOL_DECIMAL_PATTERN, hostnames: ['bol.com'] },
+  {
+    code: 'EUR',
+    symbols: [],
+    regex: BOL_DECIMAL_PATTERN,
+    hostnames: ['bol.com'],
+    requiresPriceContainer: true,
+  },
   // Coolblue whole number format (e.g., "1.349", "899") - thousand separator with no decimal
   {
     code: 'EUR',
     symbols: [],
     regex: COOLBLUE_WHOLE_PATTERN,
+    requiresPriceContainer: true,
     hostnames: ['coolblue.nl', 'coolblue.be'],
   },
   { code: 'GBP', symbols: ['£'], regex: buildPattern(['£'], 'GBP') },

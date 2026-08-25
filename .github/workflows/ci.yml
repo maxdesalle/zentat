@@ -26,6 +26,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npx dprint check
+      # Unit tests plus the golden corpus: saved markup shapes from real sites,
+      # which is the only thing that pins detection against the actual web.
       - run: npm run test -- --run
       - run: npm run build
       - run: npm run build:firefox
