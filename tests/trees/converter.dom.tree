@@ -1,4 +1,12 @@
 ConverterDomTest
+├── convertPricesInDocument
+│   ├── it converts the whole page
+│   ├── given conversion is switched off
+│   │   └── it does nothing
+│   ├── given the rates cannot be used
+│   │   └── it does nothing
+│   └── given there is no body
+│       └── it does nothing
 ├── convertPricesInNode
 │   ├── it wraps converted prices in marked spans with an accurate tooltip
 │   ├── it reverts precisely, restoring the original text
@@ -10,20 +18,81 @@ ConverterDomTest
 │   │   └── it converts it
 │   ├── given a child also holds a price
 │   │   └── it converts a parent's direct text too
+│   ├── given conversion is switched off
+│   │   └── it does nothing
 │   ├── given rates that cannot be used
 │   │   └── it refuses to convert with empty or stale rates
+│   ├── given no price converts
+│   │   └── it leaves the element alone
+│   ├── given the same price twice in one element
+│   │   └── it converts both from one replacement
+│   ├── given a longer price contains a shorter one
+│   │   └── it replaces the longer one
+│   ├── given two different prices in one text node
+│   │   └── it replaces them in the order they appear
+│   ├── given a converted container gains other content
+│   │   └── the new content is not converted inside it
+│   ├── given a converted span gains other content
+│   │   └── the new content is not converted inside it
+│   ├── given one of our spans is left inside an element being converted
+│   │   └── its text is not replaced again
+│   ├── given text inside a contenteditable region
+│   │   ├── it is left alone
+│   │   └── given it sits under a convertible element
+│   │       └── it is still left alone
+│   ├── given text inside a skipped tag
+│   │   ├── it is left alone
+│   │   └── given it sits under a convertible element
+│   │       └── it is still left alone
+│   └── given text inside a button
+│       ├── it is left alone
+│       └── given it sits under a convertible element
+│           └── it is still left alone
 │   ├── given its own output
-│   │   └── it never re-processes it
+│   │   ├── it never re-processes it
+│   │   ├── given a second pass over an already-converted element
+│   │   │   └── it is skipped
+│   │   └── given a second pass over one of our own spans
+│   │       └── it is skipped
+│   ├── given the settings carry no anchors at all
+│   │   └── it converts without a ratio line
 │   └── given script or style content
 │       └── it skips it
 ├── anchors turn a price into a quantity
 │   ├── it adds a ratio line to the tooltip
 │   └── given no anchors are set
 │       └── it leaves the tooltip alone
+├── weaning withdraws the fiat crutch
+│   ├── given weaning has reached the hidden stage
+│   │   └── it drops the original from the tooltip
+│   └── given weaning is on but has not reached that stage
+│       └── it keeps the original
+├── the held-rate disclosure states its age
+│   ├── given the peg was taken minutes ago
+│   │   └── it says just now
+│   ├── given the peg was taken hours ago
+│   │   └── it says how many hours
+│   ├── given the peg was taken a day ago
+│   │   └── it says one day
+│   ├── given the peg was taken several days ago
+│   │   └── it says how many days
+│   └── given spot has fallen below the peg
+│       └── it signs the gap negative
 ├── copying a converted price yields the fiat
 │   ├── it swaps ZEC back to the original in clipboard text
-│   └── given a selection with no converted price
-│       └── it leaves the selection alone
+│   ├── given a selection with no converted price
+│   │   └── it leaves the selection alone
+│   ├── given nothing is selected
+│   │   └── it leaves the clipboard alone
+│   └── given a span the page created
+│       └── it leaves it alone
+├── reverting
+│   ├── given a span the page created
+│   │   └── it is left alone
+│   ├── given a container that had no title before
+│   │   └── the title is removed rather than emptied
+│   └── given a container that had its own title
+│       └── the title is put back
 ├── hide-fiat mode
 │   ├── it drops the original from the tooltip but keeps the ratio
 │   └── it still gives the fiat back on copy — thinking in ZEC, not unable to pay

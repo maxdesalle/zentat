@@ -74,6 +74,8 @@ WalkerTest
 └── walkPriceElements
     ├── given a root that is not an element or document
     │   └── it returns nothing
+    ├── given the whole document as the root
+    │   └── it collects prices anywhere in it
     ├── given a site adapter declares price containers
     │   ├── it collects the container as a whole
     │   ├── it marks it as a price container

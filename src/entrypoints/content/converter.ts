@@ -2,6 +2,7 @@ import { compareToAnchors, formatComparisons } from '../../lib/anchors';
 import { convertPrice } from '../../lib/conversion/convert';
 import { setPageUnit } from '../../lib/conversion/format';
 import { adapterFor, isWholeReplacement } from '../../lib/detection/adapters';
+import { textOf } from '../../lib/detection/dom';
 import type { ParsedPrice } from '../../lib/detection/parser';
 import { isSkippedTag } from '../../lib/detection/walker';
 import { divergence, type HeldRate } from '../../lib/rates/held';
@@ -285,7 +286,7 @@ function replacePricesInTextNodes(
   // but lives in no single text node. When the element's whole text IS the
   // price, replace at the element level.
   if (!anyReplaced && !directTextOnly) {
-    const trimmed = element.textContent?.trim() ?? '';
+    const trimmed = textOf(element);
     const match = uniqueReplacements.find((r) => r.original === trimmed);
     if (match) {
       rememberContainer(element, element.innerHTML, element.getAttribute('title'));
@@ -310,11 +311,17 @@ function collectTextNodes(element: Element): Text[] {
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement;
+      // The walker is rooted at an Element, so every text node it reaches has
+      // an element parent. Kept because the alternative is a non-null
+      // assertion on a value the DOM types say can be null.
+      /* v8 ignore next */
       if (!parent) return NodeFilter.FILTER_REJECT;
       if (isSkippedTag(parent.tagName)) return NodeFilter.FILTER_REJECT;
       if (parent.isContentEditable) return NodeFilter.FILTER_REJECT;
       if (parent.closest(`.${SPAN_CLASS}`)) return NodeFilter.FILTER_REJECT;
-      if (parent.closest('button, [role="button"]')) return NodeFilter.FILTER_REJECT;
+      // BUTTON is already a skipped tag; this catches the role attribute,
+      // which storefronts use far more than the element.
+      if (parent.closest('[role="button"]')) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
   });
@@ -332,7 +339,9 @@ function replaceInTextNode(
   replacements: Replacement[],
   ctx: ConvertContext,
 ): boolean {
-  const content = tNode.nodeValue || '';
+  // .data rather than textContent: a Text node's data is always a string,
+  // where textContent is typed as nullable for nodes that are not.
+  const content = tNode.data;
   const fragment = document.createDocumentFragment();
   let cursor = 0;
   let replacedAny = false;
@@ -343,11 +352,10 @@ function replaceInTextNode(
     for (const r of replacements) {
       const idx = content.indexOf(r.original, cursor);
       if (idx === -1) continue;
-      if (
-        bestIdx === -1
-        || idx < bestIdx
-        || (idx === bestIdx && best !== null && r.original.length > best.original.length)
-      ) {
+      // Earliest match wins. A tie needs no length rule: `replacements` is
+      // sorted longest-first, so the longer of two matches at the same offset
+      // has already been considered.
+      if (bestIdx === -1 || idx < bestIdx) {
         bestIdx = idx;
         best = r;
       }
@@ -396,6 +404,12 @@ export function installCopyHandler(): () => void {
     // counts disagree, leave the clipboard alone rather than guess.
     const live = Array.from(document.querySelectorAll(`.${SPAN_CLASS}`))
       .filter((el) => range.intersectsNode(el));
+    // Not reachable from happy-dom, whose cloneContents and intersectsNode
+    // agree on every selection this suite can build. Kept because the two are
+    // allowed to disagree at a range boundary in a real browser, and pairing
+    // mismatched lists positionally puts the WRONG price on the clipboard —
+    // which is the one failure here that costs the user money.
+    /* v8 ignore next */
     if (live.length !== clones.length) return;
 
     let replaced = false;
@@ -407,7 +421,7 @@ export function installCopyHandler(): () => void {
     });
     if (!replaced) return;
 
-    event.clipboardData?.setData('text/plain', fragment.textContent ?? '');
+    event.clipboardData?.setData('text/plain', textOf(fragment));
     event.preventDefault();
   };
 

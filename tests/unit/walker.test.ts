@@ -297,6 +297,14 @@ describe('walkPriceElements', () => {
     });
   });
 
+  describe('given the whole document as the root', () => {
+    it('collects prices anywhere in it', () => {
+      // The first pass converts the whole document, not a subtree.
+      render('<p>$19.99</p>');
+      expect(walkPriceElements(document).map((r) => r.text)).toContain('$19.99');
+    });
+  });
+
   describe('given a site adapter declares price containers', () => {
     beforeEach(() => onHost('www.coolblue.nl'));
 
