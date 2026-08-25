@@ -52,87 +52,96 @@ async function doRefresh(force: boolean): Promise<boolean> {
     void browser.runtime.getPlatformInfo?.().catch(() => {});
   }, 20_000);
 
+  // Cleared on both paths explicitly rather than in a `finally`. A leaked
+  // interval holds the service worker awake forever, which is the opposite of
+  // what it is for — and the explicit form makes that impossible to lose in a
+  // refactor.
   try {
-    // Check if refresh is needed
-    if (!force) {
-      const current = await getRates();
-      if (!isRatesStale(current)) {
-        return true;
-      }
-      await sleep(Math.random() * MAX_JITTER_MS);
-    }
-
-    const settings = await getSettings();
-    await setFetchStatus('fetching');
-
-    // If Nym is enabled, retry with different gateways — never fall back to a
-    // direct fetch, which would leak the user's IP to the rate API.
-    if (settings.nymEnabled) {
-      if (!force && Date.now() < (await nymBackoffItem.getValue())) {
-        debug('Nym in backoff window, skipping this cycle');
-        await setFetchStatus('error', 'Nym unavailable, backing off');
-        return false;
-      }
-
-      for (let attempt = 1; attempt <= NYM_MAX_RETRIES; attempt++) {
-        debug(`Nym fetch attempt ${attempt}/${NYM_MAX_RETRIES}`);
-
-        const fetcher = createFetcher({
-          nymEnabled: true,
-          nymTimeoutMs: settings.nymTimeoutMs,
-        });
-
-        const result = await fetchRatesWithRetry(fetcher, {
-          isNym: true,
-          source: settings.rateSource,
-        });
-
-        if (result.success && result.data) {
-          await storeRates(result.data);
-          await nymBackoffItem.setValue(0);
-          debug('Nym fetch succeeded');
-          return true;
-        }
-
-        // Failed - destroy and recreate for new gateway on next attempt
-        if (attempt < NYM_MAX_RETRIES) {
-          debug('Nym failed, destroying for new gateway...');
-          await destroyNymConnection();
-          // Matches the gateway client's own 5s backoff ladder; 2s just retries the
-          // same congested state.
-          await sleep(15_000);
-        }
-      }
-
-      debug('All Nym attempts failed, backing off before next cycle');
-      await nymBackoffItem.setValue(Date.now() + NYM_BACKOFF_MS);
-      await setFetchStatus('error', 'Could not reach rate API through Nym');
-      return false;
-    }
-
-    // Direct fetch (Nym disabled)
-    const fetcher = createFetcher({
-      nymEnabled: false,
-    });
-
-    const result = await fetchRatesWithRetry(fetcher, { source: settings.rateSource });
-
-    if (result.success && result.data) {
-      await storeRates(result.data);
-      return true;
-    }
-
-    await setFetchStatus('error', result.errors.join('; ') || 'Rate fetch failed');
-    return false;
+    const ok = await attemptRefresh(force);
+    clearInterval(keepalive);
+    return ok;
   } catch (error) {
+    clearInterval(keepalive);
     console.error('Zentat: Rate refresh error', error);
     await setFetchStatus('error', error instanceof Error ? error.message : String(error)).catch(
       () => {},
     );
     return false;
-  } finally {
-    clearInterval(keepalive);
   }
+}
+
+async function attemptRefresh(force: boolean): Promise<boolean> {
+  // Check if refresh is needed
+  if (!force) {
+    const current = await getRates();
+    if (!isRatesStale(current)) {
+      return true;
+    }
+    await sleep(Math.random() * MAX_JITTER_MS);
+  }
+
+  const settings = await getSettings();
+  await setFetchStatus('fetching');
+
+  // If Nym is enabled, retry with different gateways — never fall back to a
+  // direct fetch, which would leak the user's IP to the rate API.
+  if (settings.nymEnabled) {
+    if (!force && Date.now() < (await nymBackoffItem.getValue())) {
+      debug('Nym in backoff window, skipping this cycle');
+      await setFetchStatus('error', 'Nym unavailable, backing off');
+      return false;
+    }
+
+    for (let attempt = 1; attempt <= NYM_MAX_RETRIES; attempt++) {
+      debug(`Nym fetch attempt ${attempt}/${NYM_MAX_RETRIES}`);
+
+      const fetcher = createFetcher({
+        nymEnabled: true,
+        nymTimeoutMs: settings.nymTimeoutMs,
+      });
+
+      const result = await fetchRatesWithRetry(fetcher, {
+        isNym: true,
+        source: settings.rateSource,
+      });
+
+      if (result.success && result.data) {
+        await storeRates(result.data);
+        await nymBackoffItem.setValue(0);
+        debug('Nym fetch succeeded');
+        return true;
+      }
+
+      // Failed - destroy and recreate for new gateway on next attempt
+      if (attempt < NYM_MAX_RETRIES) {
+        debug('Nym failed, destroying for new gateway...');
+        await destroyNymConnection();
+        // Matches the gateway client's own 5s backoff ladder; 2s just retries the
+        // same congested state.
+        await sleep(15_000);
+      }
+    }
+
+    debug('All Nym attempts failed, backing off before next cycle');
+    await nymBackoffItem.setValue(Date.now() + NYM_BACKOFF_MS);
+    await setFetchStatus('error', 'Could not reach rate API through Nym');
+    return false;
+  }
+
+  // Direct fetch (Nym disabled)
+  const fetcher = createFetcher({
+    nymEnabled: false,
+  });
+
+  const result = await fetchRatesWithRetry(fetcher, { source: settings.rateSource });
+
+  if (result.success && result.data) {
+    await storeRates(result.data);
+    return true;
+  }
+
+  await setFetchStatus('error', result.errors.join('; ') || 'Rate fetch failed');
+  return false;
 }
 
 // Merge over the existing cache so a partial provider result (Kraken only
