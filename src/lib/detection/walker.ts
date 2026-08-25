@@ -128,9 +128,9 @@ export function isConvertible(el: Element): boolean {
 const MAX_PASS_CHARS = 200_000;
 
 /** A selector's matches within `root`, plus `root` itself when it matches. */
-function selfAndMatching(root: Node, selector: string): Element[] {
-  const within = Array.from((root as Element).querySelectorAll(selector));
-  return root instanceof Element && root.matches(selector) ? [root, ...within] : within;
+function selfAndMatching(root: Element, selector: string): Element[] {
+  const within = Array.from(root.querySelectorAll(selector));
+  return root.matches(selector) ? [root, ...within] : within;
 }
 
 export function walkPriceElements(root: Node): WalkResult[] {
@@ -138,9 +138,10 @@ export function walkPriceElements(root: Node): WalkResult[] {
   let charBudget = MAX_PASS_CHARS;
   const processedElements = new Set<Element>();
 
-  if (!(root instanceof Element || root instanceof Document)) {
-    return results;
-  }
+  // Element only. Every caller passes one — document.body on the first pass,
+  // a mutation's added node after that — and accepting a Document as well
+  // meant carrying a branch no code path could take.
+  if (!(root instanceof Element)) return results;
 
   // One pass over whatever this site's adapter declares as a whole price.
   // Previously this was a hand-written block per site, each with its own
@@ -180,8 +181,8 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // `<span class="price">$19.99</span>` — the price in the added element's
     // own text — had that price skipped entirely: getElementsByTagName and
     // querySelectorAll both look only downwards.
-    ...(root instanceof Element ? [root] : []),
-    ...Array.from((root as Element).getElementsByTagName('*')),
+    root,
+    ...Array.from(root.getElementsByTagName('*')),
     ...shadowRoots.flatMap((shadow) => Array.from(shadow.querySelectorAll('*'))),
   ];
 
