@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { isBetterMatch, parseNumber, parsePrice } from '../../src/lib/detection/parser';
+import {
+  isBetterMatch,
+  overlaps,
+  parseNumber,
+  parsePrice,
+} from '../../src/lib/detection/parser';
 
 // Spec: tests/trees/parser.tree
 // Bugs found in the field live in parser.regressions.test.ts alongside this.
@@ -130,11 +135,71 @@ describe('parseNumber', () => {
     it('returns null for an empty string', () => {
       expect(parseNumber('')).toBe(null);
     });
+
+    describe('given separators with no digits between them', () => {
+      // parseNumber is called on spans a regex already matched, so these
+      // should not arrive. Should-not is not the same as cannot, and the
+      // alternative to returning null is returning NaN into a price.
+      it('returns null for commas alone', () => {
+        expect(parseNumber(',,')).toBe(null);
+        expect(parseNumber(',,.')).toBe(null);
+      });
+
+      it('returns null for dots alone', () => {
+        expect(parseNumber('..')).toBe(null);
+      });
+
+      it('returns null for a mix of both', () => {
+        expect(parseNumber('..,')).toBe(null);
+      });
+
+      it('returns null for a separator followed by letters', () => {
+        expect(parseNumber('a.123')).toBe(null);
+        expect(parseNumber('.abc')).toBe(null);
+      });
+    });
+  });
+});
+
+const span = (startIndex: number, endIndex: number) => ({ startIndex, endIndex });
+
+describe('overlaps', () => {
+  describe('given the spans are disjoint', () => {
+    it('reports no overlap', () => {
+      expect(overlaps(span(0, 3), span(5, 9))).toBe(false);
+      expect(overlaps(span(5, 9), span(0, 3))).toBe(false);
+    });
+  });
+
+  describe('given the candidate starts inside the other', () => {
+    it('reports an overlap', () => {
+      expect(overlaps(span(2, 9), span(0, 5))).toBe(true);
+    });
+  });
+
+  describe('given the candidate ends inside the other', () => {
+    it('reports an overlap', () => {
+      expect(overlaps(span(0, 5), span(2, 9))).toBe(true);
+    });
+  });
+
+  describe('given the candidate contains the other', () => {
+    it('reports an overlap', () => {
+      // Without this case a wider match is added alongside the narrower one it
+      // swallows, and the same digits get converted twice.
+      expect(overlaps(span(0, 12), span(3, 6))).toBe(true);
+    });
+  });
+
+  describe('given the spans merely touch', () => {
+    it('reports no overlap', () => {
+      // "$5$6" is two prices, not one.
+      expect(overlaps(span(2, 4), span(0, 2))).toBe(false);
+    });
   });
 });
 
 describe('isBetterMatch', () => {
-  const span = (startIndex: number, endIndex: number) => ({ startIndex, endIndex });
 
   describe('given the candidate starts earlier', () => {
     it('wins', () => {

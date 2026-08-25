@@ -25,7 +25,11 @@ function usesDotDecimal(lang: string | undefined): boolean {
   let sep = decimalSepCache.get(lang);
   if (sep === undefined) {
     try {
+      // The ?? cannot fire: formatToParts(1.1) yields a decimal part for every
+      // locale that constructs at all, and one that does not construct throws
+      // into the catch below instead.
       sep = new Intl.NumberFormat(lang).formatToParts(1.1)
+        /* v8 ignore next */
         .find((part) => part.type === 'decimal')?.value ?? '.';
     } catch {
       sep = '.';
@@ -33,6 +37,23 @@ function usesDotDecimal(lang: string | undefined): boolean {
     decimalSepCache.set(lang, sep);
   }
   return sep === '.';
+}
+
+/**
+ * Whether two matched spans cover any of the same characters.
+ *
+ * Exported and tested directly for the same reason as isBetterMatch: the
+ * containment case cannot be produced through parsePrice with today's pattern
+ * list, and it is the case that decides whether a wider match silently
+ * duplicates a narrower one already in the results.
+ */
+export function overlaps(
+  a: Pick<ParsedPrice, 'startIndex' | 'endIndex'>,
+  b: Pick<ParsedPrice, 'startIndex' | 'endIndex'>,
+): boolean {
+  return (a.startIndex >= b.startIndex && a.startIndex < b.endIndex)
+    || (a.endIndex > b.startIndex && a.endIndex <= b.endIndex)
+    || (a.startIndex <= b.startIndex && a.endIndex >= b.endIndex);
 }
 
 /**
@@ -118,12 +139,7 @@ export function parsePrice(
         const price = { ...parsed.price, currency };
 
         // Check for overlap with existing results
-        const overlapIndex = results.findIndex(
-          (r) =>
-            (price.startIndex >= r.startIndex && price.startIndex < r.endIndex)
-            || (price.endIndex > r.startIndex && price.endIndex <= r.endIndex)
-            || (price.startIndex <= r.startIndex && price.endIndex >= r.endIndex),
-        );
+        const overlapIndex = results.findIndex((r) => overlaps(price, r));
 
         if (overlapIndex === -1) {
           // No overlap, add new result
@@ -194,6 +210,10 @@ function extractPriceFromMatch(
     }
   }
 
+  // Unreachable: every pattern alternative contains NUM, so a match always
+  // carries a group with digits in it. Kept because the alternative to
+  // returning null here is indexing past the end of the array below.
+  /* v8 ignore next */
   if (numericGroups.length === 0) return null;
 
   // Handle bol.com "X euro en Y cent" format - two separate numeric groups
@@ -210,6 +230,10 @@ function extractPriceFromMatch(
 
   const preferUsDecimal = US_DECIMAL_CURRENCIES.has(pattern.code) && usesDotDecimal(documentLang);
   const amount = parseNumber(numStr, preferUsDecimal);
+  // Also unreachable from the patterns: NUM guarantees digits, so parseNumber
+  // succeeds, and NUM carries no sign, so it cannot be negative. Negative
+  // prices are rejected earlier, at isNegatedAt.
+  /* v8 ignore next */
   if (amount === null || amount < 0) return null;
 
   // Resolve currency - use locale for ambiguous symbols

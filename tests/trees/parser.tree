@@ -30,7 +30,23 @@ ParserTest
 │   │   └── it handles non-English words
 │   └── given input that is not a number
 │       ├── it returns null for letters
-│       └── it returns null for an empty string
+│       ├── it returns null for an empty string
+│       └── given separators with no digits between them
+│           ├── it returns null for commas alone
+│           ├── it returns null for dots alone
+│           ├── it returns null for a mix of both
+│           └── it returns null for a separator followed by letters
+├── overlaps
+│   ├── given the spans are disjoint
+│   │   └── it reports no overlap
+│   ├── given the candidate starts inside the other
+│   │   └── it reports an overlap
+│   ├── given the candidate ends inside the other
+│   │   └── it reports an overlap
+│   ├── given the candidate contains the other
+│   │   └── it reports an overlap
+│   └── given the spans merely touch
+│       └── it reports no overlap
 ├── isBetterMatch
 │   ├── given the candidate starts earlier
 │   │   └── it wins
