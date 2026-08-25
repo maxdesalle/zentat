@@ -34,6 +34,45 @@
           </div>
         </section>
 
+        <section class="section">
+          <h2>Display rate</h2>
+          <p class="section-desc">
+            A rate that changes several times a day is not one you can remember.
+            The held rate moves only when ZEC leaves a band, so the number stays
+            put long enough to be worth learning &mdash; and it is never further
+            from the market than the band you pick.
+          </p>
+          <div class="precision-options">
+            <label class="radio-option">
+              <input type="radio" name="rateMode" value="held" />
+              <span class="radio-label">Held &mdash; never more than 10% from market</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="rateMode" value="spot" />
+              <span class="radio-label">Market rate &mdash; changes throughout the day</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="nym-header">
+            <div class="nym-info">
+              <h2>Wean off fiat</h2>
+              <p class="section-desc">
+                Fades original prices out over about six weeks instead of asking
+                you to quit them in one step. Copying a price still gives you
+                fiat throughout &mdash; the goal is to stop translating, not to
+                be unable to pay.
+              </p>
+              <p class="anchor-hint" id="wean-stage"></p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="weanFromFiat" />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </section>
+
         <section class="section" id="anchors-section">
           <h2>Your price anchors</h2>
           <p class="section-desc">

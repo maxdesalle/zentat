@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { formatZec, formatZecWithSymbol } from '../../src/lib/conversion/format';
+import { afterEach, describe, expect, it } from 'vitest';
+import {
+  clearPageUnit,
+  formatZec,
+  formatZecWithSymbol,
+  setPageUnit,
+} from '../../src/lib/conversion/format';
 
 describe('formatZec', () => {
   describe('with auto precision', () => {
@@ -110,5 +115,34 @@ describe('the display grammar reads like money', () => {
 
   it('never renders a nonzero amount as zero', () => {
     expect(formatZecWithSymbol(0.004, 2)).not.toBe('0.00 ZEC');
+  });
+});
+
+describe('one unit per page', () => {
+  afterEach(() => clearPageUnit());
+
+  it('keeps every price on the same scale', () => {
+    // Without this, a page with a cheap and an expensive item renders one in
+    // zats and one in ZEC — two scales the eye cannot compare.
+    setPageUnit([0.0004, 5]);
+    expect(formatZecWithSymbol(0.0004)).toContain('zats');
+    expect(formatZecWithSymbol(5)).toContain('zats');
+  });
+
+  it('lets the smallest amount decide, because it goes unreadable first', () => {
+    setPageUnit([0.0004, 5]);
+    // 0.0004 ZEC is six decimals of noise; 500,000,000 zats is merely large.
+    expect(formatZecWithSymbol(0.0004)).toBe('40,000 zats');
+  });
+
+  it('stays in ZEC when nothing on the page is tiny', () => {
+    setPageUnit([0.5, 5, 500]);
+    expect(formatZecWithSymbol(0.5)).toContain('ZEC');
+  });
+
+  it('falls back to per-amount choice outside a page', () => {
+    clearPageUnit();
+    expect(formatZecWithSymbol(0.0004)).toContain('zats');
+    expect(formatZecWithSymbol(5)).toContain('ZEC');
   });
 });

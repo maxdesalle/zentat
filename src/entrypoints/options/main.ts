@@ -10,6 +10,7 @@ import {
   type Settings,
   watchSettings,
 } from '../../lib/storage/settings';
+import { daysToNextStage, describeStage, weanStage } from '../../lib/weaning';
 
 const enabledCheckbox = document.getElementById('enabled') as HTMLInputElement;
 const currenciesContainer = document.getElementById('currencies')!;
@@ -22,6 +23,8 @@ const displayModeRadios = () =>
 const displayUnitRadios = () =>
   document.querySelectorAll<HTMLInputElement>('input[name="displayUnit"]');
 const siteModeRadios = () => document.querySelectorAll<HTMLInputElement>('input[name="siteMode"]');
+const weanCheckbox = document.getElementById('weanFromFiat') as HTMLInputElement;
+const weanStageLine = document.getElementById('wean-stage')!;
 const hideFiatCheckbox = document.getElementById('hideFiat') as HTMLInputElement;
 const nymEnabledCheckbox = document.getElementById('nymEnabled') as HTMLInputElement;
 const nymPill = document.getElementById('nym-pill') as HTMLSpanElement;
@@ -207,6 +210,11 @@ function populateForm(settings: Settings) {
   updateSiteListVisibility();
 
   hideFiatCheckbox.checked = settings.hideFiat;
+  weanCheckbox.checked = settings.weanFromFiat;
+  for (const radio of document.querySelectorAll<HTMLInputElement>('input[name="rateMode"]')) {
+    radio.checked = radio.value === settings.rateMode;
+  }
+  renderWeanStage(settings);
   nymEnabledCheckbox.checked = settings.nymEnabled;
 }
 
@@ -257,6 +265,14 @@ function getFormValues(): Partial<Settings> {
     rateSource: rateSourceSelect.value as Settings['rateSource'],
     nymTimeoutMs: parseInt(nymTimeoutSelect.value, 10) || 60000,
     hideFiat: hideFiatCheckbox.checked,
+    weanFromFiat: weanCheckbox.checked,
+    // Starting the clock on the first enable is what makes the schedule mean
+    // anything; re-enabling later must not silently reset progress.
+    weanStartedAt: weanCheckbox.checked
+      ? (lastKnown?.weanStartedAt || Date.now())
+      : (lastKnown?.weanStartedAt ?? 0),
+    rateMode: (document.querySelector<HTMLInputElement>('input[name="rateMode"]:checked')
+      ?.value ?? 'held') as Settings['rateMode'],
     nymEnabled: nymEnabledCheckbox.checked,
   };
 }
@@ -390,4 +406,16 @@ async function renderAnchors(anchors: Anchor[]) {
       + `${direction} ZEC than when you set it — worth a re-look.`;
     anchorDrift.appendChild(line);
   }
+}
+
+function renderWeanStage(settings: Settings) {
+  if (!settings.weanFromFiat || !settings.weanStartedAt) {
+    weanStageLine.textContent = '';
+    return;
+  }
+  const stage = weanStage(settings.weanStartedAt);
+  const days = daysToNextStage(settings.weanStartedAt);
+  weanStageLine.textContent = days === null
+    ? describeStage(stage)
+    : `${describeStage(stage)} Next step in ${days} day${days === 1 ? '' : 's'}.`;
 }

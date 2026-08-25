@@ -2,6 +2,7 @@ import { storage } from 'wxt/utils/storage';
 import { formatZecWithSymbol } from '../../lib/conversion/format';
 import type { NymStatus } from '../../lib/fetch/types';
 import { monthlyPosition } from '../../lib/liabilities';
+import { divergence } from '../../lib/rates/held';
 import {
   getFetchStatus,
   getHeldRate,
@@ -239,6 +240,8 @@ function updateRateDisplay() {
   }
 
   // CoinGecko's terms require visible attribution wherever their data is shown.
+  void renderRateHonesty();
+
   sourceEl.textContent = rates?.source === 'coingecko'
     ? 'Powered by CoinGecko'
     : rates?.source || '--';
@@ -337,4 +340,32 @@ async function renderPosition(settings: Settings, rates: RatesData | null) {
   positionGaps.textContent = unpriced.length > 0
     ? `No rate for ${unpriced.join(', ')} — not counted.`
     : '';
+}
+
+/**
+ * Rate honesty.
+ *
+ * The unit only earns trust if the conversion never lies or hides. So the
+ * popup states which rate is actually being applied, and how far it currently
+ * sits from the market — not only when that gap is large.
+ */
+async function renderRateHonesty(): Promise<void> {
+  const line = document.getElementById('rate-honesty');
+  if (!line || !currentSettings || !currentRates) return;
+
+  if (currentSettings.rateMode === 'spot') {
+    line.textContent = 'Showing the market rate.';
+    return;
+  }
+
+  const held = await getHeldRate();
+  const gap = held ? divergence(held, currentRates) : null;
+  if (gap === null) {
+    line.textContent = 'Held rate — settling on first fetch.';
+    return;
+  }
+
+  const sign = gap >= 0 ? '+' : '';
+  const band = Math.round(currentSettings.heldBand * 100);
+  line.textContent = `Held rate · market ${sign}${(gap * 100).toFixed(1)}% · re-pegs past ${band}%`;
 }

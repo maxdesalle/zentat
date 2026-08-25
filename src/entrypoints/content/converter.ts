@@ -1,10 +1,12 @@
 import { compareToAnchors, formatComparisons } from '../../lib/anchors';
 import { convertPrice } from '../../lib/conversion/convert';
+import { setPageUnit } from '../../lib/conversion/format';
 import type { ParsedPrice } from '../../lib/detection/parser';
 import { bolPriceContainerSet, isSkippedTag } from '../../lib/detection/walker';
 import { divergence, type HeldRate } from '../../lib/rates/held';
 import { isRatesUsable, type RatesData } from '../../lib/storage/rates';
 import type { Settings } from '../../lib/storage/settings';
+import { weanStage } from '../../lib/weaning';
 import { detectPrices } from './detector';
 import { flushObserverRecords } from './state';
 
@@ -50,6 +52,20 @@ export function convertPricesInNode(
   if (!isRatesUsable(rates)) return 0;
 
   const detections = detectPrices(root, settings.currencies);
+
+  // Choose one unit for everything in this pass, so a page never shows one
+  // price in zats beside another in ZEC — two scales the eye cannot compare.
+  setPageUnit(
+    detections.flatMap(({ prices }) =>
+      prices
+        .map((parsed) =>
+          convertPrice(parsed, rates, settings.precision, settings.displayUnit, held)
+        )
+        .filter((result): result is NonNullable<typeof result> => result !== null)
+        .map((result) => result.zecAmount)
+    ),
+  );
+
   let convertedCount = 0;
 
   try {
@@ -153,7 +169,13 @@ function displayText(original: string, formatted: string, settings: Settings): s
 // quantity: the ratio line is what a person can actually remember, because it
 // does not move when the ZEC price does.
 function tooltipFor(original: string, zecAmount: number, ctx: ConvertContext): string {
-  const lines = ctx.settings.hideFiat ? [] : [`Original: ${original}`];
+  const stage = ctx.settings.weanFromFiat
+    ? weanStage(ctx.settings.weanStartedAt)
+    : 'always';
+  // 'delayed' and 'on-demand' are handled by CSS and the Alt-hold peek; only
+  // 'hidden' removes the number from the tooltip entirely.
+  const showFiat = !ctx.settings.hideFiat && stage !== 'hidden';
+  const lines = showFiat ? [`Original: ${original}`] : [];
   const comparison = formatComparisons(
     compareToAnchors(zecAmount, ctx.settings.anchors ?? [], ctx.rates),
   );

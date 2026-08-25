@@ -42,6 +42,17 @@ export interface Settings extends SiteFilterSettings {
   /** The band, and the accuracy bound disclosed to the user. */
   heldBand: number;
   hideFiat: boolean;
+  /**
+   * Fade the original price out of the tooltip over weeks rather than
+   * requiring the user to quit it cold.
+   *
+   * Habituation is the product, so the off-ramp from fiat needs designing as
+   * deliberately as the on-ramp. hideFiat is a cliff most people will not
+   * jump; this is the ramp to it, and it ends by turning hideFiat on.
+   */
+  weanFromFiat: boolean;
+  /** When weaning started, so the schedule is measured from a real date. */
+  weanStartedAt: number;
   nymEnabled: boolean;
   nymTimeoutMs: number;
 }
@@ -67,6 +78,8 @@ export const DEFAULT_SETTINGS: Settings = {
   rateMode: 'held',
   heldBand: 0.1,
   hideFiat: false,
+  weanFromFiat: false,
+  weanStartedAt: 0,
   nymEnabled: false,
   nymTimeoutMs: 60000,
 };

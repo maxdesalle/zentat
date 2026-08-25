@@ -404,3 +404,11 @@ body.preload * {
   font-size: 11.5px;
   color: var(--text-3);
 }
+
+/* The unit only earns trust if the conversion never hides anything. */
+.rate-honesty {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}

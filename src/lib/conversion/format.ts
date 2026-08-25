@@ -13,6 +13,40 @@ export const ZATS_PER_ZEC = 100_000_000;
 // exactly the sub-dime items that fill a shopping page.
 const ZATS_THRESHOLD_ZEC = 0.001;
 
+/**
+ * The unit chosen for a whole page, rather than per price.
+ *
+ * Switching units per amount is locally sensible and globally wrong: a page
+ * with a 0.0004 ZEC item and a 5 ZEC item would render one in zats and one in
+ * ZEC, so the two numbers cannot be compared by eye at all. Consistent
+ * denomination is most of what makes a unit calculable — the medieval public
+ * did not learn to reckon in money by having the unit change under them.
+ *
+ * Null means "decide per amount", which is the right behaviour for a single
+ * conversion outside a page context.
+ */
+let pageUnit: 'zec' | 'zats' | null = null;
+
+/**
+ * Pick one unit for everything about to be rendered together.
+ *
+ * The smallest amount decides, because that is the one that becomes unreadable
+ * first: 0.0004 ZEC is six decimals of noise, while 12,500,000 zats is merely
+ * a large number. Legibility of the worst case beats tidiness of the best.
+ */
+export function setPageUnit(amounts: number[]): void {
+  const positive = amounts.filter((amount) => amount > 0);
+  if (positive.length === 0) {
+    pageUnit = null;
+    return;
+  }
+  pageUnit = Math.min(...positive) < ZATS_THRESHOLD_ZEC ? 'zats' : 'zec';
+}
+
+export function clearPageUnit(): void {
+  pageUnit = null;
+}
+
 // Output honors the user's locale (decimal comma for a German user, etc.) so
 // the extension never writes "1.234" into a page where the site itself uses
 // "." as a thousands separator. Falls back to en-US outside a browser context.
@@ -125,7 +159,11 @@ export function formatZecWithSymbol(
 ): string {
   const absAmount = Math.abs(amount);
 
-  if (unit === 'zats' || (unit === 'auto' && absAmount > 0 && absAmount < ZATS_THRESHOLD_ZEC)) {
+  const auto = unit === 'auto'
+    && absAmount > 0
+    && (pageUnit === null ? absAmount < ZATS_THRESHOLD_ZEC : pageUnit === 'zats');
+
+  if (unit === 'zats' || auto) {
     const zats = amount * ZATS_PER_ZEC;
     const formatted = new Intl.NumberFormat(LOCALE, {
       maximumFractionDigits: Math.abs(zats) < 1 ? 2 : 0,
