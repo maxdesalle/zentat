@@ -19,7 +19,10 @@ export default defineConfig({
         // 0% forever and no test can move that number.
         'src/**/types.ts',
       ],
-      reporter: ['text', 'html'],
+      // json feeds scripts/uncovered-branches.mjs: the text reporter lists
+      // uncovered LINES, which says nothing about a file at 100% lines and 90%
+      // branches — the line ran, one arm of it did not.
+      reporter: ['text', 'html', 'json'],
       // Not a target to drift toward — a gate. A line nobody executes is a
       // line nobody has checked.
       thresholds: {

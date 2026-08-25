@@ -7,6 +7,7 @@ import {
   isNonPriceText,
   isSkippedTag,
   looksConcatenated,
+  textOf,
   walkPriceElements,
 } from '../../src/lib/detection/walker';
 
@@ -67,6 +68,30 @@ describe('isSkippedTag', () => {
   });
 });
 
+describe('textOf', () => {
+  describe('given an element', () => {
+    it('returns its trimmed text', () => {
+      render('<div id="p">  $19.99  </div>');
+      expect(textOf(document.getElementById('p'))).toBe('$19.99');
+    });
+  });
+
+  describe('given a text node', () => {
+    it('returns its trimmed value', () => {
+      expect(textOf(document.createTextNode('  $8  '))).toBe('$8');
+    });
+  });
+
+  describe('given nothing', () => {
+    it('returns an empty string', () => {
+      // querySelector and closest both answer null, and every caller wants a
+      // string it can test a regex against.
+      expect(textOf(null)).toBe('');
+      expect(textOf(undefined)).toBe('');
+    });
+  });
+});
+
 describe('isNonPriceText', () => {
   describe('given text this extension itself produced', () => {
     it('rejects a ZEC amount', () => {
@@ -108,6 +133,7 @@ describe('isNonPriceText', () => {
   describe('given parenthesised text', () => {
     describe('given it holds no currency symbol', () => {
       it('rejects it', () => {
+        expect(isNonPriceText('(2 left)')).toBe(true);
         expect(isNonPriceText('(123 reviews)')).toBe(true);
       });
     });
@@ -426,10 +452,35 @@ describe('walkPriceElements', () => {
     });
   });
 
+  describe('given the same element matches two adapter selectors', () => {
+    it('is collected once', () => {
+      onHost('www.coolblue.nl');
+      const results = walkPriceElements(
+        render('<div data-testid="price" class="sales-price">1.349</div>'),
+      );
+      expect(results).toHaveLength(1);
+    });
+  });
+
+  describe('given an element whose class is not a plain string', () => {
+    it('is still considered', () => {
+      // SVG elements report className as an SVGAnimatedString. Only <svg>
+      // itself is a skipped tag, so its children reach the class check.
+      render('<svg><text id="p" class="price">$19.99</text></svg>');
+      expect(() => walkPriceElements(document.body)).not.toThrow();
+    });
+  });
+
   describe('given text that is not a price', () => {
     it('is skipped', () => {
       expect(textsFrom('<span>Hello world</span>')).toEqual([]);
       expect(textsFrom('<span>4.5 out of 5 stars</span>')).toEqual([]);
+    });
+
+    it('is skipped even when it looks numeric enough to detect', () => {
+      // "10K+ bought" trips the quick pattern on the magnitude suffix and has
+      // to be rejected by the non-price rules further in.
+      expect(textsFrom('<span>10K+ bought</span>')).toEqual([]);
     });
   });
 

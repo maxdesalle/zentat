@@ -47,6 +47,15 @@ export interface WalkResult {
 // Text that looks numeric but is not a price. Never treat the extension's own
 // output ("… ZEC", "… zats") as a price — that is what allowed converted text
 // to be re-parsed and compounded on sites with bare-number patterns.
+/**
+ * textContent is typed `string | null` because Document and DocumentType can
+ * return null. Elements and text nodes never do. One helper rather than a
+ * `?? ''` at every call site, each of which would be its own untested branch.
+ */
+export function textOf(node: Node | null | undefined): string {
+  return node?.textContent?.trim() ?? '';
+}
+
 export function isNonPriceText(text: string): boolean {
   if (/\bZEC\b/.test(text) || /\bzats?\b/i.test(text)) return true;
   if (/out of \d/i.test(text)) return true; // "4.5 out of 5 stars"
@@ -70,7 +79,7 @@ const MAX_CONTROL_TEXT = 40;
 export function isInteractiveControl(el: Element): boolean {
   const control = el.closest(CONTROL_SELECTOR);
   if (!control) return false;
-  const text = control.textContent?.trim() ?? '';
+  const text = textOf(control);
   return text.length <= MAX_CONTROL_TEXT
     && control.getElementsByTagName('*').length <= MAX_CONTROL_DESCENDANTS;
 }
@@ -137,20 +146,20 @@ export function walkPriceElements(root: Node): WalkResult[] {
   // Previously this was a hand-written block per site, each with its own
   // querySelectorAll, its own eligibility checks, and in bol.com's case a
   // module-level WeakSet smuggling a boolean into the converter.
-  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  // A DOM root implies a window: the instanceof check above already proved
+  // this is running in a document.
+  const hostname = window.location.hostname;
   const adapter = adapterFor(hostname);
 
   for (const selector of adapter?.containers ?? []) {
-    for (const container of (root as Element).querySelectorAll?.(selector) ?? []) {
+    for (const container of (root as Element).querySelectorAll(selector)) {
       if (processedElements.has(container)) continue;
       if (!isConvertible(container)) continue;
       if (isExcluded(adapter, container)) continue;
 
       // An adapter's extract() exists for markup no selector can express —
       // an accessible copy of a price that the visible DOM has split up.
-      const text = (adapter?.extract?.(container, { hostname })
-        ?? container.textContent?.trim()
-        ?? '').trim();
+      const text = (adapter?.extract?.(container, { hostname }) ?? textOf(container)).trim();
 
       if (!text || text.length > MAX_PURE_PRICE_LENGTH) continue;
       if (!QUICK_DETECT_PATTERN.test(text) || isNonPriceText(text)) continue;
@@ -166,7 +175,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
     ? collectShadowRoots(root as ParentNode)
     : [];
   const allElements = [
-    ...Array.from((root as Element).getElementsByTagName?.('*') || []),
+    ...Array.from((root as Element).getElementsByTagName('*')),
     ...shadowRoots.flatMap((shadow) => Array.from(shadow.querySelectorAll('*'))),
   ];
 
@@ -221,7 +230,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // split rendering of the same price, not separate prices to defer to.
     let hasMatchingChild = false;
     for (const child of accessible !== null ? [] : element.children) {
-      const childText = child.textContent?.trim() || '';
+      const childText = textOf(child);
       if (
         childText && QUICK_DETECT_PATTERN.test(childText)
         && childText.length <= MAX_PURE_PRICE_LENGTH
@@ -238,7 +247,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
     } else {
       const directText = Array.from(element.childNodes)
         .filter((n) => n.nodeType === Node.TEXT_NODE)
-        .map((n) => n.nodeValue || '')
+        .map((n) => n.textContent ?? '')
         .join(' ');
       const directTrimmed = directText.trim();
       if (
