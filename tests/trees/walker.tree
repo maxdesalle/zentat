@@ -1,0 +1,106 @@
+WalkerTest
+├── isSkippedTag
+│   ├── given a tag that cannot hold a real price
+│   │   └── it is skipped
+│   ├── given a button
+│   │   └── it is skipped
+│   ├── given an ordinary tag
+│   │   └── it is not skipped
+│   └── when the tag arrives lower-cased
+│       └── it is still recognised
+├── isNonPriceText
+│   ├── given text this extension itself produced
+│   │   ├── it rejects a ZEC amount
+│   │   └── it rejects a zats amount
+│   ├── given a rating
+│   │   ├── it rejects an out-of-five score
+│   │   └── it rejects a star count
+│   ├── given a sales or review count
+│   │   └── it rejects it
+│   ├── given a bare number
+│   │   └── it rejects it
+│   ├── given parenthesised text
+│   │   ├── given it holds no currency symbol
+│   │   │   └── it rejects it
+│   │   └── given it holds a currency symbol
+│   │       └── it keeps it
+│   └── given an ordinary price
+│       └── it keeps it
+├── isInteractiveControl
+│   ├── given the element is not inside a control
+│   │   └── it is not a control
+│   ├── given a short control
+│   │   └── it is a control
+│   ├── given a large product tile wrapped in a link
+│   │   └── it is not a control
+│   └── given a control with many descendants
+│       └── it is not a control
+├── looksConcatenated
+│   ├── given a single child
+│   │   └── it is not concatenated
+│   ├── given several children and a long unbroken digit run
+│   │   └── it is concatenated
+│   └── given several children and an ordinary price
+│       └── it is not concatenated
+├── accessiblePriceText
+│   ├── given an aria-label holding a price
+│   │   └── it uses the label
+│   ├── given an aria-label that is not a price
+│   │   └── it ignores the label
+│   ├── given a visually hidden price
+│   │   └── it uses that text
+│   ├── given a visually hidden element that is not a price
+│   │   └── it ignores it
+│   └── given no accessible copy
+│       └── it reports nothing
+├── isConvertible
+│   ├── given a skipped tag
+│   │   └── it is not convertible
+│   ├── given an editable element
+│   │   └── it is not convertible
+│   ├── given a hidden element
+│   │   └── it is not convertible
+│   ├── given a control
+│   │   └── it is not convertible
+│   └── given an ordinary element
+│       └── it is convertible
+└── walkPriceElements
+    ├── given a root that is not an element or document
+    │   └── it returns nothing
+    ├── given a site adapter declares price containers
+    │   ├── it collects the container as a whole
+    │   ├── it marks it as a price container
+    │   ├── it uses the adapter's own extraction when there is one
+    │   ├── given the container sits in an excluded region
+    │   │   └── it is skipped
+    │   ├── given the container is not convertible
+    │   │   └── it is skipped
+    │   ├── given the container holds no price
+    │   │   └── it is skipped
+    │   └── given the container text is too long
+    │       └── it is skipped
+    ├── given a price inside a shadow root
+    │   └── it is collected
+    ├── given an element holding a plain price
+    │   └── it is collected
+    ├── given the accessibility layer holds the canonical price
+    │   ├── it prefers that text
+    │   └── it does not collect the hidden copy separately
+    ├── given an ancestor was already collected
+    │   └── the descendant is skipped
+    ├── given a parent whose direct text holds its own price
+    │   ├── it collects the parent's direct text only
+    │   └── it still collects the child
+    ├── given a parent whose only price is in a child
+    │   └── it collects only the child
+    ├── given text that looks like it lost a separator
+    │   ├── given no accessible copy resolves it
+    │   │   └── it refuses to convert
+    │   └── given an accessible copy resolves it
+    │       └── it converts from the accessible copy
+    ├── given text that is not a price
+    │   └── it is skipped
+    ├── given an empty element
+    │   └── it is skipped
+    └── given the page is enormous
+        └── it stops once the pass budget is spent
