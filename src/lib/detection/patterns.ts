@@ -21,13 +21,15 @@ const MULTIPLIER_WORDS =
   'thousand|trillion|milliard|miliardo|miljard|milione|millón|milhão|miljoen|biljoen|bilhão|billion|million|tausend|duizend|mille|mil';
 const NUM_SUFFIX = String
   .raw`[kKmMbBtT]?(?:[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:${MULTIPLIER_WORDS})\b)?`;
+// The (?!\d) after the group run stops a thousands read from ending mid-number:
+// without it "0.00595" matched as "0.005" and stranded "95" in the DOM.
 // Group separator: comma, dot, space, non-breaking/narrow space, and the Swiss
 // apostrophes ' and ’ (CHF 1'299.00). Deliberately excludes \n and \t so a
 // price and an unrelated number on the next line never join into one amount.
 const SEP = String.raw`[,.'’ \u00A0\u202F]`;
 const INDIAN_NUM = String.raw`\d{1,2}(?:,\d{2})+,\d{3}(?:\.\d{1,2})?`;
 const NUM = String
-  .raw`(${INDIAN_NUM}${NUM_SUFFIX}|\d{1,3}(?:${SEP}\d{3})+(?:[.,]\d{1,2})?${NUM_SUFFIX}|\d+(?:[.,]\d{1,2})?${NUM_SUFFIX})`;
+  .raw`(${INDIAN_NUM}${NUM_SUFFIX}|\d{1,3}(?:${SEP}\d{3})+(?!\d)(?:[.,]\d{1,8})?${NUM_SUFFIX}|\d+(?:[.,]\d{1,8})?${NUM_SUFFIX})`;
 
 // All currency symbols for negative lookahead
 const ALL_SYMBOLS = '[$€£¥₩₹]';

@@ -14,6 +14,27 @@ export interface ParsedPrice {
 // pricing), not a thousands separator.
 const US_DECIMAL_CURRENCIES = new Set(['USD', 'GBP', 'CAD', 'AUD', 'MXN']);
 
+// The gas-style "$3.499" read is only safe on a page that writes decimals with
+// a dot. "$1.500" on an es-AR page is 1500 pesos, and reading it as 1.5 is a
+// 1000x error. Ask ICU rather than keeping a hand-list of locales — es-MX uses
+// a dot while es-AR uses a comma, and a hand-list gets that wrong.
+const decimalSepCache = new Map<string, string>();
+
+function usesDotDecimal(lang: string | undefined): boolean {
+  if (!lang) return true;
+  let sep = decimalSepCache.get(lang);
+  if (sep === undefined) {
+    try {
+      sep = new Intl.NumberFormat(lang).formatToParts(1.1)
+        .find((part) => part.type === 'decimal')?.value ?? '.';
+    } catch {
+      sep = '.';
+    }
+    decimalSepCache.set(lang, sep);
+  }
+  return sep === '.';
+}
+
 export function parsePrice(
   text: string,
   enabledCurrencies: string[],
@@ -130,17 +151,17 @@ export function parsePrice(
   return deduped;
 }
 
-// A match is negated when the nearest non-space character before it is a minus
-// sign that is NOT acting as a range dash. Range dashes ("£10-£20", "10 – 20 €")
-// have a digit or currency symbol on their left; a lone leading minus does not.
+// A minus sign binds tightly to its number: "-$5" is negative, "Basic – $10" is
+// a label separated from a price. Requiring adjacency is what separates the two
+// — the earlier "nearest non-space character" rule swallowed every price in a
+// pricing table, a bullet list, or any "label — price" line.
+const MINUS_SIGNS = new Set(['-', '\u2212', '\u2013', '\u2014']);
+
 function isNegatedAt(text: string, startIndex: number): boolean {
-  const before = text.slice(0, startIndex);
-  const m = before.match(/([^\s\u00A0])[\s\u00A0]*$/);
-  if (!m) return false;
-  const ch = m[1];
-  if (ch !== '-' && ch !== '−' && ch !== '–') return false;
-  const beforeDash = before.slice(0, before.lastIndexOf(ch));
-  return !/[\d$€£¥₩₹][\s\u00A0]*$/.test(beforeDash);
+  const ch = text[startIndex - 1];
+  if (ch === undefined || !MINUS_SIGNS.has(ch)) return false;
+  // A dash with a price on its left is a range ("£10-£20"), not a sign.
+  return !/[\d$€£¥₩₹]$/.test(text.slice(0, startIndex - 1));
 }
 
 interface ExtractedPrice {
@@ -190,7 +211,7 @@ function extractPriceFromMatch(
     numStr = numericGroups[0];
   }
 
-  const preferUsDecimal = US_DECIMAL_CURRENCIES.has(pattern.code);
+  const preferUsDecimal = US_DECIMAL_CURRENCIES.has(pattern.code) && usesDotDecimal(documentLang);
   const amount = parseNumber(numStr, preferUsDecimal);
   if (amount === null || amount < 0) return null;
 
@@ -330,12 +351,14 @@ export function parseNumber(str: string, preferUsDecimal: boolean = false): numb
   // If exactly one separator with exactly 3 digits after it, it's usually a
   // thousand separator — EXCEPT for a dot in a US-decimal currency with a
   // single-digit integer part ("$3.499" gas-style pricing), which reads as a
-  // decimal rather than $3,499.
+  // decimal rather than $3,499. A redundant trailing zero rules that out:
+  // pump prices never end in one, so "$1.500" is EU-formatted 1500.
   if (commaCount + dotCount === 1) {
     const sepIndex = Math.max(lastComma, lastDot);
     const afterSep = cleaned.slice(sepIndex + 1);
     if (afterSep.length === 3 && /^\d{3}$/.test(afterSep)) {
-      const isUsDecimalRead = preferUsDecimal && cleaned[sepIndex] === '.' && sepIndex <= 1;
+      const isUsDecimalRead = preferUsDecimal && cleaned[sepIndex] === '.'
+        && sepIndex <= 1 && !afterSep.endsWith('0');
       if (!isUsDecimalRead) {
         // Single separator with 3 digits = thousand separator
         cleaned = cleaned.replace(/[,.]/, '');
