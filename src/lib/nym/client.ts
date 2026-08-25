@@ -1,7 +1,8 @@
 // Shared Nym client logic - used by both Firefox background and Chrome offscreen document
 
-import { createMixFetch, disconnectMixFetch, type IMixFetch } from '@nymproject/mix-fetch-full-fat';
+import { createMixFetch, disconnectMixFetch, type IMixFetch } from '@nymproject/mix-fetch';
 import { debug } from '../log';
+import { NYM_CLIENT_ID } from './shared';
 import { clearNymDatabases, type NymFetchResult } from './shared';
 
 export type { NymFetchResult } from './shared';
@@ -50,7 +51,21 @@ async function ensureInitialized(): Promise<IMixFetch> {
     return initializingPromise;
   }
 
-  initializingPromise = createMixFetch();
+  // Every one of these is a non-default that the option-less call got wrong.
+  initializingPromise = createMixFetch(
+    {
+      // forceTls defaults to FALSE, which means a plaintext ws:// hop to the
+      // gateway — unacceptable for a transport whose entire purpose is privacy.
+      forceTls: true,
+      // The per-request default is 5 SECONDS, not the 60 the top-level helper
+      // uses. Five seconds over a three-hop mixnet is most of the way to
+      // guaranteeing failure, and it is very likely the bulk of what we have
+      // been reading as flaky gateways.
+      mixFetchOverride: { requestTimeoutMs: 45_000 },
+      // Pins the IndexedDB name so reset logic cannot drift with an SDK default.
+      clientId: NYM_CLIENT_ID,
+    } as Parameters<typeof createMixFetch>[0],
+  );
 
   try {
     mixFetchInstance = await initializingPromise;
@@ -75,7 +90,16 @@ async function ensureInitialized(): Promise<IMixFetch> {
 
 async function attemptFetch(url: string, deadline: number): Promise<NymFetchResult> {
   const instance = await withDeadline(ensureInitialized(), deadline, 'connect');
-  const response = await withDeadline(instance.mixFetch(url, {}), deadline, 'request');
+  // The mixnet client runs its own CORS check inside the WASM. With no mode,
+  // Request defaults to 'cors', the target is cross-origin from
+  // chrome-extension://, and the response is rejected unless it carries an
+  // Access-Control-Allow-Origin matching our extension id — which no public
+  // API will ever send. This is Nym's escape hatch for exactly that.
+  const response = await withDeadline(
+    instance.mixFetch(url, { mode: 'unsafe-ignore-cors' }),
+    deadline,
+    'request',
+  );
 
   // A resolved Response means the mixnet worked, whatever the status code.
   // Nym's docs are explicit: HTTP 4xx/5xx resolve successfully, and rejections

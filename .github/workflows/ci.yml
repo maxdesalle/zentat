@@ -32,10 +32,22 @@ jobs:
 
       # addons-linter refuses to parse any single JS file over 5MB, which is
       # what kept Zentat off AMO. Fail here rather than at submission.
+      # addons-linter refuses to parse any single JS file over 5MB, which is what
+      # kept Zentat off AMO. .wasm is scanned as binary and is exempt at any
+      # size, so the check is deliberately JS-only.
       - name: No oversized JS bundles
         run: |
-          big=$(find .output -name '*.js' -size +5M 2>/dev/null || true)
-          test -z "$big" || { echo "::error::JS file over 5MB: $big"; exit 1; }
+          big=$(find dist -name '*.js' -size +4M 2>/dev/null || true)
+          test -z "$big" || { echo "::error::JS file over 4MB: $big"; exit 1; }
+
+      # The Nym WASM must ship as separate binaries, not inlined into JS. If a
+      # dependency bump silently reverts that, the Firefox listing dies again.
+      - name: Nym WASM ships as separate binaries
+        run: |
+          for f in go_conn.wasm mix_fetch_wasm_bg.wasm; do
+            test -f "dist/firefox-mv2/assets/$f" \
+              || { echo "::error::missing dist/firefox-mv2/assets/$f"; exit 1; }
+          done
 
   e2e:
     runs-on: ubuntu-latest

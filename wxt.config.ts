@@ -1,29 +1,41 @@
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
+
+const require = createRequire(import.meta.url);
+
+/**
+ * mix-fetch's worker resolves its WASM with `new URL('x.wasm', import.meta.url)`.
+ * Vite copies the worker file verbatim without rewriting those, so the two
+ * binaries are never emitted and the build succeeds while failing at the first
+ * real fetch. They have to land in the same output directory as the worker.
+ */
+function nymWasmAssets(): PluginOption {
+  return {
+    name: 'nym-wasm-assets',
+    generateBundle(this: PluginContext) {
+      for (const file of ['mix_fetch_wasm_bg.wasm', 'go_conn.wasm']) {
+        this.emitFile({
+          type: 'asset',
+          fileName: `assets/${file}`,
+          source: readFileSync(require.resolve(`@nymproject/mix-fetch/${file}`)),
+        });
+      }
+    },
+  };
+}
+import type { PluginContext } from 'rollup';
+import type { PluginOption } from 'vite';
 import { defineConfig } from 'wxt';
 
 export default defineConfig({
-  // Firefox ships without the mixnet bundle. addons-linter refuses to parse any
-  // single JS file over 5MB and @nymproject/mix-fetch-full-fat is one 22.9MB
-  // index.js, which is the sole reason this extension has no AMO listing — and
-  // therefore no Firefox Android, the only phone browser that runs extensions.
-  // Aliasing the client to a stub keeps it out of the module graph entirely,
-  // rather than relying on the bundler to prove a branch unreachable.
-  vite: (env) =>
-    env.browser === 'firefox'
-      ? {
-        resolve: {
-          // Array form with a RegExp: Vite matches aliases against the import
-          // specifier, so an absolute-path key misses the relative imports the
-          // entrypoints actually use.
-          alias: [
-            {
-              find: /^.*lib\/nym\/client$/,
-              replacement: resolve('src/lib/nym/client.stub.ts'),
-            },
-          ],
-        },
-      }
-      : {},
+  // Both browsers now carry Nym. The AMO blocker was never the total size —
+  // it is addons-linter's 5MB per-FILE JavaScript parse limit, and the
+  // -full-fat package was one 22.9MB index.js because it base64-inlines the
+  // WASM. The standard package ships the same two binaries as real .wasm files,
+  // which the linter classifies as binary and never parses, so the largest
+  // JavaScript file drops to ~100KB.
+  vite: () => ({ plugins: [nymWasmAssets()] }),
   srcDir: 'src',
   outDir: 'dist',
   manifest: ({ browser }) => ({

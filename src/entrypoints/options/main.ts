@@ -43,13 +43,6 @@ let lastKnown: Settings | null = null;
 let saving = false;
 
 async function init() {
-  // The Firefox build ships no mixnet bundle, so the toggle would be a control
-  // that silently does nothing. Say why rather than leaving it dead.
-  if (import.meta.env.FIREFOX) {
-    const nymSection = document.querySelector('.section-nym');
-    nymSection?.setAttribute('hidden', '');
-  }
-
   // Build currency checkboxes and the display-currency select from the single
   // shared currency list (previously three hardcoded copies drifted apart)
   for (const currency of SUPPORTED_CURRENCIES) {

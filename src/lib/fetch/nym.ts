@@ -3,25 +3,11 @@ import { debug } from '../log';
 import { clearNymDatabases, isAllowedNymUrl, type NymFetchResult } from '../nym/shared';
 import type { Fetcher, FetcherResponse, NymStatus } from './types';
 
-// Detect environment: Firefox has window in background, Chrome needs offscreen
-// Check for Firefox by looking at the manifest version and offscreen API availability
-function detectFirefox(): boolean {
-  // In Firefox MV2, window exists and chrome.offscreen does not
-  // In Chrome MV3, we're in a service worker (no window) OR chrome.offscreen exists
-  if (typeof window === 'undefined') {
-    // Service worker context (Chrome MV3)
-    return false;
-  }
-  // Window exists - check if offscreen API is available
-  if (typeof chrome !== 'undefined' && chrome.offscreen) {
-    // Chrome with offscreen API
-    return false;
-  }
-  // Window exists but no offscreen API - Firefox or older Chrome
-  return true;
-}
-
-const isFirefox = detectFirefox();
+// Build-time, not runtime sniffing. The old detectFirefox() inferred the
+// browser from "window exists AND chrome.offscreen doesn't" — which is also
+// true inside the Chrome offscreen document (it exposes only chrome.runtime),
+// in content scripts, and on Safari.
+const isFirefox = Boolean(import.meta.env.FIREFOX);
 
 // The live status is kept in memory for background-side consumers AND mirrored
 // to storage so the popup/options UI can show the real connection state
@@ -78,11 +64,19 @@ let firefoxClientModule: typeof import('../nym/client') | null = null;
 // ~100KB) and would restore Nym on Firefox. That swap needs bundler wiring and,
 // more importantly, a live mixnet round-trip to verify, so it is deliberately
 // not being made blind. This gets the extension into the store today.
-export const NYM_AVAILABLE = !import.meta.env.FIREFOX;
+// Both builds carry Nym again: the standard package ships its WASM as separate
+// .wasm files (which addons-linter treats as binary and never parses) and loads
+// its worker from a real extension URL rather than a blob: URL, which Firefox
+// MV3 forbids outright. The -full-fat variant failed on both counts.
+export const NYM_AVAILABLE = true;
 
 async function getFirefoxClient() {
-  // The literal guard is what lets the bundler drop the import entirely.
-  if (import.meta.env.FIREFOX) throw new Error('Nym is not included in this build');
+  // Firefox-only by construction. Chrome reaches the client through the
+  // offscreen document instead, and without this guard the dynamic import
+  // below survives into the Chrome service worker — which then parses the
+  // whole Nym bundle on every cold start, for every user, to reach code it
+  // never executes.
+  if (!import.meta.env.FIREFOX) throw new Error('Direct Nym client is Firefox-only');
   if (!firefoxClientModule) {
     firefoxClientModule = await import('../nym/client');
   }
@@ -202,11 +196,21 @@ function createChromeNymFetcher(timeoutMs: number): Fetcher {
       }
       await ensureOffscreenDocument();
 
-      const response = (await chrome.runtime.sendMessage({
-        type: 'nymFetch',
-        url,
-        timeoutMs,
-      })) as NymFetchResult | undefined;
+      let response: NymFetchResult | undefined;
+      try {
+        response = (await chrome.runtime.sendMessage({
+          type: 'nymFetch',
+          url,
+          timeoutMs,
+        })) as NymFetchResult | undefined;
+      } catch (error) {
+        // Tearing the document down under an in-flight message REJECTS the
+        // promise ("message channel closed") rather than resolving undefined,
+        // so the falsy-response branch below never ran and offscreenCreated
+        // stayed true — the next fetch then messaged into a dead context.
+        offscreenCreated = false;
+        throw error instanceof Error ? error : new Error(String(error));
+      }
 
       if (!response) {
         offscreenCreated = false;

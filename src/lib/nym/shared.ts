@@ -50,3 +50,6 @@ export async function clearNymDatabases(): Promise<void> {
     // IndexedDB access might fail, ignore
   }
 }
+
+/** Pins the client's IndexedDB name (stored as `mix-fetch-{clientId}`). */
+export const NYM_CLIENT_ID = 'zentat';
