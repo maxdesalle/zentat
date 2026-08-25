@@ -1,0 +1,35 @@
+Zip321Test
+├── serializeAmount
+│   ├── it never emits grouping separators
+│   ├── it emits at most eight fraction digits and trims trailing zeros
+│   └── given an amount outside what the protocol can express
+│       ├── it refuses a non-positive amount
+│       ├── it refuses more than the supply
+│       ├── it refuses something that is not a number
+│       └── it refuses less than one zatoshi
+├── isShieldedAddress
+│   └── it knows which addresses can carry a memo
+├── encodeMemo
+│   ├── it uses unpadded base64url for memos
+│   └── it refuses a memo over 512 bytes, counting bytes not characters
+├── buildPaymentUri
+│   ├── it encodes a space as %20, never as +
+│   ├── it leaves the address unencoded
+│   ├── it never invents a req- parameter
+│   ├── when a label is given
+│   │   └── it includes the label
+│   ├── given a memo
+│   │   ├── given the address can carry one
+│   │   │   └── it includes the memo
+│   │   ├── given the address cannot carry one
+│   │   │   └── it invalidates the whole request rather than dropping a memo
+│   │   └── given the memo is too long
+│   │       └── it refuses the whole request
+│   ├── given an address that is not a Zcash address
+│   │   └── it refuses
+│   └── given an amount the protocol cannot express
+│       └── it refuses
+└── findAddressesIn
+    ├── it finds addresses already published on the page
+    └── given no address in the text
+        └── it finds nothing
