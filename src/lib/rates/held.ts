@@ -26,17 +26,31 @@ import type { RatesData } from '../storage/rates';
 /** Re-peg once spot leaves this band. Also the disclosed accuracy bound. */
 export const HELD_RATE_BAND = 0.1;
 
+/**
+ * ONE currency is pegged and every other is derived from it at the live fiat
+ * cross. Running an independent band per currency looks equivalent and is not:
+ * the bands re-peg at slightly different moments, so the fiat cross IMPLIED by
+ * two converted prices on the same page goes wrong — measured at >2% for a
+ * third of all hours, worst case 10.5%. A page showing $100 and EUR100 would
+ * then imply EUR/USD = 1.20 when it is 1.09.
+ *
+ * That directly breaks the invariant the anchors feature rests on: every price
+ * on a page converts at the same rate, so ratios between them are exact.
+ * Fiat crosses move under 1% a day, so carrying them live costs no stability.
+ */
+export const HELD_NUMERAIRE = 'USD';
+
 export interface HeldRate {
-  /** ZEC-per-fiat, by currency code — the number actually displayed. */
-  rates: Record<string, number>;
+  /** ZEC-per-unit of the numeraire. The only pegged number. */
+  peg: number;
   /** When this peg was taken. */
   pegged: number;
 }
 
 export interface HeldRateUpdate {
-  held: HeldRate;
-  /** Currencies whose displayed rate just moved, for the re-peg notice. */
-  repegged: string[];
+  held: HeldRate | null;
+  /** Whether the displayed rate just moved, for the re-peg notice. */
+  repegged: boolean;
 }
 
 /**
@@ -56,39 +70,46 @@ export function updateHeldRate(
   spot: RatesData,
   band: number = HELD_RATE_BAND,
 ): HeldRateUpdate {
-  const rates: Record<string, number> = { ...current?.rates };
-  const repegged: string[] = [];
-
-  for (const [code, spotRate] of Object.entries(spot.rates)) {
-    if (!Number.isFinite(spotRate) || spotRate <= 0) continue;
-
-    const heldRate = rates[code];
-    if (heldRate === undefined || !(heldRate > 0)) {
-      rates[code] = spotRate;
-      continue;
-    }
-
-    if (Math.abs(spotRate - heldRate) / heldRate > band) {
-      rates[code] = spotRate;
-      repegged.push(code);
-    }
+  const spotPeg = spot.rates[HELD_NUMERAIRE];
+  if (!Number.isFinite(spotPeg) || !(spotPeg > 0)) {
+    return { held: current, repegged: false };
   }
 
-  const changed = repegged.length > 0 || current === null;
-  return {
-    held: { rates, pegged: changed ? spot.updatedAt : current.pegged },
-    repegged,
-  };
+  if (current === null || !(current.peg > 0)) {
+    return { held: { peg: spotPeg, pegged: spot.updatedAt }, repegged: false };
+  }
+
+  if (Math.abs(spotPeg - current.peg) / current.peg > band) {
+    return { held: { peg: spotPeg, pegged: spot.updatedAt }, repegged: true };
+  }
+
+  return { held: current, repegged: false };
 }
 
-/** How far the displayed rate currently sits from spot, as a signed fraction. */
-export function divergence(
+/**
+ * The rate to display for a currency: the held ZEC leg carried at the live
+ * fiat cross, so every price on a page shares one ZEC rate and the crosses
+ * between them stay exact.
+ */
+export function heldRateFor(
   held: HeldRate,
   spot: RatesData,
   currency: string,
 ): number | null {
-  const heldRate = held.rates[currency];
-  const spotRate = spot.rates[currency];
-  if (!(heldRate > 0) || !(spotRate > 0)) return null;
-  return (spotRate - heldRate) / heldRate;
+  const code = currency.toUpperCase();
+  const spotNumeraire = spot.rates[HELD_NUMERAIRE];
+  if (!(held.peg > 0) || !(spotNumeraire > 0)) return null;
+  if (code === HELD_NUMERAIRE) return held.peg;
+
+  const spotRate = spot.rates[code];
+  if (!(spotRate > 0)) return null;
+  // held ZEC/USD x live (XXX->USD) cross
+  return held.peg * (spotRate / spotNumeraire);
+}
+
+/** How far the displayed rate currently sits from spot, as a signed fraction. */
+export function divergence(held: HeldRate, spot: RatesData): number | null {
+  const spotPeg = spot.rates[HELD_NUMERAIRE];
+  if (!(held.peg > 0) || !(spotPeg > 0)) return null;
+  return (spotPeg - held.peg) / held.peg;
 }

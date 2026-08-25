@@ -111,9 +111,14 @@ describe('fetchRates', () => {
       'api.coingecko.com': { ok: false, status: 429 },
       'api.kraken.com': { ok: true, body: KRAKEN_FIXTURE },
     });
+    // Rotation randomises which provider goes first, so drive it until the
+    // failover path is the one exercised rather than retrying once and hoping.
     let result = await fetchRates(fetcher);
-    // Retry once if rotation happened to start at the healthy provider.
-    if (calls.length === 1) result = await fetchRates(fetcher);
+    for (let attempt = 0; attempt < 20 && calls.length < 2; attempt++) {
+      calls.length = 0;
+      result = await fetchRates(fetcher);
+    }
+    expect(calls.length).toBe(2);
 
     expect(result.success).toBe(true);
     expect(result.data?.source).toBe('kraken');
