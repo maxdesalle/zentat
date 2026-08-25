@@ -1,3 +1,4 @@
+import { textOf } from '../../lib/detection/dom';
 import { qrSvg } from '../../lib/qr';
 import type { RatesData } from '../../lib/storage/rates';
 import { buildPaymentUri, findAddressesIn } from '../../lib/zip321';
@@ -21,7 +22,7 @@ let panel: HTMLElement | null = null;
 
 /** The first Zcash address published anywhere in the page, or null. */
 export function pageAddress(): string | null {
-  const text = document.body?.textContent ?? '';
+  const text = textOf(document.body);
   // Bounded: this runs on arbitrary pages and the scan is a regex over text.
   return findAddressesIn(text.slice(0, 200_000))[0] ?? null;
 }
@@ -79,6 +80,11 @@ export function showPaymentRequest(
   // carry one for markup we can parse explicitly.
   const parsed = new DOMParser().parseFromString(svg, 'image/svg+xml');
   const qrNode = parsed.documentElement;
+  // Unreachable in practice — qrSvg either returns an <svg> or null, and null
+  // was handled above. Kept because the alternative to checking is importing
+  // whatever the parser produced into the page, and a parse guard that is only
+  // correct as long as its input never changes is not a guard at all.
+  /* v8 ignore next */
   if (qrNode.nodeName.toLowerCase() !== 'svg') return false;
   panel.appendChild(document.importNode(qrNode, true));
 

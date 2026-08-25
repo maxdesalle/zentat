@@ -24,6 +24,8 @@ vi.mock('wxt/utils/storage', () => ({
 
 import { SPAN_CLASS } from '../../src/entrypoints/content/markers';
 import {
+  isOwnWrite,
+  isStillInPage,
   startObserver,
   stopObserver,
   updateObserverConfig,
@@ -112,6 +114,87 @@ describe('startObserver', () => {
       document.body.appendChild(document.createElement('p')).textContent = '$800';
       await settle();
       expect(converted()[0]).toContain('2.00');
+    });
+  });
+});
+
+describe('isOwnWrite', () => {
+  describe('given an element inside our span', () => {
+    it('is ours', () => {
+      document.body.innerHTML = `<span class="${SPAN_CLASS}"><b id="b">1 ZEC</b></span>`;
+      expect(isOwnWrite(document.getElementById('b')!)).toBe(true);
+    });
+  });
+
+  describe('given a text node inside our span', () => {
+    it('is ours', () => {
+      // Our own conversion produces characterData records on the text inside
+      // the span we wrote. Replaying them re-detects the ZEC we just wrote.
+      document.body.innerHTML = `<span class="${SPAN_CLASS}">1 ZEC</span>`;
+      expect(isOwnWrite(document.querySelector(`.${SPAN_CLASS}`)!.firstChild!)).toBe(true);
+    });
+  });
+
+  describe('given an element the page owns', () => {
+    it('is not ours', () => {
+      // Too tight in this direction and the page's own update is dropped: the
+      // node then never converts at all.
+      document.body.innerHTML = '<p id="p">$19.99</p>';
+      expect(isOwnWrite(document.getElementById('p')!)).toBe(false);
+    });
+  });
+
+  describe('given a node with no parent element', () => {
+    it('is not ours', () => {
+      expect(isOwnWrite(document.createTextNode('$19.99'))).toBe(false);
+    });
+  });
+});
+
+describe('isStillInPage', () => {
+  describe('given a node in the document', () => {
+    it('is in the page', () => {
+      document.body.innerHTML = '<p id="p">$19.99</p>';
+      expect(isStillInPage(document.getElementById('p')!)).toBe(true);
+    });
+  });
+
+  describe('given a node removed from the document', () => {
+    it('is not in the page', () => {
+      document.body.innerHTML = '<p id="p">$19.99</p>';
+      const p = document.getElementById('p')!;
+      p.remove();
+      expect(isStillInPage(p)).toBe(false);
+    });
+  });
+
+  describe('given a node inside a live shadow tree', () => {
+    it('is in the page', () => {
+      // document.contains() is false for anything in a shadow tree, so a
+      // naive check discards every shadow-hosted price as detached.
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const span = document.createElement('span');
+      host.attachShadow({ mode: 'open' }).appendChild(span);
+      expect(isStillInPage(span)).toBe(true);
+    });
+  });
+
+  describe('given a node inside a detached shadow tree', () => {
+    it('is not in the page', () => {
+      const host = document.createElement('div');
+      const span = document.createElement('span');
+      host.attachShadow({ mode: 'open' }).appendChild(span);
+      expect(isStillInPage(span)).toBe(false);
+    });
+  });
+
+  describe('given a node in a fragment', () => {
+    it('is not in the page', () => {
+      const fragment = document.createDocumentFragment();
+      const p = document.createElement('p');
+      fragment.appendChild(p);
+      expect(isStillInPage(p)).toBe(false);
     });
   });
 });
@@ -210,6 +293,25 @@ describe('reacting to mutations', () => {
     });
   });
 
+  describe('given text changes beside a converted price', () => {
+    it('reverts and re-converts the whole element', async () => {
+      // "Now $800 only" converts to "Now <span>1.00 ZEC</span> only". The page
+      // then edits the surrounding words: the element is still marked, so the
+      // stale conversion has to come out before the fresh pass.
+      const p = document.createElement('p');
+      p.textContent = 'Now $800 only';
+      document.body.appendChild(p);
+      await settle();
+      expect(converted()).toHaveLength(1);
+
+      const tail = Array.from(p.childNodes).find((n) => n.nodeType === Node.TEXT_NODE)!;
+      tail.nodeValue = 'Today ';
+      await settle();
+      expect(p.querySelectorAll(`.${SPAN_CLASS}`)).toHaveLength(1);
+      expect(p.textContent).toContain('Today');
+    });
+  });
+
   describe('given text changes outside any conversion', () => {
     it('converts the element', async () => {
       const p = document.createElement('p');
@@ -247,6 +349,26 @@ describe('reacting to mutations', () => {
       shadow.appendChild(document.createElement('span')).textContent = '$800';
       await settle();
       expect(shadow.querySelector(`.${SPAN_CLASS}`)).not.toBeNull();
+    });
+
+    describe('given the same root is probed again', () => {
+      it('is not observed twice', async () => {
+        // Re-probing after every mutation is the cheap way to catch new
+        // components; observing the same root twice would double every record.
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const shadow = host.attachShadow({ mode: 'open' });
+        await settle();
+
+        // A route change re-probes the whole body, so this shadow root comes
+        // back a second time.
+        history.pushState({}, '', '/again');
+        await settle();
+
+        shadow.appendChild(document.createElement('span')).textContent = '$800';
+        await settle();
+        expect(shadow.querySelectorAll(`.${SPAN_CLASS}`)).toHaveLength(1);
+      });
     });
   });
 });
@@ -375,6 +497,34 @@ describe('SPA route changes', () => {
     it('does the same', async () => {
       await afterRoute(() => window.dispatchEvent(new Event('popstate')));
       expect(converted()[0]).toContain('2.00');
+    });
+  });
+});
+
+describe('after stopping', () => {
+  describe('given records are replayed anyway', () => {
+    it('does nothing', () => {
+      // The drain handler is held by the state module and can fire once more
+      // after teardown; without the config guard it would convert at rates
+      // that are no longer current.
+      startObserver(rates, settings);
+      const p = document.createElement('p');
+      p.textContent = '$800';
+      document.body.appendChild(p);
+      stopObserver();
+      flush();
+      expect(converted()).toHaveLength(0);
+    });
+  });
+
+  describe('given a route change fires anyway', () => {
+    it('does nothing', () => {
+      startObserver(rates, settings);
+      stopObserver();
+      document.body.innerHTML = '<p>$800</p>';
+      window.dispatchEvent(new Event('popstate'));
+      flush();
+      expect(converted()).toHaveLength(0);
     });
   });
 });

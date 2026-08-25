@@ -7,6 +7,26 @@ ObserverTest
 │   │   └── it does not start
 │   └── given it is already running
 │       └── it keeps the same observer and takes the new config
+├── isOwnWrite
+│   ├── given an element inside our span
+│   │   └── it is ours
+│   ├── given a text node inside our span
+│   │   └── it is ours
+│   ├── given an element the page owns
+│   │   └── it is not ours
+│   └── given a node with no parent element
+│       └── it is not ours
+├── isStillInPage
+│   ├── given a node in the document
+│   │   └── it is in the page
+│   ├── given a node removed from the document
+│   │   └── it is not in the page
+│   ├── given a node inside a live shadow tree
+│   │   └── it is in the page
+│   ├── given a node inside a detached shadow tree
+│   │   └── it is not in the page
+│   └── given a node in a fragment
+│       └── it is not in the page
 ├── reacting to mutations
 │   ├── given an element is added
 │   │   └── it converts prices inside it
@@ -22,12 +42,16 @@ ObserverTest
 │   ├── given text changes in a converted element
 │   │   ├── it reverts the stale conversion
 │   │   └── it converts the new text
+│   ├── given text changes beside a converted price
+│   │   └── it reverts and re-converts the whole element
 │   ├── given text changes outside any conversion
 │   │   └── it converts the element
 │   ├── given text changes inside our own span
 │   │   └── it is ignored
 │   └── given a shadow root appears with new content
-│       └── it is observed too
+│       ├── it is observed too
+│       └── given the same root is probed again
+│           └── it is not observed twice
 ├── given the observer was never started
 │   └── it does nothing
 ├── batching
@@ -51,6 +75,11 @@ ObserverTest
 │   │   └── it does the same
 │   └── given the user goes back
 │       └── it does the same
+├── after stopping
+│   ├── given records are replayed anyway
+│   │   └── it does nothing
+│   └── given a route change fires anyway
+│       └── it does nothing
 ├── stopObserver
 │   ├── it disconnects the observer
 │   ├── it restores the history methods it patched

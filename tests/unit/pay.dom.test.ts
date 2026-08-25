@@ -56,6 +56,26 @@ describe('payment requests come from the page, not from us', () => {
     });
   });
 
+  describe('given the amount cannot be expressed as a payment request', () => {
+    it('offers nothing', () => {
+      // ZIP-321 cannot express zero, and a URI a wallet rejects is worse than
+      // no button at all.
+      document.body.innerHTML = `<p>${UA}</p>`;
+      expect(showPaymentRequest(0, '$0.00', spot)).toBe(false);
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    });
+  });
+
+  describe('given the amount is too large to fit a QR', () => {
+    it('offers nothing', () => {
+      // No QR is recoverable; a truncated one is not.
+      document.body.innerHTML = `<p>${UA}</p>`;
+      const huge = 'x'.repeat(4000);
+      expect(showPaymentRequest(0.025, huge, spot)).toBe(false);
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    });
+  });
+
   describe('given a panel is already open', () => {
     it('replaces a previous panel rather than stacking them', () => {
       document.body.innerHTML = `<p>${UA}</p>`;

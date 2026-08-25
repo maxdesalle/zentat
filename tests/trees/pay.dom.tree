@@ -5,6 +5,10 @@ PayDomTest
     │   └── it renders a QR and names the rate when it can
     ├── given the page has no address
     │   └── it offers nothing
+    ├── given the amount cannot be expressed as a payment request
+    │   └── it offers nothing
+    ├── given the amount is too large to fit a QR
+    │   └── it offers nothing
     ├── given a panel is already open
     │   └── it replaces a previous panel rather than stacking them
     └── when the panel is dismissed
