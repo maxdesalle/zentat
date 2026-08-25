@@ -1,0 +1,79 @@
+NymFetcherTest
+├── createNymFetcher
+│   ├── given a URL that is not a rate API
+│   │   ├── it refuses to route it
+│   │   └── it never reaches the transport
+│   └── given a rate API URL
+│       └── it reaches the transport
+├── status
+│   ├── given nothing has happened yet
+│   │   └── it reports disconnected
+│   ├── when a watcher subscribes
+│   │   ├── it is called immediately with the current status
+│   │   └── it is called again on every change
+│   ├── when a watcher unsubscribes
+│   │   └── it stops being called
+│   ├── when the status changes
+│   │   └── it is mirrored to storage for the popup
+│   └── when another context watches the stored status
+│       └── it is called on every change
+├── on Chrome
+│   ├── given no offscreen document exists
+│   │   ├── it creates one
+│   │   └── it reports connecting rather than connected
+│   ├── given an offscreen document already exists
+│   │   └── it does not create a second one
+│   ├── given this context already created the document
+│   │   └── it reuses it without asking the platform again
+│   ├── given the platform cannot report existing contexts
+│   │   └── it tries to create one anyway
+│   ├── given two fetches race the first creation
+│   │   └── it creates exactly one document
+│   ├── given the platform reports a document already exists
+│   │   └── it treats the creation as successful
+│   ├── given creating the document fails
+│   │   ├── it reports an error status
+│   │   └── it rethrows
+│   ├── given the fetch succeeds
+│   │   ├── it reports connected
+│   │   ├── it returns the payload
+│   │   └── it defaults a missing status to 200
+│   ├── given the message channel closes mid-flight
+│   │   ├── it forgets the document so the next fetch recreates it
+│   │   └── it rethrows as an Error
+│   ├── given no response comes back
+│   │   └── it forgets the document so the next fetch recreates it
+│   ├── given the fetch fails but the transport is fine
+│   │   ├── it throws the reported error
+│   │   └── it keeps the document
+│   ├── given the fetch fails fatally
+│   │   ├── it tears the document down
+│   │   └── it reports an error status
+│   ├── destroyNymConnection
+│   │   ├── it closes the document
+│   │   └── it reports disconnected
+│   ├── resetNymConnection
+│   │   └── it forgets the document without closing it
+│   └── resetNymIdentity
+│       ├── it closes the document
+│       └── it clears the stored identity
+└── on Firefox
+    ├── given the fetch succeeds
+    │   ├── it reports connected
+    │   └── it returns the payload
+    ├── given the fetch fails but the transport is fine
+    │   ├── it throws the reported error
+    │   └── it keeps the client
+    ├── given the fetch fails fatally
+    │   ├── it destroys the client
+    │   └── it reports an error status
+    ├── given the build flag disagrees with the selected transport
+    │   └── it refuses to load the direct client
+    ├── given the error carries no message
+    │   └── it throws a generic failure
+    ├── destroyNymConnection
+    │   ├── it reports disconnected
+    │   └── it destroys the client
+    └── resetNymConnection
+        ├── it reports disconnected
+        └── it resets the client
