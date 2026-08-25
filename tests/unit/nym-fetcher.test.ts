@@ -198,11 +198,8 @@ describe('on Chrome', () => {
       // privacy the user does not have.
       const { createNymFetcher, watchNymStatus } = await load(false);
       const seen: string[] = [];
-      installChrome({}).createDocument;
-      (globalThis as { chrome: { offscreen: { createDocument: () => Promise<void> } } })
-        .chrome.offscreen.createDocument = async () => {
-          seen.push('created');
-        };
+      const { createDocument } = installChrome();
+      createDocument.mockImplementation(async () => void seen.push('created'));
       watchNymStatus((s) => seen.push(s));
       const pending = createNymFetcher().fetch(RATE_URL);
       await pending;
