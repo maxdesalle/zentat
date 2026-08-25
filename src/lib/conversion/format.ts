@@ -1,16 +1,33 @@
-export type Precision = 'auto' | number;
+// 'coarse' rounds to the digits the rate can actually justify. At ZEC's daily
+// volatility the third and fourth significant figures are noise, so "0.1204 ZEC"
+// claims a precision the rate does not have — and a number nobody can remember.
+// Memorable, honest numbers are the point: a unit of account you cannot recall
+// is a conversion widget.
+export type Precision = 'auto' | 'coarse' | number;
 export type DisplayUnit = 'auto' | 'zec' | 'zats';
 
 export const ZATS_PER_ZEC = 100_000_000;
 // In 'auto' unit mode, amounts below this render in zats for readability
-const ZATS_THRESHOLD_ZEC = 0.0001;
+// Below this, decimals stop being scannable ("0.000423") and zats read better.
+// Raised from 0.0001, which left an unreadable six-decimal band populated by
+// exactly the sub-dime items that fill a shopping page.
+const ZATS_THRESHOLD_ZEC = 0.001;
 
 // Output honors the user's locale (decimal comma for a German user, etc.) so
 // the extension never writes "1.234" into a page where the site itself uses
 // "." as a thousands separator. Falls back to en-US outside a browser context.
-const LOCALE = typeof navigator !== 'undefined' && navigator.language
+let LOCALE = typeof navigator !== 'undefined' && navigator.language
   ? navigator.language
   : 'en-US';
+
+/**
+ * Render in the page's locale rather than the browser's. A US user on a German
+ * shop parses "1.234,56 €" under German rules and would then read the result
+ * under US ones — the meaning of "." flipping mid-sentence.
+ */
+export function setDisplayLocale(locale: string | undefined): void {
+  if (locale) LOCALE = locale;
+}
 
 function formatFixed(amount: number, decimals: number): string {
   return new Intl.NumberFormat(LOCALE, {
@@ -37,6 +54,9 @@ function formatFixed(amount: number, decimals: number): string {
  * - 0.00001  → "0.00001000"
  */
 export function formatZec(amount: number, precision: Precision = 'auto'): string {
+  if (precision === 'coarse') {
+    return new Intl.NumberFormat(LOCALE, { maximumSignificantDigits: 2 }).format(amount);
+  }
   if (precision !== 'auto') {
     const roundsToZero = amount !== 0 && Math.abs(amount) < Math.pow(10, -precision) / 2;
     if (!roundsToZero) {
@@ -89,6 +109,15 @@ export function formatZec(amount: number, precision: Precision = 'auto'): string
  *   user chose a fixed precision, which is honored with full grouped digits
  * - Everything else: formatZec + " ZEC"
  */
+/** Significant figures a currency amount should show at a given magnitude. */
+function decimalsFor(abs: number): number {
+  if (abs >= 1_000) return 0;
+  if (abs >= 100) return 1;
+  if (abs >= 1) return 2;
+  if (abs >= 0.01) return 4;
+  return 5;
+}
+
 export function formatZecWithSymbol(
   amount: number,
   precision: Precision = 'auto',
@@ -96,7 +125,6 @@ export function formatZecWithSymbol(
 ): string {
   const absAmount = Math.abs(amount);
 
-  // Sub-unit display for small amounts
   if (unit === 'zats' || (unit === 'auto' && absAmount > 0 && absAmount < ZATS_THRESHOLD_ZEC)) {
     const zats = amount * ZATS_PER_ZEC;
     const formatted = new Intl.NumberFormat(LOCALE, {
@@ -105,25 +133,24 @@ export function formatZecWithSymbol(
     return `${formatted} zats`;
   }
 
-  if (absAmount >= 1_000) {
-    if (precision !== 'auto') {
-      // Honor the user's fixed precision with full grouped digits
-      const formatted = new Intl.NumberFormat(LOCALE, {
-        minimumFractionDigits: precision,
-        maximumFractionDigits: precision,
-      }).format(amount);
-      return `${formatted} ZEC`;
-    }
-    // Compact notation picks the unit after rounding, so 999,999,999 promotes
-    // to "1B" instead of "1000M"
-    const compact = new Intl.NumberFormat(LOCALE, {
-      notation: 'compact',
-      compactDisplay: 'short',
-      maximumSignificantDigits: 4,
+  if (precision === 'coarse') {
+    // Two significant figures, and an explicit "about" so the number is not
+    // mistaken for a precise quote.
+    const formatted = new Intl.NumberFormat(LOCALE, {
+      maximumSignificantDigits: 2,
     }).format(amount);
-    return `${compact} ZEC`;
+    return `≈${formatted} ZEC`;
   }
 
-  // Standard format for smaller amounts
-  return `${formatZec(amount, precision)} ZEC`;
+  // Grouped digits, never compact notation. No currency prices anything as
+  // "1.235M" — and at four significant figures that rounding silently discards
+  // hundreds of ZEC from a large amount.
+  const decimals = precision === 'auto' ? decimalsFor(absAmount) : precision;
+  const roundsToZero = amount !== 0 && Math.abs(amount) < Math.pow(10, -decimals) / 2;
+  const formatted = new Intl.NumberFormat(LOCALE, {
+    minimumFractionDigits: roundsToZero ? undefined : decimals,
+    maximumFractionDigits: roundsToZero ? 8 : decimals,
+    ...(roundsToZero ? { maximumSignificantDigits: 4 } : {}),
+  }).format(amount);
+  return `${formatted} ZEC`;
 }

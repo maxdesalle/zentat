@@ -1,3 +1,4 @@
+import { setDisplayLocale } from '../../lib/conversion/format';
 import { getRates, type RatesData, watchRates } from '../../lib/storage/rates';
 import {
   getSettings,
@@ -19,6 +20,8 @@ export default defineContentScript({
   runAt: 'document_start',
 
   async main() {
+    // Render in the page's locale, the same one the parser reads prices under.
+    setDisplayLocale(document.documentElement.lang || undefined);
     try {
       // Load cached data (no network requests are ever made from this context)
       const [rates, settings] = await Promise.all([getRates(), getSettings()]);

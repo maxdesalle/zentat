@@ -49,11 +49,11 @@ describe('convertPricesInNode', () => {
     expect(span).not.toBeNull();
     expect(span!.getAttribute('title')).toBe('Original: $19.99');
     // Pin the number, not just the unit: $19.99 x 0.00125 = 0.0249875 ZEC.
-    expect(span!.textContent).toBe('0.02499 ZEC');
+    expect(span!.textContent).toBe('0.0250 ZEC');
     // The tooltip must show the ORIGINAL fiat price, not the converted value
     expect(span!.getAttribute('title')).toBe('Original: $19.99');
     // Pin the number, not just the unit: $19.99 x 0.00125 = 0.0249875 ZEC.
-    expect(span!.textContent).toBe('0.02499 ZEC');
+    expect(span!.textContent).toBe('0.0250 ZEC');
     expect(span!.textContent).toContain('ZEC');
     expect(span!.textContent).not.toContain('$19.99');
     // Surrounding text and structure survive
@@ -76,7 +76,7 @@ describe('convertPricesInNode', () => {
     document.body.innerHTML = '<p>$19.99</p>';
     convertPricesInNode(document.body, freshRates(), settings({ displayMode: 'append' }));
     const span = document.querySelector(`.${SPAN_CLASS}`)!;
-    expect(span.textContent).toBe('$19.99 (0.02499 ZEC)');
+    expect(span.textContent).toBe('$19.99 (0.0250 ZEC)');
   });
 
   it('never rewrites prices inside buttons', () => {

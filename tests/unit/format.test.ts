@@ -49,20 +49,21 @@ describe('formatZec', () => {
 
 describe('formatZecWithSymbol', () => {
   it('appends ZEC suffix for small amounts', () => {
-    expect(formatZecWithSymbol(100)).toBe('100.00 ZEC');
-    expect(formatZecWithSymbol(0.001234)).toBe('0.001234 ZEC');
+    expect(formatZecWithSymbol(100)).toBe('100.0 ZEC');
+    expect(formatZecWithSymbol(0.001234)).toBe('0.00123 ZEC');
   });
 
   it('uses compact notation for large amounts', () => {
-    expect(formatZecWithSymbol(27150)).toBe('27.15K ZEC');
-    expect(formatZecWithSymbol(1234567)).toBe('1.235M ZEC');
-    expect(formatZecWithSymbol(1234567890)).toBe('1.235B ZEC');
-    expect(formatZecWithSymbol(1234567890000)).toBe('1.235T ZEC');
+    // Grouped digits, not compact notation — no currency prices as "27.15K".
+    expect(formatZecWithSymbol(27150)).toBe('27,150 ZEC');
+    expect(formatZecWithSymbol(1234567)).toBe('1,234,567 ZEC');
+    expect(formatZecWithSymbol(1234567890)).toBe('1,234,567,890 ZEC');
+    expect(formatZecWithSymbol(1234567890000)).toBe('1,234,567,890,000 ZEC');
   });
 
   it('promotes across unit boundaries after rounding', () => {
     // 999,999,999 must round to "1B", never "1000M"
-    expect(formatZecWithSymbol(999_999_999)).toBe('1B ZEC');
+    expect(formatZecWithSymbol(999_999_999)).toBe('999,999,999 ZEC');
   });
 
   it('honors fixed precision for large amounts instead of compact units', () => {
@@ -76,10 +77,38 @@ describe('formatZecWithSymbol', () => {
   });
 
   it('respects an explicit ZEC-only unit', () => {
-    expect(formatZecWithSymbol(0.00005, 'auto', 'zec')).toBe('0.00005000 ZEC');
+    expect(formatZecWithSymbol(0.00005, 'auto', 'zec')).toBe('0.00005 ZEC');
   });
 
   it('respects an explicit zats unit', () => {
     expect(formatZecWithSymbol(0.5, 'auto', 'zats')).toBe('50,000,000 zats');
+  });
+});
+
+describe('the display grammar reads like money', () => {
+  it('groups large amounts instead of compacting them', () => {
+    // Compact notation at 4 significant figures silently discards 433 ZEC here.
+    expect(formatZecWithSymbol(1_234_567)).toBe('1,234,567 ZEC');
+  });
+
+  it('shows the digits that matter at each magnitude', () => {
+    expect(formatZecWithSymbol(27_150)).toBe('27,150 ZEC');
+    expect(formatZecWithSymbol(271.5)).toBe('271.5 ZEC');
+    expect(formatZecWithSymbol(4.2314)).toBe('4.23 ZEC');
+    expect(formatZecWithSymbol(0.4231)).toBe('0.4231 ZEC');
+    expect(formatZecWithSymbol(0.00423)).toBe('0.00423 ZEC');
+  });
+
+  it('switches to zats before decimals stop being scannable', () => {
+    expect(formatZecWithSymbol(0.0004231)).toBe('42,310 zats');
+  });
+
+  it('coarse mode is honest about what the rate can support', () => {
+    expect(formatZecWithSymbol(0.1204, 'coarse')).toBe('≈0.12 ZEC');
+    expect(formatZecWithSymbol(4.2314, 'coarse')).toBe('≈4.2 ZEC');
+  });
+
+  it('never renders a nonzero amount as zero', () => {
+    expect(formatZecWithSymbol(0.004, 2)).not.toBe('0.00 ZEC');
   });
 });
