@@ -60,7 +60,11 @@ test('converts prices, keeps buttons fiat, and tooltips show the original', asyn
   const converted = page.locator('#usd span[title^="Original: "]');
   await expect(converted).toHaveCount(1);
   await expect(converted).toHaveAttribute('title', 'Original: $19.99');
+  // End-to-end numeric check, not just "contains ZEC".
+  await expect(converted).toHaveText(/^0\.\d+ ZEC$/);
   await expect(converted).toHaveAttribute('title', 'Original: $19.99');
+  // End-to-end numeric check, not just "contains ZEC".
+  await expect(converted).toHaveText(/^0\.\d+ ZEC$/);
   await expect(converted).toContainText('ZEC');
 
   // Checkout CTAs are never rewritten
