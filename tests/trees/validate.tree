@@ -1,0 +1,15 @@
+ValidateTest
+└── validateRates
+    ├── given a quote inside the plausible range
+    │   └── it accepts a normal quote
+    ├── given a quote outside the plausible range
+    │   ├── it rejects values outside any plausible ZEC price
+    │   └── it rejects a decimal shift
+    ├── given one currency is bad
+    │   └── it keeps the good currencies
+    ├── given the same rejection keeps arriving
+    │   └── it gives in after three consecutive rejections so a real crash is not locked out
+    ├── given the baseline is stale
+    │   └── it does not apply a delta guard against it
+    └── given there is no baseline
+        └── it accepts anything on a first run

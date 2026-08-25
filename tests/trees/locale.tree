@@ -1,0 +1,15 @@
+LocaleTest
+├── inferCurrencyFromHostname
+│   ├── given a single-part country TLD
+│   │   └── it maps single TLDs
+│   ├── given a two-part country TLD
+│   │   └── it maps two-part TLDs
+│   └── given a TLD it does not know
+│       └── it returns null for unknown TLDs
+└── resolveAmbiguousSymbol
+    ├── given a dollar sign
+    │   └── it resolves $ by TLD
+    ├── given a yen sign
+    │   └── it resolves ¥ by TLD and page language
+    └── given a symbol that means one thing
+        └── it returns null for unambiguous symbols

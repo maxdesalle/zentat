@@ -1,0 +1,19 @@
+WeaningTest
+├── weanStage
+│   ├── given the first week
+│   │   └── it starts by changing nothing
+│   ├── given later weeks
+│   │   └── it moves through the stages on schedule
+│   ├── given weaning was never started
+│   │   └── it does nothing
+│   └── given a clock that went backwards
+│       └── it is not fooled
+├── daysToNextStage
+│   ├── given a stage still ahead
+│   │   └── it says how long until the next step
+│   ├── given the last stage is reached
+│   │   └── it stops counting
+│   └── given weaning was never started
+│       └── it says nothing
+└── describeStage
+    └── it describes every stage
