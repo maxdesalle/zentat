@@ -1,13 +1,10 @@
 // Offscreen document for Nym mixnet fetching (Chrome only)
 // This runs in a context with `window` available
 
-import { nymFetch, type NymFetchResult } from '../../lib/nym/client';
+import { nymFetch } from '../../lib/nym/client';
+import { isAllowedNymUrl, type NymFetchRequest, type NymFetchResult } from '../../lib/nym/shared';
 
-interface NymFetchRequest {
-  type: 'nymFetch';
-  url: string;
-  timeoutMs: number;
-}
+const DEFAULT_TIMEOUT_MS = 60000;
 
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener(
@@ -16,10 +13,18 @@ chrome.runtime.onMessage.addListener(
       return;
     }
 
-    const msg = message as NymFetchRequest;
+    const msg = message as Partial<NymFetchRequest>;
 
     if (msg.type === 'nymFetch') {
-      nymFetch(msg.url, msg.timeoutMs)
+      if (typeof msg.url !== 'string' || !isAllowedNymUrl(msg.url)) {
+        sendResponse({ success: false, error: 'Invalid or disallowed URL' });
+        return;
+      }
+      const timeoutMs = typeof msg.timeoutMs === 'number' && msg.timeoutMs > 0
+        ? msg.timeoutMs
+        : DEFAULT_TIMEOUT_MS;
+
+      nymFetch(msg.url, timeoutMs)
         .then(sendResponse)
         .catch((error) => {
           sendResponse({
@@ -29,5 +34,5 @@ chrome.runtime.onMessage.addListener(
         });
       return true; // Keep channel open for async response
     }
-  }
+  },
 );

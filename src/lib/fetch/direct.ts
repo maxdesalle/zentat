@@ -11,6 +11,11 @@ export function createDirectFetcher(timeoutMs: number = DEFAULT_TIMEOUT_MS): Fet
       try {
         const response = await fetch(url, {
           ...init,
+          // Hardened defaults placed AFTER the init spread so callers can
+          // never weaken them: no cookies, no referrer, no shared HTTP cache.
+          credentials: 'omit',
+          referrerPolicy: 'no-referrer',
+          cache: 'no-store',
           signal: controller.signal,
         });
 

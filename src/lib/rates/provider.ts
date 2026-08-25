@@ -4,11 +4,27 @@ import { fetchFromCoinGecko } from './coingecko';
 import { fetchFromKraken } from './kraken';
 
 export type RateProvider = (fetcher: Fetcher) => Promise<RatesData>;
+export type RateSource = 'auto' | 'coingecko' | 'kraken';
 
-const providers: { name: string; fetch: RateProvider }[] = [
-  { name: 'CoinGecko', fetch: fetchFromCoinGecko },
-  { name: 'Kraken', fetch: fetchFromKraken },
+const ALL_PROVIDERS: { name: string; key: RateSource; fetch: RateProvider }[] = [
+  { name: 'CoinGecko', key: 'coingecko', fetch: fetchFromCoinGecko },
+  { name: 'Kraken', key: 'kraken', fetch: fetchFromKraken },
 ];
+
+/**
+ * Start from a different provider each call.
+ *
+ * A fixed order meant the first provider saw ~100% of every user's requests and
+ * therefore their complete refresh cadence — a per-IP record of when the
+ * extension is running. Alternating splits that between operators so neither
+ * holds the whole pattern, and it costs one line. Failover still tries all of
+ * them, so reliability is unchanged.
+ */
+function rotate<T>(items: T[]): T[] {
+  if (items.length < 2) return items;
+  const start = Math.floor(Math.random() * items.length);
+  return [...items.slice(start), ...items.slice(0, start)];
+}
 
 export interface FetchResult {
   success: boolean;
@@ -16,8 +32,14 @@ export interface FetchResult {
   errors: string[];
 }
 
-export async function fetchRates(fetcher: Fetcher): Promise<FetchResult> {
+export async function fetchRates(
+  fetcher: Fetcher,
+  source: RateSource = 'auto',
+): Promise<FetchResult> {
   const errors: string[] = [];
+  const providers = source === 'auto'
+    ? rotate(ALL_PROVIDERS)
+    : ALL_PROVIDERS.filter((p) => p.key === source);
 
   for (const provider of providers) {
     try {
@@ -37,18 +59,19 @@ export async function fetchRates(fetcher: Fetcher): Promise<FetchResult> {
 export interface RetryOptions {
   maxRetries?: number;
   isNym?: boolean;
+  source?: RateSource;
 }
 
 export async function fetchRatesWithRetry(
   fetcher: Fetcher,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): Promise<FetchResult> {
   // Fewer retries for Nym since it's already slow
   const maxRetries = options.maxRetries ?? (options.isNym ? 1 : 2);
   let lastResult: FetchResult = { success: false, errors: [] };
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    lastResult = await fetchRates(fetcher);
+    lastResult = await fetchRates(fetcher, options.source ?? 'auto');
     if (lastResult.success) {
       return lastResult;
     }

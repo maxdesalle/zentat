@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # A second lockfile means the artifact we ship and the artifact CI
+      # validates can resolve different dependency trees. npm is the source of
+      # truth because AMO reviewers rebuild with `npm ci`.
+      - name: Single lockfile
+        run: |
+          test ! -f bun.lock -a ! -f yarn.lock -a ! -f pnpm-lock.yaml \
+            || { echo "::error::More than one lockfile is present"; exit 1; }
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx dprint check
+      # Unit tests plus the golden corpus: saved markup shapes from real sites,
+      # which is the only thing that pins detection against the actual web.
+      - run: npm run test -- --run
+      - run: npm run build
+      - run: npm run build:firefox
+
+      # addons-linter refuses to parse any single JS file over 5MB, which is
+      # what kept Zentat off AMO. Fail here rather than at submission.
+      # addons-linter refuses to parse any single JS file over 5MB, which is what
+      # kept Zentat off AMO. .wasm is scanned as binary and is exempt at any
+      # size, so the check is deliberately JS-only.
+      - name: No oversized JS bundles
+        run: |
+          big=$(find dist -name '*.js' -size +4M 2>/dev/null || true)
+          test -z "$big" || { echo "::error::JS file over 4MB: $big"; exit 1; }
+
+      # The Nym WASM must ship as separate binaries, not inlined into JS. If a
+      # dependency bump silently reverts that, the Firefox listing dies again.
+      - name: Nym WASM ships as separate binaries
+        run: |
+          for f in go_conn.wasm mix_fetch_wasm_bg.wasm; do
+            test -f "dist/firefox-mv2/assets/$f" \
+              || { echo "::error::missing dist/firefox-mv2/assets/$f"; exit 1; }
+          done
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: xvfb-run -a npm run test:e2e

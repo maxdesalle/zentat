@@ -8,16 +8,33 @@ export interface CurrencyPattern {
   regex: RegExp;
   // Optional: restrict this pattern to specific hostnames
   hostnames?: string[];
+  /**
+   * Only run inside an element the site adapter marked as a price container.
+   * Set on any pattern that matches a bare number with no currency evidence.
+   */
+  requiresPriceContainer?: boolean;
 }
 
 // Number pattern: 1,234.56 or 1.234,56 or 1234.56 or 69k or 2.5M or 150B or 2T
-// Supports k/K (thousand), m/M (million), B (billion), T (trillion) suffixes
+// Supports k/K (thousand), m/M (million), b/B (billion), t/T (trillion) suffixes
 // Also supports spelled-out multipliers in multiple languages
-// First alternation requires thousand separators (+ not *), second handles plain numbers
-// Note: \s doesn't match non-breaking space (\u00A0), so we explicitly include it
-const MULTIPLIER_WORDS = 'thousand|million|billion|trillion|mille|tausend|duizend|mil|millón|milhão|milione|miljoen|milliard|miljard|miliardo|bilhão|biljoen';
-const NUM_SUFFIX = String.raw`[kKmMBT]?(?:[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:${MULTIPLIER_WORDS}))?`;
-const NUM = String.raw`(\d{1,3}(?:[,.\s\u00A0]\d{3})+(?:[.,]\d{1,2})?${NUM_SUFFIX}|\d+(?:[.,]\d{1,2})?${NUM_SUFFIX})`;
+// First alternation handles Indian lakh/crore grouping (1,00,000), the second
+// requires thousand separators (+ not *), the third handles plain numbers
+// Ordered longest-first and bounded with \b so e.g. "miljoen" is never
+// captured as its prefix "mil" (which would be off by a factor of 1000)
+const MULTIPLIER_WORDS =
+  'thousand|trillion|milliard|miliardo|miljard|milione|millón|milhão|miljoen|biljoen|bilhão|billion|million|tausend|duizend|mille|mil';
+const NUM_SUFFIX = String
+  .raw`[kKmMbBtT]?(?:[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:${MULTIPLIER_WORDS})\b)?`;
+// The (?!\d) after the group run stops a thousands read from ending mid-number:
+// without it "0.00595" matched as "0.005" and stranded "95" in the DOM.
+// Group separator: comma, dot, space, non-breaking/narrow space, and the Swiss
+// apostrophes ' and ’ (CHF 1'299.00). Deliberately excludes \n and \t so a
+// price and an unrelated number on the next line never join into one amount.
+const SEP = String.raw`[,.'’ \u00A0\u202F]`;
+const INDIAN_NUM = String.raw`\d{1,2}(?:,\d{2})+,\d{3}(?:\.\d{1,2})?`;
+const NUM = String
+  .raw`(${INDIAN_NUM}${NUM_SUFFIX}|\d{1,3}(?:${SEP}\d{3})+(?!\d)(?:[.,]\d{1,8})?${NUM_SUFFIX}|\d+(?:[.,]\d{1,8})?${NUM_SUFFIX})`;
 
 // All currency symbols for negative lookahead
 const ALL_SYMBOLS = '[$€£¥₩₹]';
@@ -31,7 +48,8 @@ function buildPattern(symbols: string[], code: string): RegExp {
   // 3. CODE + number: USD 19.99, EUR 1299 (but NOT "EUR €300" where symbol follows)
   // 4. number + CODE: 19.99 USD, 1299 EUR
   // Note: Pattern 3 uses negative lookahead to avoid matching "EUR €300,000" where the symbol-based pattern should take precedence
-  const pattern = String.raw`(?:(?:\b${code}\b\s*)?(${escapedSymbols})\s*${NUM}|${NUM}\s*(${escapedSymbols})|(?:^|\s)\b(${code})\b\s*(?!${ALL_SYMBOLS})${NUM}|${NUM}\s*\b(${code})\b)`;
+  const pattern = String
+    .raw`(?:(?:\b${code}\b\s*)?(${escapedSymbols})\s*${NUM}|${NUM}\s*(${escapedSymbols})|(?:^|\s)\b(${code})\b\s*(?!${ALL_SYMBOLS})${NUM}|${NUM}\s*\b(${code})\b)`;
   return new RegExp(pattern, 'gi');
 }
 
@@ -42,17 +60,28 @@ function escapeRegex(str: string): string {
 // European price format: "339,-" or "1.299,-" (whole number with ,- suffix)
 // Handles whitespace/newlines between parts: "339 , -" or "339\n,\n-"
 // Matches regular hyphen (U+002D), EN DASH (U+2013), and EM DASH (U+2014)
-const EUR_DASH_PATTERN = /(\d{1,3}(?:\.\d{3})*)\s*,\s*[\u002D\u2013\u2014]/g;
+const EUR_DASH_PATTERN = /(\d{1,3}(?:\.\d{3})*)\s*,\s*[-–—]/g;
 
 // Dutch/Belgian format: "247,11 excl. btw" or "247,11 incl. btw"
 const EUR_BTW_PATTERN = /(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)\s*(?:excl|incl)\.?\s*btw/gi;
 
 // Dutch format: "149 euro" or "'149' euro" or "'149' euro en '00' cent" (bol.com)
 // Captures full bol.com accessibility format with optional cents part
-const EUR_WORD_PATTERN = /['"]?(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)['"]?\s*euro(?:\s+en\s+['"]?(\d{1,2})['"]?\s*cent)?/gi;
+const EUR_WORD_PATTERN =
+  /['"]?(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)['"]?\s*euro(?:\s+en\s+['"]?(\d{1,2})['"]?\s*cent)?/gi;
 
 // Bol.com decimal format: "149,00" or "53,95" (plain decimal, no symbol)
 // Only safe on bol.com where we know all prices are EUR
+// Bare-number patterns are a false-positive generator by construction: a
+// number with no currency evidence is as likely to be a screen resolution, a
+// battery capacity or a clock speed as a price. A hostname allowlist does not
+// change that — it only says WHICH page the wrong answer appears on.
+//
+// So these are marked, and the walker requires positional evidence before
+// running them: the element must sit inside something the site's adapter has
+// identified as a price container. That replaces "trust every number on this
+// host" with "trust numbers in these nodes on this host", which is the actual
+// claim we can support.
 const BOL_DECIMAL_PATTERN = /\b(\d{1,3}(?:\.\d{3})*,\d{2})\b/g;
 
 // Coolblue whole number format: "1.349" or "899" (no decimal, uses . as thousand separator)
@@ -60,7 +89,13 @@ const BOL_DECIMAL_PATTERN = /\b(\d{1,3}(?:\.\d{3})*,\d{2})\b/g;
 const COOLBLUE_WHOLE_PATTERN = /\b(\d{1,3}(?:\.\d{3})+)\b/g;
 
 // Sites that use EUR with regional price formats (no € symbol)
-const EUR_REGIONAL_SITES = ['coolblue.nl', 'coolblue.be', 'bol.com', 'mediamarkt.nl', 'mediamarkt.be'];
+const EUR_REGIONAL_SITES = [
+  'coolblue.nl',
+  'coolblue.be',
+  'bol.com',
+  'mediamarkt.nl',
+  'mediamarkt.be',
+];
 
 export const CURRENCY_PATTERNS: CurrencyPattern[] = [
   { code: 'USD', symbols: ['$', 'US$'], regex: buildPattern(['$', 'US$'], 'USD') },
@@ -73,9 +108,21 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
   // Dutch "euro" word format (e.g., "149 euro", "53,95 euro")
   { code: 'EUR', symbols: ['euro'], regex: EUR_WORD_PATTERN, hostnames: EUR_REGIONAL_SITES },
   // Bol.com plain decimal format (e.g., "149,00", "53,95") - very restricted
-  { code: 'EUR', symbols: [], regex: BOL_DECIMAL_PATTERN, hostnames: ['bol.com'] },
+  {
+    code: 'EUR',
+    symbols: [],
+    regex: BOL_DECIMAL_PATTERN,
+    hostnames: ['bol.com'],
+    requiresPriceContainer: true,
+  },
   // Coolblue whole number format (e.g., "1.349", "899") - thousand separator with no decimal
-  { code: 'EUR', symbols: [], regex: COOLBLUE_WHOLE_PATTERN, hostnames: ['coolblue.nl', 'coolblue.be'] },
+  {
+    code: 'EUR',
+    symbols: [],
+    regex: COOLBLUE_WHOLE_PATTERN,
+    requiresPriceContainer: true,
+    hostnames: ['coolblue.nl', 'coolblue.be'],
+  },
   { code: 'GBP', symbols: ['£'], regex: buildPattern(['£'], 'GBP') },
   { code: 'JPY', symbols: ['¥', '円'], regex: buildPattern(['¥', '円'], 'JPY') },
   { code: 'CAD', symbols: ['C$', 'CA$'], regex: buildPattern(['C$', 'CA$'], 'CAD') },
@@ -95,5 +142,5 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
 // Also matches European thousand-separator format like "1.349" (used on Coolblue)
 // Multilingual multiplier words: EN, FR, DE, NL, ES, PT, IT
 // Note: \d.*btw requires a number before "btw" to avoid matching labels like "BTW (V.A.T.)"
-export const QUICK_DETECT_PATTERN = /[$€£¥₩₹][\s\u00A0]*\d|\d[\s\u00A0]*[$€£¥₩₹]|(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\d,-|\d[.,\s\u00A0]*(?:excl|incl)\.?\s*btw\b|\beuro\b|\d,\d{2}\b|\d\.\d{3}\b|\d[kKmMBT]\b|\d[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:thousand|million|billion|trillion|mille|tausend|duizend|mil|millón|milhão|milione|miljoen|milliard|miljard|miliardo|bilhão|biljoen)\b/i;
-
+export const QUICK_DETECT_PATTERN =
+  /[$€£¥₩₹][\s\u00A0]*\d|\d[\s\u00A0]*[$€£¥₩₹]|(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\d,-|\d[.,\s\u00A0]*(?:excl|incl)\.?\s*btw\b|\beuro\b|\d,\d{2}\b|\d\.\d{3}\b|\d[kKmMbBtT]\b|\d[\s\u00A0]+(?:hundred[\s\u00A0]+)?(?:thousand|million|billion|trillion|mille|tausend|duizend|mil|millón|milhão|milione|miljoen|milliard|miljard|miliardo|bilhão|biljoen)\b/i;

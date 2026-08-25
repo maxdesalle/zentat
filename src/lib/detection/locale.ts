@@ -50,10 +50,26 @@ export function inferCurrencyFromHostname(hostname: string): string | null {
   return null;
 }
 
-// For ambiguous symbols like "$", resolve based on context
-// Returns null for non-ambiguous symbols so pattern.code is preserved
-export function resolveAmbiguousSymbol(symbol: string, hostname: string): string | null {
+// Candidate currencies for symbols shared by several of them. Exported so the
+// parser can fall back to another candidate when the locale-resolved currency
+// is disabled (e.g. "$" on a .mx site resolves to MXN, but if the user only
+// enabled USD we convert as USD rather than dropping the price entirely).
+export const AMBIGUOUS_SYMBOLS: Record<string, string[]> = {
+  $: ['USD', 'CAD', 'AUD', 'MXN'],
+  '¥': ['JPY', 'CNY'],
+};
+
+// For ambiguous symbols like "$", resolve based on context.
+// `documentLang` is the page's html[lang], used to tell zh (CNY) from ja (JPY)
+// on generic TLDs. Returns null for non-ambiguous symbols so pattern.code is
+// preserved.
+export function resolveAmbiguousSymbol(
+  symbol: string,
+  hostname: string,
+  documentLang?: string,
+): string | null {
   const inferredCurrency = inferCurrencyFromHostname(hostname);
+  const lang = (documentLang || '').toLowerCase();
 
   if (symbol === '$') {
     // $ could be USD, CAD, AUD, MXN, etc.
@@ -66,6 +82,8 @@ export function resolveAmbiguousSymbol(symbol: string, hostname: string): string
   if (symbol === '¥') {
     // ¥ could be JPY or CNY
     if (inferredCurrency === 'CNY') return 'CNY';
+    if (inferredCurrency === 'JPY') return 'JPY';
+    if (lang.startsWith('zh')) return 'CNY';
     return 'JPY'; // Default
   }
 

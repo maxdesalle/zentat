@@ -3,18 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
     <title>Zentat</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
-  <body>
+  <body class="preload">
     <div class="popup">
       <header class="header">
-        <h1 class="title">Zentat</h1>
+        <div class="header-text">
+          <h1 class="title">Zentat</h1>
+          <p class="subtitle" id="state-line">Converting prices · <kbd>Alt+Z</kbd></p>
+        </div>
         <label class="toggle">
-          <input type="checkbox" id="enabled" />
+          <input type="checkbox" id="enabled" checked aria-label="Convert prices to ZEC" />
           <span class="slider"></span>
         </label>
       </header>
+
+      <div class="site-row" id="site-row" hidden>
+        <span class="site-name" id="site-name"></span>
+        <button id="site-toggle" class="btn btn-small"></button>
+      </div>
 
       <div class="rate-section">
         <div class="rate-row">
@@ -35,46 +44,28 @@
           <span id="updated">--</span>
           <span class="nym-status" id="nym-status"></span>
         </div>
+        <div class="rate-honesty" id="rate-honesty"></div>
+        <p class="status-line" id="status-line" hidden></p>
       </div>
 
-      <div class="site-filter-section">
-        <button class="site-filter-toggle" id="site-filter-toggle">
-          <span>Site Filtering</span>
-          <span class="toggle-icon" id="toggle-icon">▼</span>
-        </button>
-        <div class="site-filter-content" id="site-filter-content">
-          <div class="site-mode">
-            <label class="radio-option">
-              <input type="radio" name="siteMode" value="blocklist" />
-              <span class="radio-label">Everywhere except blocked</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="siteMode" value="allowlist" />
-              <span class="radio-label">Only on allowed sites</span>
-            </label>
-          </div>
-          <div class="site-lists">
-            <div class="site-list" id="blocklist-container">
-              <textarea
-                id="blockedSites"
-                placeholder="Blocked sites (one per line)&#10;example.com"
-                rows="3"
-              ></textarea>
-            </div>
-            <div class="site-list" id="allowlist-container">
-              <textarea
-                id="allowedSites"
-                placeholder="Allowed sites (one per line)&#10;amazon.com"
-                rows="3"
-              ></textarea>
-            </div>
-          </div>
+
+      <section class="position" id="position" hidden>
+        <div class="position-head">
+          <span class="position-label" data-i18n="popupYourMonth">Your month</span>
+          <span class="position-net" id="position-net">--</span>
         </div>
-      </div>
+        <div class="position-detail">
+          <span id="position-in">--</span>
+          <span class="separator">·</span>
+          <span id="position-out">--</span>
+        </div>
+        <p class="position-gaps" id="position-gaps" hidden></p>
+      </section>
 
       <div class="actions">
-        <button id="refresh" class="btn btn-secondary">Refresh</button>
-        <button id="options" class="btn btn-primary">Options</button>
+        <button id="refresh" class="btn btn-secondary" data-i18n="popupRefresh">Refresh</button>
+        <button id="practice" class="btn btn-secondary" data-i18n="popupPractice">Practice</button>
+        <button id="options" class="btn btn-primary" data-i18n="popupOptions">Options</button>
       </div>
     </div>
     <script type="module" src="./main.ts"></script>

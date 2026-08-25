@@ -1,13 +1,15 @@
+import { CURRENCY_CODES } from '../currencies';
 import type { Fetcher } from '../fetch';
 import type { RatesData } from '../storage/rates';
 
 const COINGECKO_API = 'https://api.coingecko.com/api/v3/simple/price';
-const SUPPORTED_CURRENCIES = ['usd', 'eur', 'gbp', 'jpy', 'cad', 'aud', 'chf', 'cny', 'krw', 'inr', 'brl', 'mxn'];
 
 export async function fetchFromCoinGecko(fetcher: Fetcher): Promise<RatesData> {
   const params = new URLSearchParams({
     ids: 'zcash',
-    vs_currencies: SUPPORTED_CURRENCIES.join(','),
+    // Always request the full supported list (never the user's selection) so
+    // the request reveals nothing about the user's configuration.
+    vs_currencies: CURRENCY_CODES.map((c) => c.toLowerCase()).join(','),
   });
 
   const response = await fetcher.fetch(`${COINGECKO_API}?${params}`);

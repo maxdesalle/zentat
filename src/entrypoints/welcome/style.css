@@ -1,0 +1,255 @@
+/* Onboarding shares the extension's tokens; kept local so the welcome page has
+   no runtime dependency on the popup or options stylesheets. */
+:root {
+  --zec: #f4b728;
+  --bg: #0f0f10;
+  --card: #1a1a1c;
+  --card-2: #242427;
+  --line: #2e2e32;
+  --text: #f5f5f7;
+  --text-2: #9a9aa1;
+  --text-3: #6a6a71;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #faf9f7;
+    --card: #ffffff;
+    --card-2: #f2f1ee;
+    --line: #e2e0dc;
+    --text: #17171a;
+    --text-2: #5c5c66;
+    --text-3: #83838d;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage {
+  width: 100%;
+  max-width: 560px;
+}
+
+.screen {
+  display: none;
+}
+
+.screen.is-active {
+  display: block;
+  animation: rise 220ms ease-out;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen.is-active {
+    animation: none;
+  }
+}
+
+.headline {
+  margin: 0 0 12px;
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  margin: 0 0 20px;
+  color: var(--text-2);
+}
+
+.fine {
+  margin: 0 0 24px;
+  padding-inline-start: 12px;
+  border-inline-start: 2px solid var(--line);
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+/* The demo is the pitch: one product, one before, one after. */
+.demo {
+  margin: 0 0 22px;
+  padding: 22px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.demo-product {
+  color: var(--text-3);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.demo-price {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.demo-fiat {
+  color: var(--text-3);
+  text-decoration: line-through;
+  font-size: 20px;
+}
+
+.demo-arrow {
+  color: var(--text-3);
+}
+
+.demo-zec {
+  font-size: 30px;
+  font-weight: 650;
+  color: var(--zec);
+}
+
+.demo-zec.is-pending {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.currency-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.currency-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.currency-choice span {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.currency-choice[aria-checked="true"] {
+  border-color: var(--zec);
+  background: color-mix(in srgb, var(--zec) 12%, transparent);
+}
+
+.tips {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tips li {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  gap: 12px;
+  align-items: start;
+  color: var(--text-2);
+}
+
+kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.tip-icon {
+  color: var(--zec);
+}
+
+.warn {
+  margin: 0 0 24px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border-inline-start: 3px solid var(--zec);
+  background: color-mix(in srgb, var(--zec) 10%, transparent);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--zec);
+  color: #1a1400;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--text-2);
+}
+
+.btn:focus-visible,
+.currency-choice:focus-visible,
+.dot:focus-visible {
+  outline: 2px solid var(--zec);
+  outline-offset: 2px;
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 32px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line);
+  cursor: pointer;
+}
+
+.dot.is-on {
+  background: var(--zec);
+}

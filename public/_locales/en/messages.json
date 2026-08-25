@@ -1,0 +1,130 @@
+{
+  "extName": {
+    "message": "Zentat",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "Convert fiat prices to ZEC inline",
+    "description": "Store description"
+  },
+  "popupConverting": {
+    "message": "Converting prices"
+  },
+  "popupPaused": {
+    "message": "Paused"
+  },
+  "popupDisableHere": {
+    "message": "Turn off on $SITE$",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupEnableHere": {
+    "message": "Turn on for $SITE$",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupRefresh": {
+    "message": "Refresh"
+  },
+  "popupPractice": {
+    "message": "Practice"
+  },
+  "popupOptions": {
+    "message": "Options"
+  },
+  "popupYourMonth": {
+    "message": "Your month"
+  },
+  "popupNoRate": {
+    "message": "No rate yet"
+  },
+  "rateHeld": {
+    "message": "Held rate"
+  },
+  "rateMarket": {
+    "message": "Showing the market rate."
+  },
+  "rateOriginal": {
+    "message": "Original: $PRICE$",
+    "placeholders": {
+      "price": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsTitle": {
+    "message": "Zentat Options"
+  },
+  "optionsDisplayRate": {
+    "message": "Display rate"
+  },
+  "optionsHeldOption": {
+    "message": "Held — never more than 10% from market"
+  },
+  "optionsSpotOption": {
+    "message": "Market rate — changes throughout the day"
+  },
+  "optionsWeanTitle": {
+    "message": "Wean off fiat"
+  },
+  "optionsHideFiat": {
+    "message": "Hide fiat"
+  },
+  "optionsAnchors": {
+    "message": "Your price anchors"
+  },
+  "optionsCurrencies": {
+    "message": "Currencies"
+  },
+  "optionsSaved": {
+    "message": "Saved"
+  },
+  "welcomeHeadline": {
+    "message": "Prices, in ZEC."
+  },
+  "welcomeContinue": {
+    "message": "Continue"
+  },
+  "welcomeSkip": {
+    "message": "Skip"
+  },
+  "welcomeWhereShop": {
+    "message": "Where do you shop?"
+  },
+  "welcomeReady": {
+    "message": "You're set."
+  },
+  "welcomeTryIt": {
+    "message": "Open a store and try it"
+  },
+  "trainingTitle": {
+    "message": "How much is that in ZEC?"
+  },
+  "trainingGuessLabel": {
+    "message": "Your guess, in ZEC"
+  },
+  "trainingCheck": {
+    "message": "Check"
+  },
+  "trainingNext": {
+    "message": "Next"
+  },
+  "trainingSpotOn": {
+    "message": "Spot on"
+  },
+  "trainingClose": {
+    "message": "Close"
+  },
+  "trainingInRegion": {
+    "message": "In the region"
+  },
+  "trainingWayOff": {
+    "message": "Way off"
+  }
+}

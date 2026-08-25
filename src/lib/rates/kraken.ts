@@ -8,7 +8,9 @@ interface KrakenResponse {
 
 const KRAKEN_API = 'https://api.kraken.com/0/public/Ticker';
 
-// Kraken trading pairs for ZEC
+// Kraken trading pairs for ZEC. Note Kraken only lists USD/EUR pairs for ZEC,
+// so this provider covers a subset of the supported currencies — the caller
+// merges its result over the existing cache rather than replacing it.
 const KRAKEN_PAIRS: Record<string, string> = {
   USD: 'ZECUSD',
   EUR: 'ZECEUR',
@@ -30,15 +32,18 @@ export async function fetchFromKraken(fetcher: Fetcher): Promise<RatesData> {
 
   const rates: Record<string, number> = {};
 
-  for (const [currency, pair] of Object.entries(KRAKEN_PAIRS)) {
-    // Kraken uses different key formats, try both
-    const tickerData = data.result?.[pair] || data.result?.[`X${pair}`];
-    if (tickerData) {
-      // 'c' is the last trade closed [price, lot volume]
-      const price = parseFloat(tickerData.c[0]);
-      if (price > 0) {
-        rates[currency] = 1 / price;
-      }
+  // Kraken renames pairs in responses using X/Z asset-class prefixes: a request
+  // for ZECUSD comes back keyed "XZECZUSD". Match keys structurally (contains
+  // ZEC + ends with the quote currency) instead of guessing exact key names.
+  for (const [key, tickerData] of Object.entries(data.result ?? {})) {
+    if (!key.includes('ZEC')) continue;
+    const currency = Object.keys(KRAKEN_PAIRS).find((c) => key.endsWith(c));
+    if (!currency || rates[currency] !== undefined) continue;
+
+    // 'c' is the last trade closed [price, lot volume]
+    const price = parseFloat(tickerData.c?.[0]);
+    if (price > 0) {
+      rates[currency] = 1 / price;
     }
   }
 
