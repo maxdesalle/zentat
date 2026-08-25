@@ -100,6 +100,10 @@ async function init() {
 
   refreshBtn.addEventListener('click', onRefreshClick);
 
+  document.getElementById('practice')!.addEventListener('click', () => {
+    void browser.tabs.create({ url: browser.runtime.getURL('/training.html') });
+  });
+
   optionsBtn.addEventListener('click', () => {
     browser.runtime.openOptionsPage();
   });

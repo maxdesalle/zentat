@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zentat — Practice</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <header class="head">
+        <h1 class="title">How much is that in ZEC?</h1>
+        <p class="lede">
+          Guess before you look. Getting the rough size right is the skill —
+          you are not being marked on decimal places.
+        </p>
+      </header>
+
+      <section class="card" id="card">
+        <div class="item">
+          <span class="item-emoji" id="item-emoji" aria-hidden="true">☕</span>
+          <span class="item-label" id="item-label">a coffee</span>
+          <span class="item-price" id="item-price">$4.00</span>
+        </div>
+
+        <form class="guess" id="guess-form">
+          <label class="guess-label" for="guess">Your guess, in ZEC</label>
+          <div class="guess-row">
+            <input
+              type="number"
+              id="guess"
+              step="any"
+              min="0"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="0.005"
+              required
+            />
+            <button type="submit" class="btn btn-primary" id="submit">Check</button>
+          </div>
+        </form>
+
+        <div class="result" id="result" hidden aria-live="polite">
+          <p class="verdict" id="verdict"></p>
+          <p class="truth" id="truth"></p>
+          <button type="button" class="btn btn-primary" id="next">Next</button>
+        </div>
+      </section>
+
+      <section class="scoreline" id="scoreline" hidden>
+        <span><strong id="stat-accuracy">--</strong> average</span>
+        <span class="separator">·</span>
+        <span><strong id="stat-streak">0</strong> in a row</span>
+        <span class="separator">·</span>
+        <span><strong id="stat-attempts">0</strong> tried</span>
+      </section>
+
+      <p class="rate-note" id="rate-note"></p>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

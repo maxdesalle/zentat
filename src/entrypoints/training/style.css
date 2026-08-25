@@ -1,0 +1,175 @@
+:root {
+  --zec: #f4b728;
+  --bg: #0f0f10;
+  --card: #1a1a1c;
+  --card-2: #242427;
+  --line: #2e2e32;
+  --text: #f5f5f7;
+  --text-2: #9a9aa1;
+  --text-3: #6a6a71;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #faf9f7;
+    --card: #ffffff;
+    --card-2: #f2f1ee;
+    --line: #e2e0dc;
+    --text: #17171a;
+    --text-2: #5c5c66;
+    --text-3: #83838d;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage {
+  width: 100%;
+  max-width: 460px;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  margin: 0 0 24px;
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.card {
+  padding: 24px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+
+.item-emoji {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.item-label {
+  font-size: 16px;
+}
+
+.item-price {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.guess-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 6px;
+}
+
+.guess-row {
+  display: flex;
+  gap: 8px;
+}
+
+#guess {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--zec);
+  color: #1a1400;
+}
+
+.btn:focus-visible,
+#guess:focus-visible {
+  outline: 2px solid var(--zec);
+  outline-offset: 2px;
+}
+
+.verdict {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* The real answer is the point of the exercise, so it gets the accent. */
+.truth {
+  margin: 0 0 18px;
+  color: var(--zec);
+  font-size: 15px;
+}
+
+.scoreline {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.scoreline strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.separator {
+  margin: 0 6px;
+  color: var(--line);
+}
+
+.rate-note {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card {
+    transition: border-color 150ms ease-out;
+  }
+}
