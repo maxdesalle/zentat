@@ -1,0 +1,32 @@
+HeldTest
+├── updateHeldRate
+│   ├── given no peg yet
+│   │   └── it pegs on first sight
+│   ├── given spot moves inside the band
+│   │   └── it ignores movement inside the band
+│   ├── given spot leaves the band
+│   │   └── it re-pegs once spot leaves the band, in either direction
+│   ├── given a relentless trend
+│   │   └── it never drifts further from spot than the disclosed bound
+│   ├── given a garbage quote
+│   │   └── it ignores a garbage quote rather than pegging to it
+│   ├── given the stored peg is itself unusable
+│   │   └── it pegs afresh
+│   └── when a band is given
+│       └── it uses that band instead of the default
+├── heldRateFor
+│   ├── it keeps the fiat cross between two prices exact
+│   ├── it returns the peg itself for the numeraire
+│   ├── it is case-insensitive about currency codes
+│   ├── given a currency with no spot rate
+│   │   └── it returns null
+│   ├── given the peg is unusable
+│   │   └── it returns null
+│   └── given spot has no rate for the numeraire
+│       └── it returns null
+└── divergence
+    ├── it reports the signed gap from spot
+    ├── given the peg is unusable
+    │   └── it returns null
+    └── given spot has no rate for the numeraire
+        └── it returns null
