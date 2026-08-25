@@ -7,8 +7,8 @@
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
-    "build": "node scripts/verify-nym-wasm.mjs && wxt build",
-    "build:firefox": "node scripts/verify-nym-wasm.mjs && wxt build -b firefox",
+    "build": "node scripts/verify-vendored.mjs && wxt build",
+    "build:firefox": "node scripts/verify-vendored.mjs && wxt build -b firefox",
     "zip": "wxt clean && wxt zip",
     "zip:firefox": "wxt clean && wxt zip -b firefox",
     "postinstall": "wxt prepare",
@@ -16,10 +16,11 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "clean": "wxt clean",
-    "verify:nym": "node scripts/verify-nym-wasm.mjs"
+    "verify:vendored": "node scripts/verify-vendored.mjs"
   },
   "dependencies": {
     "@nymproject/mix-fetch": "1.4.4",
+    "qrcode-generator": "2.0.4",
     "webextension-polyfill": "^0.12.0"
   },
   "devDependencies": {
