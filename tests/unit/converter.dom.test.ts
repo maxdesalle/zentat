@@ -262,3 +262,58 @@ describe('the held rate reaches the page', () => {
     expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('0.1250 ZEC');
   });
 });
+
+describe('a site adapter that replaces the whole container', () => {
+  /** happy-dom lets the hostname be set directly; the adapters key off it. */
+  function onHost(hostname: string) {
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, hostname },
+      writable: true,
+      configurable: true,
+    });
+  }
+
+  it('replaces a bol.com price container', () => {
+    // The price on screen is aria-hidden fragments; the real one is an
+    // absolutely-positioned span holding a sentence. There is nothing in the
+    // visible markup for a partial replace to match, so the whole container
+    // has to go. This used to be carried by a WeakSet the walker filled; the
+    // adapter refactor stopped filling it and no test caught the regression.
+    onHost('www.bol.com');
+    document.body.innerHTML = '<div class="font-produkt">'
+      + '<span aria-hidden="true">149</span><span aria-hidden="true">95</span>'
+      + '<span style="position: absolute">\'149\' euro en \'95\' cent</span>'
+      + '</div>';
+
+    convertPricesInNode(
+      document.body,
+      freshRates({ rates: { EUR: 0.0013 } }),
+      settings({ currencies: ['EUR'] }),
+    );
+
+    const container = document.querySelector('.font-produkt')!;
+    expect(container.querySelector(`.${SPAN_CLASS}`)).not.toBeNull();
+    expect(container.textContent).toContain('ZEC');
+    expect(container.textContent).not.toContain('149');
+    expect(container.getAttribute('title')).toContain('Original:');
+  });
+
+  it('leaves an accessible copy behind', () => {
+    // Assigning textContent used to delete the only price a screen reader
+    // ever saw: sighted users got ZEC, screen-reader users got nothing.
+    onHost('www.bol.com');
+    document.body.innerHTML = '<div class="font-produkt">'
+      + '<span style="position: absolute">\'149\' euro en \'95\' cent</span></div>';
+
+    convertPricesInNode(
+      document.body,
+      freshRates({ rates: { EUR: 0.0013 } }),
+      settings({ currencies: ['EUR'] }),
+    );
+
+    const container = document.querySelector('.font-produkt')!;
+    expect(container.querySelector('.sr-only, [class*="a11y"], [aria-hidden="false"]')
+      ?? container.querySelector('span:last-child')).not.toBeNull();
+    expect(container.textContent).toContain('ZEC');
+  });
+});

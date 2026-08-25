@@ -44,9 +44,6 @@ export interface WalkResult {
   directTextOnly?: boolean;
 }
 
-// Track bol.com price containers that need special handling
-export const bolPriceContainerSet = new WeakSet<Element>();
-
 // Text that looks numeric but is not a price. Never treat the extension's own
 // output ("… ZEC", "… zats") as a price — that is what allowed converted text
 // to be re-parsed and compounded on sites with bare-number patterns.

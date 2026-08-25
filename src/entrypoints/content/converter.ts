@@ -3,7 +3,7 @@ import { convertPrice } from '../../lib/conversion/convert';
 import { setPageUnit } from '../../lib/conversion/format';
 import { adapterFor, isWholeReplacement } from '../../lib/detection/adapters';
 import type { ParsedPrice } from '../../lib/detection/parser';
-import { bolPriceContainerSet, isSkippedTag } from '../../lib/detection/walker';
+import { isSkippedTag } from '../../lib/detection/walker';
 import { divergence, type HeldRate } from '../../lib/rates/held';
 import { isRatesUsable, type RatesData } from '../../lib/storage/rates';
 import type { Settings } from '../../lib/storage/settings';
@@ -83,9 +83,8 @@ export function convertPricesInNode(
       // One lookup instead of a chain of per-site booleans, each of which had
       // its own hostname test and its own idea of what counted.
       const adapter = adapterFor(window.location.hostname);
-      const isBolPrice = adapter?.id === 'bol' && bolPriceContainerSet.has(node);
 
-      if (isWholeReplacement(adapter, node) || isBolPrice) {
+      if (isWholeReplacement(adapter, node)) {
         // For structured price containers, replace entire content
         const convertedPrices: string[] = [];
         for (const parsed of prices) {
@@ -105,29 +104,20 @@ export function convertPricesInNode(
           const newText = convertedPrices.join(' ');
           rememberContainer(node, node.innerHTML, node.getAttribute('title'));
 
-          if (isBolPrice) {
-            // Bol.com special handling: hide visual spans and update accessibility text
-            const visualSpans = node.querySelectorAll('[aria-hidden="true"]');
-            for (const span of visualSpans) {
-              (span as HTMLElement).style.display = 'none';
-            }
-            const accessibilitySpan = node.querySelector('span[style*="position: absolute"]');
-            if (accessibilitySpan) {
-              accessibilitySpan.textContent = newText;
-              (accessibilitySpan as HTMLElement).style.cssText = '';
-              (accessibilitySpan as HTMLElement).style.fontWeight = 'bold';
-            }
-          } else {
-            // Wrap rather than assigning textContent, for three reasons: the
-            // structured path gets the same underline, tooltip and precise
-            // revert as everywhere else; and assigning textContent deleted
-            // Amazon's .a-offscreen span, which is the only price a screen
-            // reader ever saw — sighted users got ZEC and screen-reader users
-            // got nothing. The accessible copy is rewritten, not removed.
-            node.textContent = '';
-            node.appendChild(makeSpan(originalText.trim(), newText));
-            node.appendChild(makeAccessibleCopy(newText));
-          }
+          // Wrap rather than assigning textContent, for three reasons: the
+          // structured path gets the same underline, tooltip and precise
+          // revert as everywhere else; and assigning textContent deleted
+          // Amazon's .a-offscreen span, which is the only price a screen
+          // reader ever saw — sighted users got ZEC and screen-reader users
+          // got nothing. The accessible copy is rewritten, not removed.
+          //
+          // bol.com used to branch off here to hide its aria-hidden fragments
+          // and rewrite the absolutely-positioned span in place. Clearing the
+          // container does the same job and leaves one path to maintain, with
+          // the accessible copy written by the same code as everywhere else.
+          node.textContent = '';
+          node.appendChild(makeSpan(originalText.trim(), newText));
+          node.appendChild(makeAccessibleCopy(newText));
 
           // Tooltip carries the pre-conversion price (the old code read
           // textContent AFTER replacing it, labeling the ZEC value "Original")
