@@ -6,12 +6,14 @@ import {
   type Settings,
   watchSettings,
 } from '../../lib/storage/settings';
+import { installCopyHandler } from './converter';
 import { convertPricesInDocument, revertConversions } from './converter';
 import { startObserver, stopObserver, updateObserverConfig } from './observer';
 
 let currentRates: RatesData | null = null;
 let currentSettings: Settings | null = null;
 let running = false;
+let uninstallCopy: (() => void) | null = null;
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -68,9 +70,12 @@ function start(): void {
   // brief fiat flash it prevented.
   convertPricesInDocument(currentRates, currentSettings);
   startObserver(currentRates, currentSettings);
+  uninstallCopy = installCopyHandler();
 }
 
 function stop(): void {
+  uninstallCopy?.();
+  uninstallCopy = null;
   running = false;
   stopObserver();
   revertConversions();

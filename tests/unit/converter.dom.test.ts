@@ -16,7 +16,11 @@ vi.mock('wxt/utils/storage', () => ({
   },
 }));
 
-import { convertPricesInNode, revertConversions } from '../../src/entrypoints/content/converter';
+import {
+  convertPricesInNode,
+  installCopyHandler,
+  revertConversions,
+} from '../../src/entrypoints/content/converter';
 import type { RatesData } from '../../src/lib/storage/rates';
 import { DEFAULT_SETTINGS, type Settings } from '../../src/lib/storage/settings';
 
@@ -152,5 +156,49 @@ describe('anchors turn a price into a quantity', () => {
     convertPricesInNode(document.body, freshRates(), settings());
     expect(document.querySelector(`.${SPAN_CLASS}`)!.getAttribute('title'))
       .toBe('Original: $700.00');
+  });
+});
+
+describe('copying a converted price yields the fiat', () => {
+  it('swaps ZEC back to the original in clipboard text', () => {
+    document.body.innerHTML = '<p id="p">Total: $19.99 today</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    const uninstall = installCopyHandler();
+
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('p')!);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    let copied: string | null = null;
+    const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', {
+      value: { setData: (_type: string, data: string) => (copied = data) },
+    });
+    document.dispatchEvent(event);
+    uninstall();
+
+    expect(copied).toBe('Total: $19.99 today');
+  });
+
+  it('leaves a selection with no converted price alone', () => {
+    document.body.innerHTML = '<p id="p">no prices here</p>';
+    const uninstall = installCopyHandler();
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('p')!);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    let called = false;
+    const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', {
+      value: { setData: () => (called = true) },
+    });
+    document.dispatchEvent(event);
+    uninstall();
+
+    expect(called).toBe(false);
   });
 });

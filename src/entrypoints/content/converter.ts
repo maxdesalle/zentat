@@ -323,6 +323,48 @@ function replaceInTextNode(
   return true;
 }
 
+/**
+ * Copy the fiat, not the ZEC.
+ *
+ * Read in ZEC, copy in fiat. That asymmetry is what makes replacing the price
+ * safe as a default: the user thinks in ZEC while browsing, and the number that
+ * lands in a payment field, a spreadsheet or a message is still the one the
+ * merchant will actually charge.
+ */
+export function installCopyHandler(): () => void {
+  const onCopy = (event: ClipboardEvent) => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const fragment = range.cloneContents();
+    const clones = fragment.querySelectorAll(`.${SPAN_CLASS}`);
+    if (clones.length === 0) return;
+
+    // cloneContents() produces new nodes, so the WeakMap cannot be consulted on
+    // them. Both lists are in document order, so pair them positionally; if the
+    // counts disagree, leave the clipboard alone rather than guess.
+    const live = Array.from(document.querySelectorAll(`.${SPAN_CLASS}`))
+      .filter((el) => range.intersectsNode(el));
+    if (live.length !== clones.length) return;
+
+    let replaced = false;
+    clones.forEach((clone, index) => {
+      const original = spanOriginalText(live[index]);
+      if (original === undefined) return;
+      clone.replaceWith(document.createTextNode(original));
+      replaced = true;
+    });
+    if (!replaced) return;
+
+    event.clipboardData?.setData('text/plain', fragment.textContent ?? '');
+    event.preventDefault();
+  };
+
+  document.addEventListener('copy', onCopy, true);
+  return () => document.removeEventListener('copy', onCopy, true);
+}
+
 export function revertConversions(): void {
   revertWithin(document);
   flushObserverRecords();
