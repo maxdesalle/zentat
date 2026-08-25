@@ -73,11 +73,14 @@ export function showPaymentRequest(
     'text-align:center',
   ].join(';');
 
-  // Built as nodes rather than innerHTML — this module renders into arbitrary
-  // pages, and the QR is the only markup that comes from a generator.
-  const qrHost = document.createElement('div');
-  qrHost.innerHTML = svg;
-  panel.appendChild(qrHost);
+  // Parsed rather than assigned to innerHTML. The SVG is our own generator's
+  // output, so this is not a security fix — it is that an innerHTML assignment
+  // in an extension is an automatic review flag, and there is no reason to
+  // carry one for markup we can parse explicitly.
+  const parsed = new DOMParser().parseFromString(svg, 'image/svg+xml');
+  const qrNode = parsed.documentElement;
+  if (qrNode.nodeName.toLowerCase() !== 'svg') return false;
+  panel.appendChild(document.importNode(qrNode, true));
 
   const amountLine = document.createElement('div');
   amountLine.textContent = `${zecAmount.toFixed(8)} ZEC`;

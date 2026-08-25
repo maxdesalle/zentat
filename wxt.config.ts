@@ -56,6 +56,10 @@ export default defineConfig({
       browser_specific_settings: {
         gecko: {
           id: 'zentat@zentat.org',
+          // Declared rather than omitted: Firefox expects add-ons to state
+          // what they collect, and "none" is both true here and the answer a
+          // reviewer most wants to see backed by a minimal permission list.
+          data_collection_permissions: { required: ['none'] },
         },
         // Opts the listing in to Firefox for Android, which is the only
         // browser on a phone that runs extensions at all.
