@@ -3,6 +3,7 @@ import { debug } from '../../lib/log';
 import { getRates, isRatesStale, watchRates } from '../../lib/storage/rates';
 import { getSettings, setSettings, watchSettings } from '../../lib/storage/settings';
 import { handleAlarm, setupAlarms } from './alarms';
+import { setupQuickConvert } from './quick';
 import { refreshRates } from './rates';
 
 const STALE_BADGE_AGE_MS = 30 * 60 * 1000;
@@ -110,6 +111,7 @@ export default defineBackground(() => {
 
   // Ensure alarms are set up (in case onInstalled/onStartup didn't fire)
   void setupAlarms();
+  setupQuickConvert();
   refreshRates(false)
     .then((success) => debug(`Initial rate fetch ${success ? 'succeeded' : 'failed'}`))
     .catch((error) => console.error('Zentat: Initial rate fetch error:', error));

@@ -118,10 +118,49 @@ function onRatesChange(rates: RatesData): void {
   updateObserverConfig(rates, currentSettings);
 }
 
+// A transient answer for the context-menu conversion. Rendered here rather
+// than as a notification so it needs no extra permission and appears where the
+// user is already looking.
+let toastTimer: number | null = null;
+
+function showToast(text: string, ok: boolean): void {
+  document.getElementById('zentat-toast')?.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'zentat-toast';
+  toast.textContent = text;
+  toast.setAttribute('role', 'status');
+  toast.style.cssText = [
+    'position:fixed',
+    'z-index:2147483647',
+    'bottom:24px',
+    'left:50%',
+    'transform:translateX(-50%)',
+    'padding:10px 16px',
+    'border-radius:10px',
+    'font:600 14px/1.4 system-ui,sans-serif',
+    'color:#1a1400',
+    `background:${ok ? '#f4b728' : '#e0e0e0'}`,
+    'box-shadow:0 6px 24px rgba(0,0,0,0.28)',
+    'max-width:min(90vw,420px)',
+    'pointer-events:none',
+  ].join(';');
+
+  (document.body || document.documentElement).appendChild(toast);
+
+  if (toastTimer !== null) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.remove(), 3200) as unknown as number;
+}
+
 function handleMessage(message: unknown): void {
   if (typeof message !== 'object' || message === null) return;
 
-  const msg = message as { type?: string };
+  const msg = message as { type?: string; text?: string; ok?: boolean };
+
+  if (msg.type === 'quickResult' && msg.text) {
+    showToast(msg.text, msg.ok !== false);
+    return;
+  }
 
   // Enabled/disabled state arrives via the settings watcher — there is
   // deliberately no 'toggle' echo here (the old echo re-toggled from

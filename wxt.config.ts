@@ -10,9 +10,10 @@ export default defineConfig({
     // blanket host access. Note: NO <all_urls> host permission — the content
     // script's own `matches` key injects it, and extension-context fetches
     // only ever hit the three API hosts below.
+    omnibox: { keyword: 'zec' },
     permissions: browser === 'chrome'
-      ? ['storage', 'alarms', 'offscreen', 'activeTab']
-      : ['storage', 'alarms', 'activeTab'],
+      ? ['storage', 'alarms', 'offscreen', 'activeTab', 'contextMenus']
+      : ['storage', 'alarms', 'activeTab', 'contextMenus'],
     ...(browser === 'firefox' && {
       browser_specific_settings: {
         gecko: {
