@@ -1,6 +1,9 @@
 import { adapterFor, isExcluded } from './adapters';
+import { textOf } from './dom';
 import { QUICK_DETECT_PATTERN } from './patterns';
 import { collectShadowRoots, hasShadowDom } from './shadow';
+
+export { textOf } from './dom';
 
 // Elements to skip entirely. Tag names are compared upper-cased because SVG
 // and MathML elements report lowercase tagName in HTML documents.
@@ -47,15 +50,6 @@ export interface WalkResult {
 // Text that looks numeric but is not a price. Never treat the extension's own
 // output ("… ZEC", "… zats") as a price — that is what allowed converted text
 // to be re-parsed and compounded on sites with bare-number patterns.
-/**
- * textContent is typed `string | null` because Document and DocumentType can
- * return null. Elements and text nodes never do. One helper rather than a
- * `?? ''` at every call site, each of which would be its own untested branch.
- */
-export function textOf(node: Node | null | undefined): string {
-  return node?.textContent?.trim() ?? '';
-}
-
 export function isNonPriceText(text: string): boolean {
   if (/\bZEC\b/.test(text) || /\bzats?\b/i.test(text)) return true;
   if (/out of \d/i.test(text)) return true; // "4.5 out of 5 stars"
