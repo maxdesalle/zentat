@@ -1,0 +1,29 @@
+LiabilitiesTest
+├── liabilityZec
+│   ├── given a spot rate
+│   │   └── it prices a single obligation
+│   ├── given a held rate
+│   │   ├── it prices against the held rate
+│   │   └── given the held rate cannot cover the currency
+│   │       └── it cannot price it
+│   ├── given a currency with no rate
+│   │   └── it cannot price it
+│   ├── given a non-positive amount
+│   │   └── it cannot price it
+│   └── given the arithmetic does not produce a usable number
+│       └── it cannot price it
+├── monthlyPosition
+│   ├── it normalises every cadence to a month
+│   ├── it nets income against obligations
+│   ├── it mixes currencies, because obligations do
+│   ├── it names what it could not price rather than quietly undercounting
+│   └── given nothing entered
+│       └── it is empty, not broken
+└── createLiability
+    ├── it records what it cost when entered, so drift is visible later
+    ├── it upper-cases the currency
+    ├── it truncates an over-long label
+    └── given input it cannot price
+        ├── it refuses an empty label
+        ├── it refuses a non-positive amount
+        └── it refuses a currency with no rate
