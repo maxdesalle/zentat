@@ -76,66 +76,80 @@ describe('convertPricesInNode', () => {
     expect(document.querySelector(`.${CONVERTED_MARKER}`)).toBeNull();
   });
 
-  it('append mode keeps the original price visible', () => {
-    document.body.innerHTML = '<p>$19.99</p>';
-    convertPricesInNode(document.body, freshRates(), settings({ displayMode: 'append' }));
-    const span = document.querySelector(`.${SPAN_CLASS}`)!;
-    expect(span.textContent).toBe('$19.99 (0.0250 ZEC)');
+  describe('given append mode', () => {
+    it('keeps the original price visible', () => {
+      document.body.innerHTML = '<p>$19.99</p>';
+      convertPricesInNode(document.body, freshRates(), settings({ displayMode: 'append' }));
+      const span = document.querySelector(`.${SPAN_CLASS}`)!;
+      expect(span.textContent).toBe('$19.99 (0.0250 ZEC)');
+    });
   });
 
-  it('never rewrites prices inside buttons', () => {
-    document.body.innerHTML = '<button>Pay $49.99 now</button><p>$10</p>';
-    convertPricesInNode(document.body, freshRates(), settings());
-    expect(document.querySelector('button')!.textContent).toBe('Pay $49.99 now');
-    // The non-button price still converts
-    expect(document.querySelector(`p .${SPAN_CLASS}`)).not.toBeNull();
+  describe('given a price inside a button', () => {
+    it('never rewrites it', () => {
+      document.body.innerHTML = '<button>Pay $49.99 now</button><p>$10</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.querySelector('button')!.textContent).toBe('Pay $49.99 now');
+      // The non-button price still converts
+      expect(document.querySelector(`p .${SPAN_CLASS}`)).not.toBeNull();
+    });
   });
 
-  it('converts prices split across inline child nodes', () => {
-    document.body.innerHTML = '<div id="split"><span>$</span><span>99</span></div>';
-    const count = convertPricesInNode(document.body, freshRates(), settings());
-    expect(count).toBe(1);
-    const span = document.querySelector(`#split .${SPAN_CLASS}`)!;
-    expect(span.getAttribute('title')).toBe('Original: $99');
-    revertConversions();
-    expect(document.getElementById('split')!.textContent).toBe('$99');
+  describe('given a price split across inline child nodes', () => {
+    it('converts it', () => {
+      document.body.innerHTML = '<div id="split"><span>$</span><span>99</span></div>';
+      const count = convertPricesInNode(document.body, freshRates(), settings());
+      expect(count).toBe(1);
+      const span = document.querySelector(`#split .${SPAN_CLASS}`)!;
+      expect(span.getAttribute('title')).toBe('Original: $99');
+      revertConversions();
+      expect(document.getElementById('split')!.textContent).toBe('$99');
+    });
   });
 
-  it("converts a parent's direct text even when a child also holds a price", () => {
-    document.body.innerHTML = '<p id="pair">$10 – <span class="sale">$8</span></p>';
-    convertPricesInNode(document.body, freshRates(), settings());
-    const spans = document.querySelectorAll(`#pair .${SPAN_CLASS}`);
-    // Both the parent's $10 and the child's $8 convert
-    expect(spans.length).toBe(2);
-    expect(document.body.textContent).not.toContain('$10');
-    expect(document.body.textContent).not.toContain('$8');
+  describe('given a child also holds a price', () => {
+    it("converts a parent's direct text too", () => {
+      document.body.innerHTML = '<p id="pair">$10 – <span class="sale">$8</span></p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      const spans = document.querySelectorAll(`#pair .${SPAN_CLASS}`);
+      // Both the parent's $10 and the child's $8 convert
+      expect(spans.length).toBe(2);
+      expect(document.body.textContent).not.toContain('$10');
+      expect(document.body.textContent).not.toContain('$8');
+    });
   });
 
-  it('refuses to convert with empty or stale rates', () => {
-    document.body.innerHTML = '<p>$19.99</p>';
-    expect(convertPricesInNode(document.body, freshRates({ rates: {} }), settings())).toBe(0);
-    expect(
-      convertPricesInNode(
-        document.body,
-        freshRates({ updatedAt: Date.now() - 25 * 60 * 60 * 1000 }),
-        settings(),
-      ),
-    ).toBe(0);
-    expect(document.body.textContent).toBe('$19.99');
+  describe('given rates that cannot be used', () => {
+    it('refuses to convert with empty or stale rates', () => {
+      document.body.innerHTML = '<p>$19.99</p>';
+      expect(convertPricesInNode(document.body, freshRates({ rates: {} }), settings())).toBe(0);
+      expect(
+        convertPricesInNode(
+          document.body,
+          freshRates({ updatedAt: Date.now() - 25 * 60 * 60 * 1000 }),
+          settings(),
+        ),
+      ).toBe(0);
+      expect(document.body.textContent).toBe('$19.99');
+    });
   });
 
-  it('never re-processes its own output', () => {
-    document.body.innerHTML = '<p>$19.99</p>';
-    convertPricesInNode(document.body, freshRates(), settings());
-    const after = document.body.innerHTML;
-    convertPricesInNode(document.body, freshRates(), settings());
-    expect(document.body.innerHTML).toBe(after);
+  describe('given its own output', () => {
+    it('never re-processes it', () => {
+      document.body.innerHTML = '<p>$19.99</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      const after = document.body.innerHTML;
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.body.innerHTML).toBe(after);
+    });
   });
 
-  it('skips script/style content', () => {
-    document.body.innerHTML = '<div><style>.x{content:"$19.99"}</style><p>$5</p></div>';
-    convertPricesInNode(document.body, freshRates(), settings());
-    expect(document.querySelector('style')!.textContent).toContain('$19.99');
+  describe('given script or style content', () => {
+    it('skips it', () => {
+      document.body.innerHTML = '<div><style>.x{content:"$19.99"}</style><p>$5</p></div>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.querySelector('style')!.textContent).toContain('$19.99');
+    });
   });
 });
 
@@ -151,11 +165,13 @@ describe('anchors turn a price into a quantity', () => {
     expect(span.getAttribute('title')).toBe('Original: $700.00\n≈ 140 coffees');
   });
 
-  it('leaves the tooltip alone when no anchors are set', () => {
-    document.body.innerHTML = '<p>$700.00</p>';
-    convertPricesInNode(document.body, freshRates(), settings());
-    expect(document.querySelector(`.${SPAN_CLASS}`)!.getAttribute('title'))
-      .toBe('Original: $700.00');
+  describe('given no anchors are set', () => {
+    it('leaves the tooltip alone', () => {
+      document.body.innerHTML = '<p>$700.00</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.querySelector(`.${SPAN_CLASS}`)!.getAttribute('title'))
+        .toBe('Original: $700.00');
+    });
   });
 });
 
@@ -182,24 +198,26 @@ describe('copying a converted price yields the fiat', () => {
     expect(copied).toBe('Total: $19.99 today');
   });
 
-  it('leaves a selection with no converted price alone', () => {
-    document.body.innerHTML = '<p id="p">no prices here</p>';
-    const uninstall = installCopyHandler();
-    const range = document.createRange();
-    range.selectNodeContents(document.getElementById('p')!);
-    const selection = window.getSelection()!;
-    selection.removeAllRanges();
-    selection.addRange(range);
+  describe('given a selection with no converted price', () => {
+    it('leaves the selection alone', () => {
+      document.body.innerHTML = '<p id="p">no prices here</p>';
+      const uninstall = installCopyHandler();
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById('p')!);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
 
-    let called = false;
-    const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
-    Object.defineProperty(event, 'clipboardData', {
-      value: { setData: () => (called = true) },
+      let called = false;
+      const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      Object.defineProperty(event, 'clipboardData', {
+        value: { setData: () => (called = true) },
+      });
+      document.dispatchEvent(event);
+      uninstall();
+
+      expect(called).toBe(false);
     });
-    document.dispatchEvent(event);
-    uninstall();
-
-    expect(called).toBe(false);
   });
 });
 
@@ -256,10 +274,12 @@ describe('the held rate reaches the page', () => {
     expect(title).not.toContain('$');
   });
 
-  it('falls back to spot when the user asked for it', () => {
-    document.body.innerHTML = '<p>$100.00</p>';
-    convertPricesInNode(document.body, freshRates(), settings(), null);
-    expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('0.1250 ZEC');
+  describe('given the user asked for spot', () => {
+    it('falls back to spot', () => {
+      document.body.innerHTML = '<p>$100.00</p>';
+      convertPricesInNode(document.body, freshRates(), settings(), null);
+      expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('0.1250 ZEC');
+    });
   });
 });
 

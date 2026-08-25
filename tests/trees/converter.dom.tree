@@ -1,0 +1,37 @@
+ConverterDomTest
+├── convertPricesInNode
+│   ├── it wraps converted prices in marked spans with an accurate tooltip
+│   ├── it reverts precisely, restoring the original text
+│   ├── given append mode
+│   │   └── it keeps the original price visible
+│   ├── given a price inside a button
+│   │   └── it never rewrites it
+│   ├── given a price split across inline child nodes
+│   │   └── it converts it
+│   ├── given a child also holds a price
+│   │   └── it converts a parent's direct text too
+│   ├── given rates that cannot be used
+│   │   └── it refuses to convert with empty or stale rates
+│   ├── given its own output
+│   │   └── it never re-processes it
+│   └── given script or style content
+│       └── it skips it
+├── anchors turn a price into a quantity
+│   ├── it adds a ratio line to the tooltip
+│   └── given no anchors are set
+│       └── it leaves the tooltip alone
+├── copying a converted price yields the fiat
+│   ├── it swaps ZEC back to the original in clipboard text
+│   └── given a selection with no converted price
+│       └── it leaves the selection alone
+├── hide-fiat mode
+│   ├── it drops the original from the tooltip but keeps the ratio
+│   └── it still gives the fiat back on copy — thinking in ZEC, not unable to pay
+├── the held rate reaches the page
+│   ├── it converts at the held rate, not spot
+│   ├── it always discloses the gap from spot, with no fiat figure
+│   └── given the user asked for spot
+│       └── it falls back to spot
+└── a site adapter that replaces the whole container
+    ├── it replaces a bol.com price container
+    └── it leaves an accessible copy behind

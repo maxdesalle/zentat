@@ -2,7 +2,8 @@
 
 Every module under `src/lib` has a `.tree` file here describing the complete
 branching structure of its behaviour, and a test file whose shape mirrors that
-tree exactly.
+tree exactly. `src/lib` is at 100% line, branch, function and statement
+coverage, and CI fails below that.
 
 The point is that the specification is written _before_ and _separately from_
 the implementation of the tests, in a form a human can read end to end and ask
@@ -49,9 +50,51 @@ mechanically that no branch was written down and then never tested.
 
 ## Rules
 
-1. A `.tree` file exists for every module in `src/lib`.
-2. Every branch in the tree appears as a `describe` with identical text.
-3. Every `it` in the tree appears as an `it` with identical text.
+1. A `.tree` file exists for every behavioural test suite. `<name>.tree` pairs
+   with `tests/unit/<name>.test.ts`.
+2. Every branch in the tree appears as a `describe` with identical text, **at
+   the same nesting**. `scripts/check-trees.mjs` compares paths, not just
+   strings: a test that drifts out from under its branch is a failure even
+   though both texts still exist in the file.
+3. Every `it` in the tree appears as an `it` with identical text, again at its
+   own path.
 4. Coverage is 100% and enforced. The tree says what should be true; coverage
    says nothing was left unexecuted. Neither alone is sufficient — a tree can
    omit a branch, and coverage can be satisfied by a test that asserts nothing.
+
+## What is not a tree
+
+Four suites are deliberately not tree-shaped, and it would be dishonest to
+pretend otherwise:
+
+| Suite                | Why                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------- |
+| `parser.regressions` | A list of bugs found in the wild. Each entry is a specific page that broke, not a branch of a decision. |
+| `walker.markup`      | The same, for real-site markup shapes.                                                                  |
+| `walker.budget`      | Timing and cost behaviour, measured rather than branched.                                               |
+| `converter.security` | Adversarial input. The structure is "things an attacker might try", which is open-ended by nature.      |
+
+These earn their place a different way: every one of them exists because
+something actually went wrong. A tree describes what a unit _should_ do; these
+record what the world _did_. Both are needed, and conflating them would make
+the trees read as complete when they are not.
+
+`tests/corpus` is likewise fixture-driven — saved markup from real sites, run
+through the same detection path.
+
+## Deriving a tree from unreachable code
+
+Some decisions cannot be reached through a module's public entry point — a
+defensive guard, or a rule that only fires for input the callers cannot
+currently produce. Three honest options, in order of preference:
+
+1. **Export the rule and test it directly.** `isBetterMatch`, `overlaps`,
+   `rotate` and `withDeadline` are all exported for exactly this reason, each
+   with a comment saying so. A rule worth having is a rule worth pinning.
+2. **Delete it**, when the types already prove it cannot happen. Several
+   `?? ''` guards on `textContent` were removed this way and replaced with one
+   tested `textOf` helper.
+3. **`/* v8 ignore next */` with a stated reason** — last resort, and only when
+   the claim "no input can reach this" has actually been checked. Three sites in
+   `parser.ts` carry one. Gaming the counter gives you the number without the
+   property, which defeats the point of asking for it.
