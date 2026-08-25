@@ -30,9 +30,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">89.47% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>17/19</span>
+                <span class='fraction'>23/23</span>
             </div>
         
             
@@ -246,25 +246,25 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">517x</span>
-<span class="cline-any cline-yes">517x</span>
-<span class="cline-any cline-yes">517x</span>
-<span class="cline-any cline-yes">517x</span>
-<span class="cline-any cline-yes">517x</span>
-<span class="cline-any cline-yes">517x</span>
+<span class="cline-any cline-yes">521x</span>
+<span class="cline-any cline-yes">521x</span>
+<span class="cline-any cline-yes">521x</span>
+<span class="cline-any cline-yes">521x</span>
+<span class="cline-any cline-yes">521x</span>
+<span class="cline-any cline-yes">521x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">517x</span>
-<span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">521x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">517x</span>
-<span class="cline-any cline-yes">127x</span>
-<span class="cline-any cline-yes">127x</span>
+<span class="cline-any cline-yes">521x</span>
+<span class="cline-any cline-yes">128x</span>
+<span class="cline-any cline-yes">128x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">376x</span>
-<span class="cline-any cline-yes">376x</span>
+<span class="cline-any cline-yes">377x</span>
+<span class="cline-any cline-yes">377x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -272,25 +272,25 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">504x</span>
-<span class="cline-any cline-yes">504x</span>
+<span class="cline-any cline-yes">506x</span>
+<span class="cline-any cline-yes">506x</span>
 <span class="cline-any cline-yes">504x</span>
 <span class="cline-any cline-yes">504x</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import type { RatesData } from '../storage/rates';
@@ -393,7 +393,7 @@ export function heldRateFor(
 ): number | null {
   const code = currency.toUpperCase();
   const spotNumeraire = spot.rates[HELD_NUMERAIRE];
-  if (!(held.peg &gt; 0) || !(spotNumeraire &gt; 0)) <span class="branch-0 cbranch-no" title="branch not covered" >return null;</span>
+  if (!(held.peg &gt; 0) || !(spotNumeraire &gt; 0)) return null;
   if (code === HELD_NUMERAIRE) return held.peg;
 &nbsp;
   const spotRate = spot.rates[code];
@@ -405,7 +405,7 @@ export function heldRateFor(
 /** How far the displayed rate currently sits from spot, as a signed fraction. */
 export function divergence(held: HeldRate, spot: RatesData): number | null {
   const spotPeg = spot.rates[HELD_NUMERAIRE];
-  if (!(held.peg &gt; 0) || !(spotPeg &gt; 0)) <span class="branch-0 cbranch-no" title="branch not covered" >return null;</span>
+  if (!(held.peg &gt; 0) || !(spotPeg &gt; 0)) return null;
   return (spotPeg - held.peg) / held.peg;
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -415,7 +415,7 @@ export function divergence(held: HeldRate, spot: RatesData): number | null {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-08-25T22:52:49.474Z
+                at 2026-08-25T22:55:36.914Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
