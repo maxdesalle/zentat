@@ -20,7 +20,8 @@ const ALL_PROVIDERS: { name: string; key: RateSource; fetch: RateProvider }[] = 
  * holds the whole pattern, and it costs one line. Failover still tries all of
  * them, so reliability is unchanged.
  */
-function rotate<T>(items: T[]): T[] {
+/** Exported for tests: the rotation is a privacy property, not an implementation detail. */
+export function rotate<T>(items: T[]): T[] {
   if (items.length < 2) return items;
   const start = Math.floor(Math.random() * items.length);
   return [...items.slice(start), ...items.slice(0, start)];

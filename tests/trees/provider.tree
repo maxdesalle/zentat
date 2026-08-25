@@ -1,0 +1,44 @@
+ProviderTest
+├── rotate
+│   ├── given a single item
+│   │   └── it returns it unchanged
+│   ├── given no items
+│   │   └── it returns nothing
+│   └── given several items
+│       ├── it keeps every item
+│       └── it starts somewhere else
+├── fetchRates
+│   ├── given the source is a specific provider
+│   │   ├── it uses only that provider
+│   │   └── given that provider fails
+│   │       └── it does not fall back to the other one
+│   ├── given the source is auto
+│   │   ├── it does not always start with the same provider
+│   │   ├── given the first provider it tries succeeds
+│   │   │   └── it does not call the other one
+│   │   ├── given the first provider it tries fails
+│   │   │   ├── it falls back to the other one
+│   │   │   └── it reports the first failure alongside the success
+│   │   ├── given a provider returns an empty map
+│   │   │   ├── it treats that as a failure
+│   │   │   └── it falls back to the other one
+│   │   ├── given a provider rejects with something that is not an Error
+│   │   │   └── it still records a readable message
+│   │   └── given every provider fails
+│   │       ├── it reports failure
+│   │       └── it reports every error
+└── fetchRatesWithRetry
+    ├── given the first attempt succeeds
+    │   └── it does not retry
+    ├── given an early attempt fails
+    │   ├── it retries
+    │   └── it backs off between attempts
+    ├── given the transport is Nym
+    │   ├── it retries fewer times
+    │   └── it uses a flat backoff
+    ├── when a retry count is given
+    │   └── it overrides the transport default
+    ├── given every attempt fails
+    │   └── it returns the last result
+    └── given a specific source
+        └── it passes that source through to every attempt
