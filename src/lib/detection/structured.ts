@@ -25,7 +25,12 @@ export interface StructuredPrice {
 
 const MAX_JSONLD_BYTES = 512 * 1024;
 
-function toAmount(value: unknown): number | null {
+/**
+ * Exported for tests: JSON cannot carry a non-finite number, so that arm is
+ * unreachable through readStructuredPrices — and it is the one that decides
+ * whether Infinity reaches a price on the page.
+ */
+export function toAmount(value: unknown): number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (typeof value !== 'string') return null;
   // Structured `price` is machine-normalised: dot decimal, no grouping.

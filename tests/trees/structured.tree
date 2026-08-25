@@ -1,4 +1,16 @@
 StructuredTest
+├── toAmount
+│   ├── given a finite number
+│   │   └── it is taken as is
+│   ├── given a number that is not finite
+│   │   └── it is rejected
+│   ├── given a machine-normalised string
+│   │   ├── it parses it
+│   │   └── it strips grouping separators
+│   ├── given a string that is not a number
+│   │   └── it is rejected
+│   └── given anything else
+│       └── it is rejected
 ├── readStructuredPrices
 │   ├── given JSON-LD
 │   │   ├── it reads a Product/Offer block
@@ -66,6 +78,8 @@ StructuredTest
 │   │   └── it does not give them the same element
 │   ├── given an element holds no digits
 │   │   └── it is not a candidate
+│   ├── given an element holds digits that do not match
+│   │   └── it is not chosen
 │   └── given a Shopify cents-integer
 │       ├── given the screen shows two decimals
 │       │   └── it reads the value as cents

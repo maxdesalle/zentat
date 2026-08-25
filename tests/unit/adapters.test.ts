@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
+// Spec: tests/trees/adapters.tree
 import {
   adapterFor,
   hostMatches,
@@ -115,10 +116,21 @@ describe('extraction', () => {
       .toBe('149 euro en 00 cent');
   });
 
-  it('returns null when the copy is absent, so the caller falls back', () => {
-    document.body.innerHTML = '<span class="a-price">$19.99</span>';
-    const amazon = adapterFor('www.amazon.com')!;
-    expect(amazon.extract!(document.querySelector('.a-price')!, { hostname: 'amazon.com' }))
-      .toBeNull();
+  describe('given the accessible copy is absent', () => {
+    it('returns null so the caller falls back to the visible text', () => {
+      document.body.innerHTML = '<span class="a-price">$19.99</span>';
+      const amazon = adapterFor('www.amazon.com')!;
+      expect(amazon.extract!(document.querySelector('.a-price')!, { hostname: 'amazon.com' }))
+        .toBeNull();
+    });
+
+    it('returns null for a bol container with no positioned span', () => {
+      // Bol renders some tiles without the accessible sentence at all. Falling
+      // back to the visible fragments is wrong there, but crashing is worse.
+      document.body.innerHTML = '<div class="font-produkt"><span>149</span></div>';
+      const bol = adapterFor('www.bol.com')!;
+      expect(bol.extract!(document.querySelector('.font-produkt')!, { hostname: 'bol.com' }))
+        .toBeNull();
+    });
   });
 });

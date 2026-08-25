@@ -6,6 +6,7 @@ import {
   locatePrices,
   projectionsFor,
   readStructuredPrices,
+  toAmount,
 } from '../../src/lib/detection/structured';
 
 // Spec: tests/trees/structured.tree
@@ -23,6 +24,48 @@ function rawJsonLd(text: string) {
   script.textContent = text;
   document.head.appendChild(script);
 }
+
+describe('toAmount', () => {
+  describe('given a finite number', () => {
+    it('is taken as is', () => {
+      expect(toAmount(49.99)).toBe(49.99);
+    });
+  });
+
+  describe('given a number that is not finite', () => {
+    it('is rejected', () => {
+      // JSON cannot carry these, but structured data also arrives from
+      // microdata attributes and from callers doing their own arithmetic.
+      expect(toAmount(Number.POSITIVE_INFINITY)).toBeNull();
+      expect(toAmount(Number.NaN)).toBeNull();
+    });
+  });
+
+  describe('given a machine-normalised string', () => {
+    it('parses it', () => {
+      expect(toAmount('49.99')).toBe(49.99);
+    });
+
+    it('strips grouping separators', () => {
+      // Structured price is meant to be dot-decimal and ungrouped, but plenty
+      // of themes emit "1,299.00" anyway.
+      expect(toAmount('1,299.00')).toBe(1299);
+    });
+  });
+
+  describe('given a string that is not a number', () => {
+    it('is rejected', () => {
+      expect(toAmount('call us')).toBeNull();
+    });
+  });
+
+  describe('given anything else', () => {
+    it('is rejected', () => {
+      expect(toAmount({ amount: 5 })).toBeNull();
+      expect(toAmount(null)).toBeNull();
+    });
+  });
+});
 
 describe('readStructuredPrices', () => {
   describe('given JSON-LD', () => {
@@ -313,6 +356,24 @@ describe('locatePrices', () => {
         { amount: 49.99, currency: 'USD', source: 'jsonld' },
       ]);
       expect(located.element.id).toBe('p');
+    });
+  });
+
+  describe('given an element holds digits that do not match', () => {
+    it('is not chosen', () => {
+      document.body.innerHTML = '<p>Save 20%</p><p id="p">$49.99</p>';
+      const [located] = locatePrices(document.body, [
+        { amount: 49.99, currency: 'USD', source: 'jsonld' },
+      ]);
+      expect(located.element.id).toBe('p');
+
+      // Same, for an amount that also carries a cents reading: the decoy must
+      // fail both sets of projections, not just the literal one.
+      document.body.innerHTML = '<p>Save 20%</p><p id="q">$159.00</p>';
+      const [cents] = locatePrices(document.body, [
+        { amount: 15900, currency: 'USD', source: 'jsonld' },
+      ]);
+      expect(cents.element.id).toBe('q');
     });
   });
 
