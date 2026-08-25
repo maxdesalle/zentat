@@ -247,7 +247,7 @@ describe('stored values', () => {
   });
 
   describe('when a held rate is written', () => {
-    const held = { rate: 0.025, currency: 'USD', heldSince: NOW, marketRate: 0.025 };
+    const held = { peg: 0.025, pegged: NOW };
 
     it('reads it back', async () => {
       await setHeldRate(held);
