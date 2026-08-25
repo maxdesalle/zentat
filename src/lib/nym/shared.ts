@@ -3,6 +3,12 @@
 // contract can't silently drift between the two contexts.
 
 export interface NymFetchResult {
+  /**
+   * The request reached its destination and came back — the mixnet did its job
+   * even if the server answered with an error. Distinguishes an API's 429 from
+   * a broken tunnel, which are handled very differently.
+   */
+  transportOk?: boolean;
   success: boolean;
   data?: unknown;
   status?: number;
