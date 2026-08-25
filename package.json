@@ -16,7 +16,10 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "clean": "wxt clean",
-    "verify:vendored": "node scripts/verify-vendored.mjs"
+    "verify:vendored": "node scripts/verify-vendored.mjs",
+    "test:coverage": "vitest run --coverage",
+    "test:trees": "node scripts/check-trees.mjs",
+    "uncovered": "node scripts/uncovered-branches.mjs"
   },
   "dependencies": {
     "@nymproject/mix-fetch": "1.4.4",

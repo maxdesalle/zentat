@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  divergence,
-  HELD_RATE_BAND,
-  heldRateFor,
-  updateHeldRate,
-} from '../../src/lib/rates/held';
+import { divergence, HELD_RATE_BAND, heldRateFor, updateHeldRate } from '../../src/lib/rates/held';
 import type { RatesData } from '../../src/lib/storage/rates';
 
 // Spec: tests/trees/held.tree

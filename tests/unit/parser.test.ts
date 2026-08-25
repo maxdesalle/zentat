@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  isBetterMatch,
-  overlaps,
-  parseNumber,
-  parsePrice,
-} from '../../src/lib/detection/parser';
+import { isBetterMatch, overlaps, parseNumber, parsePrice } from '../../src/lib/detection/parser';
 
 // Spec: tests/trees/parser.tree
 // Bugs found in the field live in parser.regressions.test.ts alongside this.
@@ -200,7 +195,6 @@ describe('overlaps', () => {
 });
 
 describe('isBetterMatch', () => {
-
   describe('given the candidate starts earlier', () => {
     it('wins', () => {
       expect(isBetterMatch(span(0, 3), span(2, 9))).toBe(true);

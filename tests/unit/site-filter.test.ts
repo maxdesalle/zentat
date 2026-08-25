@@ -7,8 +7,8 @@ import { describe, expect, it } from 'vitest';
 import {
   isSiteAllowed,
   matchesPattern,
-  type SiteFilterSettings,
   patternsMatching,
+  type SiteFilterSettings,
   siteToggleKey,
 } from '../../src/lib/storage/site-filter';
 

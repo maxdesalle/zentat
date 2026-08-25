@@ -282,7 +282,7 @@ describe('a site adapter that replaces the whole container', () => {
     onHost('www.bol.com');
     document.body.innerHTML = '<div class="font-produkt">'
       + '<span aria-hidden="true">149</span><span aria-hidden="true">95</span>'
-      + '<span style="position: absolute">\'149\' euro en \'95\' cent</span>'
+      + "<span style=\"position: absolute\">'149' euro en '95' cent</span>"
       + '</div>';
 
     convertPricesInNode(
@@ -303,7 +303,7 @@ describe('a site adapter that replaces the whole container', () => {
     // ever saw: sighted users got ZEC, screen-reader users got nothing.
     onHost('www.bol.com');
     document.body.innerHTML = '<div class="font-produkt">'
-      + '<span style="position: absolute">\'149\' euro en \'95\' cent</span></div>';
+      + "<span style=\"position: absolute\">'149' euro en '95' cent</span></div>";
 
     convertPricesInNode(
       document.body,
@@ -312,8 +312,10 @@ describe('a site adapter that replaces the whole container', () => {
     );
 
     const container = document.querySelector('.font-produkt')!;
-    expect(container.querySelector('.sr-only, [class*="a11y"], [aria-hidden="false"]')
-      ?? container.querySelector('span:last-child')).not.toBeNull();
+    expect(
+      container.querySelector('.sr-only, [class*="a11y"], [aria-hidden="false"]')
+        ?? container.querySelector('span:last-child'),
+    ).not.toBeNull();
     expect(container.textContent).toContain('ZEC');
   });
 });

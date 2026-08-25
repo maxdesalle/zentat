@@ -115,8 +115,7 @@ describe('localizeDocument', () => {
 
   describe('given a root is given', () => {
     it('leaves elements outside that root alone', () => {
-      document.body.innerHTML =
-        '<div id="in"><span data-i18n="greeting">A</span></div>'
+      document.body.innerHTML = '<div id="in"><span data-i18n="greeting">A</span></div>'
         + '<span id="out" data-i18n="greeting">B</span>';
       localizeDocument(document.getElementById('in')!);
       expect(document.querySelector('#in span')?.textContent).toBe('Hola');

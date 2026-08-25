@@ -251,7 +251,10 @@ describe('on Chrome', () => {
       const { createDocument } = installChrome();
       let release: () => void = () => {};
       createDocument.mockImplementation(
-        () => new Promise<void>((resolve) => { release = resolve; }),
+        () =>
+          new Promise<void>((resolve) => {
+            release = resolve;
+          }),
       );
       const fetcher = createNymFetcher();
       const both = Promise.all([fetcher.fetch(RATE_URL), fetcher.fetch(RATE_URL)]);
@@ -355,7 +358,9 @@ describe('on Chrome', () => {
     it('throws the reported error', async () => {
       const { createNymFetcher } = await load(false);
       const { sendMessage } = installChrome();
-      sendMessage.mockResolvedValue({ success: false, error: 'HTTP 429', transportOk: true } as never);
+      sendMessage.mockResolvedValue(
+        { success: false, error: 'HTTP 429', transportOk: true } as never,
+      );
       await expect(createNymFetcher().fetch(RATE_URL)).rejects.toThrow('HTTP 429');
     });
 
@@ -364,7 +369,9 @@ describe('on Chrome', () => {
       // Churning the document on one would burn a gateway registration.
       const { createNymFetcher } = await load(false);
       const { sendMessage, closeDocument } = installChrome();
-      sendMessage.mockResolvedValue({ success: false, error: 'HTTP 429', transportOk: true } as never);
+      sendMessage.mockResolvedValue(
+        { success: false, error: 'HTTP 429', transportOk: true } as never,
+      );
       await createNymFetcher().fetch(RATE_URL).catch(() => {});
       expect(closeDocument).not.toHaveBeenCalled();
     });

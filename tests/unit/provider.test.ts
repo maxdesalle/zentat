@@ -165,11 +165,13 @@ describe('fetchRatesWithRetry', () => {
   async function withDelays(run: () => Promise<unknown>) {
     vi.useFakeTimers();
     const delays: number[] = [];
-    vi.spyOn(globalThis, 'setTimeout').mockImplementation(((fn: () => void, ms: number) => {
-      delays.push(ms);
-      fn();
-      return 0;
-    }) as never);
+    vi.spyOn(globalThis, 'setTimeout').mockImplementation(
+      ((fn: () => void, ms: number) => {
+        delays.push(ms);
+        fn();
+        return 0;
+      }) as never,
+    );
     const result = await run();
     vi.useRealTimers();
     return { result, delays };

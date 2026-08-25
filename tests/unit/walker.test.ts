@@ -174,8 +174,8 @@ describe('isInteractiveControl', () => {
       // control, so the test is size rather than tag.
       render(
         '<a href="/product"><h2>A rather long product title that runs on</h2>'
-        + '<p>Some description text that also runs on for a while</p>'
-        + '<span id="p">$19.99</span></a>',
+          + '<p>Some description text that also runs on for a while</p>'
+          + '<span id="p">$19.99</span></a>',
       );
       expect(isInteractiveControl(document.getElementById('p')!)).toBe(false);
     });
@@ -321,7 +321,7 @@ describe('walkPriceElements', () => {
       onHost('www.bol.com');
       const results = walkPriceElements(render(
         '<div class="font-produkt"><span aria-hidden="true">149</span>'
-        + '<span style="position: absolute">\'149\' euro en \'95\' cent</span></div>',
+          + "<span style=\"position: absolute\">'149' euro en '95' cent</span></div>",
       ));
       expect(results).toHaveLength(1);
       expect(results[0].text).toBe("'149' euro en '95' cent");
@@ -334,7 +334,7 @@ describe('walkPriceElements', () => {
         onHost('www.amazon.com');
         const results = walkPriceElements(render(
           '<div id="buy-now-button"><span class="a-price">'
-          + '<span class="a-offscreen">$19.99</span></span></div>',
+            + '<span class="a-offscreen">$19.99</span></span></div>',
         ));
         expect(results.filter((r) => r.inPriceContainer)).toHaveLength(0);
       });
@@ -384,7 +384,7 @@ describe('walkPriceElements', () => {
     it('prefers that text', () => {
       const results = walkPriceElements(render(
         '<div class="p"><span class="a-offscreen">$19.99</span>'
-        + '<span aria-hidden="true">$19</span></div>',
+          + '<span aria-hidden="true">$19</span></div>',
       ));
       expect(results.map((r) => r.text)).toContain('$19.99');
     });
@@ -394,7 +394,7 @@ describe('walkPriceElements', () => {
       // rewrite the only text a screen reader gets.
       const results = walkPriceElements(render(
         '<div class="p"><span class="a-offscreen">$19.99</span>'
-        + '<span aria-hidden="true">$19</span></div>',
+          + '<span aria-hidden="true">$19</span></div>',
       ));
       expect(results.filter((r) => r.node.className === 'a-offscreen')).toHaveLength(0);
     });
@@ -445,7 +445,7 @@ describe('walkPriceElements', () => {
       it('converts from the accessible copy', () => {
         const results = walkPriceElements(render(
           '<div><span class="a-offscreen">$49.99</span>'
-          + '<span aria-hidden="true">49</span><span aria-hidden="true">99</span></div>',
+            + '<span aria-hidden="true">49</span><span aria-hidden="true">99</span></div>',
         ));
         expect(results.map((r) => r.text)).toContain('$49.99');
       });
