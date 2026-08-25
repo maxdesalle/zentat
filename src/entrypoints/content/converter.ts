@@ -1,6 +1,7 @@
 import { compareToAnchors, formatComparisons } from '../../lib/anchors';
 import { convertPrice } from '../../lib/conversion/convert';
 import { setPageUnit } from '../../lib/conversion/format';
+import { adapterFor, isWholeReplacement } from '../../lib/detection/adapters';
 import type { ParsedPrice } from '../../lib/detection/parser';
 import { bolPriceContainerSet, isSkippedTag } from '../../lib/detection/walker';
 import { divergence, type HeldRate } from '../../lib/rates/held';
@@ -79,18 +80,12 @@ export function convertPricesInNode(
 
       let converted = false;
 
-      const hostname = window.location.hostname;
-      const isAmazonPrice = node.classList.contains('a-price');
-      const isBolPrice = bolPriceContainerSet.has(node);
-      // Structured-container replacement is destructive (drops child markup),
-      // so on Coolblue it is limited to short, price-only elements instead of
-      // firing for every element on the site.
-      const isCoolbluePrice = isHost(hostname, ['coolblue.nl', 'coolblue.be'])
-        && originalText.trim().length <= 32;
-      const isDigitalOceanPrice = isHost(hostname, ['digitalocean.com'])
-        && (node.classList.contains('pricing') || node.closest('.pricing') !== null);
+      // One lookup instead of a chain of per-site booleans, each of which had
+      // its own hostname test and its own idea of what counted.
+      const adapter = adapterFor(window.location.hostname);
+      const isBolPrice = adapter?.id === 'bol' && bolPriceContainerSet.has(node);
 
-      if (isAmazonPrice || isBolPrice || isCoolbluePrice || isDigitalOceanPrice) {
+      if (isWholeReplacement(adapter, node) || isBolPrice) {
         // For structured price containers, replace entire content
         const convertedPrices: string[] = [];
         for (const parsed of prices) {
@@ -155,10 +150,6 @@ export function convertPricesInNode(
   }
 
   return convertedCount;
-}
-
-function isHost(hostname: string, domains: string[]): boolean {
-  return domains.some((d) => hostname === d || hostname.endsWith('.' + d));
 }
 
 function displayText(original: string, formatted: string, settings: Settings): string {

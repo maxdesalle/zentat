@@ -1,3 +1,4 @@
+import { adapterFor, isExcluded } from './adapters';
 import { QUICK_DETECT_PATTERN } from './patterns';
 import { collectShadowRoots, hasShadowDom } from './shadow';
 
@@ -133,47 +134,30 @@ export function walkPriceElements(root: Node): WalkResult[] {
     return results;
   }
 
-  // Bol.com-specific: price containers with grid layout and accessibility text
-  // These have visual spans (aria-hidden) that need to be handled specially
+  // One pass over whatever this site's adapter declares as a whole price.
+  // Previously this was a hand-written block per site, each with its own
+  // querySelectorAll, its own eligibility checks, and in bol.com's case a
+  // module-level WeakSet smuggling a boolean into the converter.
   const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-  if (hostname === 'bol.com' || hostname.endsWith('.bol.com')) {
-    const bolPriceContainers = (root as Element).querySelectorAll?.('.font-produkt') || [];
-    for (const container of bolPriceContainers) {
+  const adapter = adapterFor(hostname);
+
+  for (const selector of adapter?.containers ?? []) {
+    for (const container of (root as Element).querySelectorAll?.(selector) ?? []) {
       if (processedElements.has(container)) continue;
       if (!isConvertible(container)) continue;
+      if (isExcluded(adapter, container)) continue;
 
-      // Find the accessibility span (has visually-hidden styles)
-      const accessibilitySpan = container.querySelector('span[style*="position: absolute"]');
-      if (accessibilitySpan) {
-        const text = accessibilitySpan.textContent?.trim() || '';
-        if (text && QUICK_DETECT_PATTERN.test(text) && !isNonPriceText(text)) {
-          // Mark this as a bol.com price container for special handling
-          bolPriceContainerSet.add(container);
-          results.push({ node: container as Element, text });
-          processedElements.add(container);
-        }
-      }
-    }
-  }
+      // An adapter's extract() exists for markup no selector can express —
+      // an accessible copy of a price that the visible DOM has split up.
+      const text = (adapter?.extract?.(container, { hostname })
+        ?? container.textContent?.trim()
+        ?? '').trim();
 
-  // First, handle Amazon-specific price containers (.a-price) - including strikethrough prices
-  // Gated on the host: this selector ran on every page on the web for nothing.
-  const amazonPrices = /(^|\.)amazon\./.test(hostname)
-    ? (root as Element).querySelectorAll?.('.a-price') || []
-    : [];
-  for (const priceEl of amazonPrices) {
-    if (processedElements.has(priceEl)) continue;
-    if (!isConvertible(priceEl)) continue;
+      if (!text || text.length > MAX_PURE_PRICE_LENGTH) continue;
+      if (!QUICK_DETECT_PATTERN.test(text) || isNonPriceText(text)) continue;
 
-    // Get the offscreen text which has the full price
-    const offscreen = priceEl.querySelector('.a-offscreen');
-    const text = offscreen?.textContent?.trim() || priceEl.textContent?.trim() || '';
-
-    if (text && QUICK_DETECT_PATTERN.test(text) && text.length <= MAX_PURE_PRICE_LENGTH) {
-      if (!isNonPriceText(text)) {
-        results.push({ node: priceEl, text });
-        processedElements.add(priceEl);
-      }
+      results.push({ node: container, text });
+      processedElements.add(container);
     }
   }
 
