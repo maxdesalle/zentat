@@ -1,4 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// convert.ts reaches into storage/rates for per-currency staleness, and that
+// module defines storage items at import time. Without this, the definitions
+// touch chrome.runtime and reject asynchronously — 299 green tests plus three
+// unhandled rejections, which vitest exits non-zero on.
+vi.mock('wxt/utils/storage', () => ({
+  storage: {
+    defineItem: () => ({
+      getValue: async () => null,
+      setValue: async () => {},
+      watch: () => () => {},
+    }),
+  },
+}));
 import { convertPrice } from '../../src/lib/conversion/convert';
 import type { ParsedPrice } from '../../src/lib/detection/parser';
 import type { RatesData } from '../../src/lib/storage/rates';
