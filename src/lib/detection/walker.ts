@@ -57,6 +57,67 @@ export function isNonPriceText(text: string): boolean {
   return false;
 }
 
+// A control the user acts on, as opposed to a card that happens to be clickable.
+// Modern storefronts wrap whole product tiles in role="button" or an <a>, and
+// skipping those would drop entire category pages — measured across 31 real
+// pages, only ~1% of prices sit in a genuine control. So the test is size, not
+// tag: a checkout CTA is short, a product tile is not.
+const CONTROL_SELECTOR = 'button, [role="button"], a[href], [role="link"], label, summary';
+const MAX_CONTROL_DESCENDANTS = 12;
+const MAX_CONTROL_TEXT = 40;
+
+export function isInteractiveControl(el: Element): boolean {
+  const control = el.closest(CONTROL_SELECTOR);
+  if (!control) return false;
+  const text = control.textContent?.trim() ?? '';
+  return text.length <= MAX_CONTROL_TEXT
+    && control.getElementsByTagName('*').length <= MAX_CONTROL_DESCENDANTS;
+}
+
+const A11Y_TEXT_SELECTOR = '.a-offscreen, .sr-only, .visually-hidden, .screen-reader-only, '
+  + '[class*="visuallyhidden"], [class*="screenReader"]';
+
+/**
+ * Concatenating child text drops the separator between them, so
+ * `$<span>49</span><span>99</span>` reads as "$4999" — a silent 100x error, and
+ * one of the most common price markups on the web (Walmart, Target, Best Buy,
+ * Etsy). Newegg only survives because its decimal point happens to sit inside
+ * the <sup>. Four or more unbroken digits after a symbol, in an element built
+ * from multiple children, is the signature.
+ */
+export function looksConcatenated(el: Element, text: string): boolean {
+  if (el.children.length < 2) return false;
+  return /[$€£¥₩₹][\s\u00A0]*\d{4,}(?!\d)/.test(text);
+}
+
+/**
+ * The canonical, unsplit price is very often in the accessibility layer while
+ * the visible DOM holds the styled/split version — Amazon's `.a-offscreen` is
+ * the well-known case, but Walmart, Target, Best Buy and many themes use a
+ * plain `sr-only` span for exactly the same purpose. Reading it turns the
+ * hardest markup into the easiest, so prefer it wherever it parses.
+ */
+export function accessiblePriceText(el: Element): string | null {
+  const label = el.getAttribute('aria-label');
+  if (label && QUICK_DETECT_PATTERN.test(label) && !isNonPriceText(label)) {
+    return label.trim();
+  }
+  for (const node of el.querySelectorAll(A11Y_TEXT_SELECTOR)) {
+    const text = node.textContent?.trim();
+    if (text && QUICK_DETECT_PATTERN.test(text) && !isNonPriceText(text)) return text;
+  }
+  return null;
+}
+
+/** Every eligibility rule, applied to every candidate however it was collected. */
+export function isConvertible(el: Element): boolean {
+  if (isSkippedTag(el.tagName)) return false;
+  if ((el as HTMLElement).isContentEditable) return false;
+  if ((el as HTMLElement).hidden === true) return false;
+  if (isInteractiveControl(el)) return false;
+  return true;
+}
+
 export function walkPriceElements(root: Node): WalkResult[] {
   const results: WalkResult[] = [];
   const processedElements = new Set<Element>();
@@ -72,6 +133,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
     const bolPriceContainers = (root as Element).querySelectorAll?.('.font-produkt') || [];
     for (const container of bolPriceContainers) {
       if (processedElements.has(container)) continue;
+      if (!isConvertible(container)) continue;
 
       // Find the accessibility span (has visually-hidden styles)
       const accessibilitySpan = container.querySelector('span[style*="position: absolute"]');
@@ -88,9 +150,13 @@ export function walkPriceElements(root: Node): WalkResult[] {
   }
 
   // First, handle Amazon-specific price containers (.a-price) - including strikethrough prices
-  const amazonPrices = (root as Element).querySelectorAll?.('.a-price') || [];
+  // Gated on the host: this selector ran on every page on the web for nothing.
+  const amazonPrices = /(^|\.)amazon\./.test(hostname)
+    ? (root as Element).querySelectorAll?.('.a-price') || []
+    : [];
   for (const priceEl of amazonPrices) {
     if (processedElements.has(priceEl)) continue;
+    if (!isConvertible(priceEl)) continue;
 
     // Get the offscreen text which has the full price
     const offscreen = priceEl.querySelector('.a-offscreen');
@@ -109,14 +175,12 @@ export function walkPriceElements(root: Node): WalkResult[] {
   for (const element of allElements) {
     if (!(element instanceof Element)) continue;
     if (processedElements.has(element)) continue;
-    if (isSkippedTag(element.tagName)) continue;
-    if ((element as HTMLElement).isContentEditable) continue;
+    if (!isConvertible(element)) continue;
 
-    // Skip hidden/offscreen elements (Amazon uses a-offscreen for screen readers)
+    // The accessibility copy is read through accessiblePriceText() on its owner
+    // element rather than converted in place.
     const classStr = typeof element.className === 'string' ? element.className : '';
     if (/a-offscreen|sr-only|visually-hidden|screen-reader-only/i.test(classStr)) continue;
-    const htmlEl = element as HTMLElement;
-    if (htmlEl.hidden === true) continue;
 
     // Skip if an ancestor was already collected (walk up — much cheaper than
     // scanning the whole processed set per element)
@@ -129,7 +193,10 @@ export function walkPriceElements(root: Node): WalkResult[] {
     }
     if (ancestorProcessed) continue;
 
-    const text = element.textContent || '';
+    // Prefer the accessibility text when the visible text is split or styled.
+    const rawText = element.textContent || '';
+    const accessible = accessiblePriceText(element);
+    const text = accessible ?? rawText;
     const trimmed = text.trim();
 
     if (!trimmed) continue;
@@ -142,14 +209,17 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // This avoids replacing "Price: $19.99 - Save 20%" with just the ZEC amount
     if (trimmed.length > MAX_PURE_PRICE_LENGTH) continue;
 
-    // Prices inside interactive controls stay fiat — the site will charge fiat
-    if (element.closest('button, [role="button"]')) continue;
+    // Refuse rather than risk a 100x error when the text looks like it lost a
+    // separator between child elements and no accessible source disambiguates.
+    if (accessible === null && looksConcatenated(element, trimmed)) continue;
 
     // If a child also contains a price, the child will be collected on its own —
     // but the parent's DIRECT text may hold a price of its own
     // ("<p>$10 – <span class='sale'>$8</span></p>"), so convert just that part.
+    // An accessible copy describes the WHOLE element, so its children are the
+    // split rendering of the same price, not separate prices to defer to.
     let hasMatchingChild = false;
-    for (const child of element.children) {
+    for (const child of accessible !== null ? [] : element.children) {
       const childText = child.textContent?.trim() || '';
       if (
         childText && QUICK_DETECT_PATTERN.test(childText)

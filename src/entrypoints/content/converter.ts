@@ -88,8 +88,15 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
               (accessibilitySpan as HTMLElement).style.fontWeight = 'bold';
             }
           } else {
-            // Amazon/Coolblue: replace entire textContent
-            node.textContent = newText;
+            // Wrap rather than assigning textContent, for three reasons: the
+            // structured path gets the same underline, tooltip and precise
+            // revert as everywhere else; and assigning textContent deleted
+            // Amazon's .a-offscreen span, which is the only price a screen
+            // reader ever saw — sighted users got ZEC and screen-reader users
+            // got nothing. The accessible copy is rewritten, not removed.
+            node.textContent = '';
+            node.appendChild(makeSpan(originalText.trim(), newText));
+            node.appendChild(makeAccessibleCopy(newText));
           }
 
           // Tooltip carries the pre-conversion price (the old code read
@@ -137,6 +144,15 @@ function makeSpan(original: string, converted: string): HTMLSpanElement {
   span.style.whiteSpace = 'nowrap';
   span.style.cursor = 'help';
   rememberSpan(span, original);
+  return span;
+}
+
+// A visually-hidden copy so the accessible name matches what is on screen.
+function makeAccessibleCopy(text: string): HTMLSpanElement {
+  const span = document.createElement('span');
+  span.textContent = text;
+  span.style.cssText =
+    'position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap';
   return span;
 }
 
