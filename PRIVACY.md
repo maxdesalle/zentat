@@ -50,3 +50,10 @@ No page content, visited URLs, or any other browsing data ever appears in any ne
 ## Contact
 
 Questions about this policy? [Open an issue](https://github.com/maxdesalle/zentat/issues) or [reach out on Signal](https://signal.me/#eu/TST_2FkJznjly3Xkn2NnsNRDw32eoOTHwO0L9REt2N1A2fOQ_vdKEYb-C-KsvEW6).
+
+## Nym on Firefox
+
+The Firefox build ships without the Nym mixnet. The `-full-fat` Nym package is a
+single 22.9 MB JavaScript file, larger than Mozilla's add-on review will parse,
+so carrying it meant no Firefox listing at all — and therefore no Firefox for
+Android. Rate lookups on Firefox use the direct path described above.

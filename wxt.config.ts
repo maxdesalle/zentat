@@ -1,6 +1,29 @@
+import { resolve } from 'node:path';
 import { defineConfig } from 'wxt';
 
 export default defineConfig({
+  // Firefox ships without the mixnet bundle. addons-linter refuses to parse any
+  // single JS file over 5MB and @nymproject/mix-fetch-full-fat is one 22.9MB
+  // index.js, which is the sole reason this extension has no AMO listing — and
+  // therefore no Firefox Android, the only phone browser that runs extensions.
+  // Aliasing the client to a stub keeps it out of the module graph entirely,
+  // rather than relying on the bundler to prove a branch unreachable.
+  vite: (env) =>
+    env.browser === 'firefox'
+      ? {
+        resolve: {
+          // Array form with a RegExp: Vite matches aliases against the import
+          // specifier, so an absolute-path key misses the relative imports the
+          // entrypoints actually use.
+          alias: [
+            {
+              find: /^.*lib\/nym\/client$/,
+              replacement: resolve('src/lib/nym/client.stub.ts'),
+            },
+          ],
+        },
+      }
+      : {},
   srcDir: 'src',
   outDir: 'dist',
   manifest: ({ browser }) => ({
@@ -19,6 +42,9 @@ export default defineConfig({
         gecko: {
           id: 'zentat@zentat.org',
         },
+        // Opts the listing in to Firefox for Android, which is the only
+        // browser on a phone that runs extensions at all.
+        gecko_android: {},
       },
     }),
     host_permissions: [

@@ -63,7 +63,26 @@ export async function getStoredNymStatus(): Promise<NymStatus> {
 
 let firefoxClientModule: typeof import('../nym/client') | null = null;
 
+// Compile-time constant, so on Firefox this branch and the 22.9MB Nym bundle
+// behind it are dead-code-eliminated rather than shipped.
+//
+// Why the Firefox build carries no Nym at all: addons-linter refuses to parse
+// any single JavaScript file over 5MB, and @nymproject/mix-fetch-full-fat is
+// one 22.9MB index.js because the -full-fat variants base64-inline the WASM and
+// the worker into the JS. That single file is the reason Zentat has no AMO
+// listing — and no AMO listing means no Firefox Android either, which is the
+// only browser on a phone that can run this extension at all.
+//
+// The better end state is the standard @nymproject/mix-fetch package, which
+// ships the WASM as separate binaries the linter never parses (largest JS file:
+// ~100KB) and would restore Nym on Firefox. That swap needs bundler wiring and,
+// more importantly, a live mixnet round-trip to verify, so it is deliberately
+// not being made blind. This gets the extension into the store today.
+export const NYM_AVAILABLE = !import.meta.env.FIREFOX;
+
 async function getFirefoxClient() {
+  // The literal guard is what lets the bundler drop the import entirely.
+  if (import.meta.env.FIREFOX) throw new Error('Nym is not included in this build');
   if (!firefoxClientModule) {
     firefoxClientModule = await import('../nym/client');
   }

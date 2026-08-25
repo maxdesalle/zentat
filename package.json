@@ -7,14 +7,15 @@
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
-    "build": "wxt build",
-    "build:firefox": "wxt build -b firefox",
-    "zip": "wxt zip",
-    "zip:firefox": "wxt zip -b firefox",
+    "build": "wxt clean && wxt build",
+    "build:firefox": "wxt clean && wxt build -b firefox",
+    "zip": "wxt clean && wxt zip",
+    "zip:firefox": "wxt clean && wxt zip -b firefox",
     "postinstall": "wxt prepare",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "clean": "wxt clean"
   },
   "dependencies": {
     "@nymproject/mix-fetch-full-fat": "^1.4.1",
