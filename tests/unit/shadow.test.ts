@@ -85,6 +85,16 @@ describe('collectShadowRoots', () => {
     });
   });
 
+  describe('given the root element is itself a host', () => {
+    it('finds its shadow root', () => {
+      // The observer probes each newly added element. When the added node IS
+      // the component host, looking only downwards misses its whole tree —
+      // the component then converts once and never again.
+      const { el, shadow } = host('self');
+      expect(collectShadowRoots(el)).toEqual([shadow]);
+    });
+  });
+
   describe('given a shadow root nested in another', () => {
     it('finds both', () => {
       // Component trees nest: a checkout widget inside a payment section
@@ -119,6 +129,13 @@ describe('hasShadowDom', () => {
     it('reports one', () => {
       host('a');
       expect(hasShadowDom(document.body)).toBe(true);
+    });
+  });
+
+  describe('given the root element is itself a host', () => {
+    it('reports one', () => {
+      const { el } = host('self');
+      expect(hasShadowDom(el)).toBe(true);
     });
   });
 

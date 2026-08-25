@@ -363,6 +363,28 @@ describe('walkPriceElements', () => {
     });
   });
 
+  describe('given the root element itself holds the price', () => {
+    it('is collected', () => {
+      // The observer queues each added element as a root, so an infinite-
+      // scroll page appending `<span class="price">$19.99</span>` — the price
+      // in the added element's own text — had it skipped entirely.
+      // getElementsByTagName only looks downwards.
+      const root = render('<p id="p">$19.99</p>').querySelector('#p')!;
+      expect(walkPriceElements(root).map((r) => r.text)).toEqual(['$19.99']);
+    });
+
+    describe("given the root itself is an adapter's price container", () => {
+      it('is collected', () => {
+        onHost('www.coolblue.nl');
+        const root = render('<div data-testid="price">1.349</div>')
+          .querySelector('[data-testid="price"]')!;
+        const results = walkPriceElements(root);
+        expect(results).toHaveLength(1);
+        expect(results[0].inPriceContainer).toBe(true);
+      });
+    });
+  });
+
   describe('given a price inside a shadow root', () => {
     it('is collected', () => {
       // Shadow trees are invisible to getElementsByTagName, so a checkout

@@ -1,0 +1,63 @@
+ObserverTest
+├── startObserver
+│   ├── given a document with a body
+│   │   ├── it watches the body
+│   │   └── it watches shadow roots separately
+│   ├── given no body
+│   │   └── it does not start
+│   └── given it is already running
+│       └── it keeps the same observer and takes the new config
+├── reacting to mutations
+│   ├── given an element is added
+│   │   └── it converts prices inside it
+│   ├── given the added element is our own output
+│   │   └── it is ignored
+│   ├── given text is added inside a converted element
+│   │   ├── it reverts the stale conversion
+│   │   └── it converts the new text
+│   ├── given text is added outside any conversion
+│   │   └── it converts the parent
+│   ├── given text is added inside our own span
+│   │   └── it is ignored
+│   ├── given text changes in a converted element
+│   │   ├── it reverts the stale conversion
+│   │   └── it converts the new text
+│   ├── given text changes outside any conversion
+│   │   └── it converts the element
+│   ├── given text changes inside our own span
+│   │   └── it is ignored
+│   └── given a shadow root appears with new content
+│       └── it is observed too
+├── given the observer was never started
+│   └── it does nothing
+├── batching
+│   ├── given several roots in one batch
+│   │   └── it converts once per frame
+│   ├── given one queued root contains another
+│   │   └── it skips the one already covered
+│   ├── given a root left the page before the flush
+│   │   └── it is not converted
+│   ├── given a root inside a shadow tree
+│   │   └── it is still considered part of the page
+│   ├── given the document is never rendered
+│   │   └── it flushes on a timer instead
+│   └── given an infinite-scroll page queues past the cap
+│       └── it falls back to rescanning the body once
+├── SPA route changes
+│   ├── given the page pushes a new route
+│   │   ├── it drops stale markers
+│   │   └── it converts the new content
+│   ├── given the page replaces the route
+│   │   └── it does the same
+│   └── given the user goes back
+│       └── it does the same
+├── stopObserver
+│   ├── it disconnects the observer
+│   ├── it restores the history methods it patched
+│   └── it drops any queued work
+└── updateObserverConfig
+    ├── given the observer is running
+    │   ├── it swaps the rates without tearing the observer down
+    │   └── it converts at the new rate
+    └── given the observer is not running
+        └── it starts one

@@ -1,9 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  flushObserverRecords,
-  setActiveObserver,
-} from '../../src/entrypoints/content/state';
+import { flushObserverRecords, setActiveObserver } from '../../src/entrypoints/content/state';
 
 // Spec: tests/trees/content-state.tree
 //

@@ -16,6 +16,8 @@ ShadowTest
 │   │   └── it finds nothing
 │   ├── given one shadow root
 │   │   └── it finds it
+│   ├── given the root element is itself a host
+│   │   └── it finds its shadow root
 │   ├── given a shadow root nested in another
 │   │   └── it finds both
 │   └── given more roots than the limit
@@ -24,6 +26,8 @@ ShadowTest
     ├── given a page with no shadow root
     │   └── it reports none
     ├── given a page with one
+    │   └── it reports one
+    ├── given the root element is itself a host
     │   └── it reports one
     └── given the root has no children
         └── it reports none

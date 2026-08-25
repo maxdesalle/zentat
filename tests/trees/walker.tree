@@ -86,6 +86,10 @@ WalkerTest
     │   │   └── it is skipped
     │   └── given the container text is too long
     │       └── it is skipped
+    ├── given the root element itself holds the price
+    │   ├── it is collected
+    │   └── given the root itself is an adapter's price container
+    │       └── it is collected
     ├── given a price inside a shadow root
     │   └── it is collected
     ├── given an element holding a plain price

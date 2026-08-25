@@ -127,6 +127,12 @@ export function isConvertible(el: Element): boolean {
 // patterns are quadratic on long digit runs. Budget the whole pass too.
 const MAX_PASS_CHARS = 200_000;
 
+/** A selector's matches within `root`, plus `root` itself when it matches. */
+function selfAndMatching(root: Node, selector: string): Element[] {
+  const within = Array.from((root as Element).querySelectorAll(selector));
+  return root instanceof Element && root.matches(selector) ? [root, ...within] : within;
+}
+
 export function walkPriceElements(root: Node): WalkResult[] {
   const results: WalkResult[] = [];
   let charBudget = MAX_PASS_CHARS;
@@ -146,7 +152,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
   const adapter = adapterFor(hostname);
 
   for (const selector of adapter?.containers ?? []) {
-    for (const container of (root as Element).querySelectorAll(selector)) {
+    for (const container of selfAndMatching(root, selector)) {
       if (processedElements.has(container)) continue;
       if (!isConvertible(container)) continue;
       if (isExcluded(adapter, container)) continue;
@@ -169,6 +175,12 @@ export function walkPriceElements(root: Node): WalkResult[] {
     ? collectShadowRoots(root as ParentNode)
     : [];
   const allElements = [
+    // The root ITSELF, not only its descendants. The observer queues each
+    // added element as a root, so an infinite-scroll page that appends
+    // `<span class="price">$19.99</span>` — the price in the added element's
+    // own text — had that price skipped entirely: getElementsByTagName and
+    // querySelectorAll both look only downwards.
+    ...(root instanceof Element ? [root] : []),
     ...Array.from((root as Element).getElementsByTagName('*')),
     ...shadowRoots.flatMap((shadow) => Array.from(shadow.querySelectorAll('*'))),
   ];
