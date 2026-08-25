@@ -80,8 +80,8 @@ body {
 
 .fine {
   margin: 0 0 24px;
-  padding-left: 12px;
-  border-left: 2px solid var(--line);
+  padding-inline-start: 12px;
+  border-inline-start: 2px solid var(--line);
   color: var(--text-3);
   font-size: 13px;
 }
@@ -197,7 +197,7 @@ kbd {
   margin: 0 0 24px;
   padding: 10px 12px;
   border-radius: 8px;
-  border-left: 3px solid var(--zec);
+  border-inline-start: 3px solid var(--zec);
   background: color-mix(in srgb, var(--zec) 10%, transparent);
   font-size: 13px;
 }

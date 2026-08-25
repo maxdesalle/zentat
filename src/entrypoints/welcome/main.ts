@@ -1,5 +1,6 @@
 import { formatZecWithSymbol } from '../../lib/conversion/format';
 import { SUPPORTED_CURRENCIES } from '../../lib/currencies';
+import { localizeDocument } from '../../lib/i18n';
 import { getRates, watchRates } from '../../lib/storage/rates';
 import { setSettings } from '../../lib/storage/settings';
 
@@ -118,3 +119,7 @@ async function init(): Promise<void> {
 }
 
 void init();
+
+// Applied once at load: browser.i18n resolves synchronously, so there is no
+// flash of untranslated text.
+localizeDocument();

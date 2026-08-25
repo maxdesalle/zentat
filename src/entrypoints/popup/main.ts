@@ -1,6 +1,7 @@
 import { storage } from 'wxt/utils/storage';
 import { formatZecWithSymbol } from '../../lib/conversion/format';
 import type { NymStatus } from '../../lib/fetch/types';
+import { localizeDocument } from '../../lib/i18n';
 import { monthlyPosition } from '../../lib/liabilities';
 import { divergence } from '../../lib/rates/held';
 import {
@@ -369,3 +370,7 @@ async function renderRateHonesty(): Promise<void> {
   const band = Math.round(currentSettings.heldBand * 100);
   line.textContent = `Held rate · market ${sign}${(gap * 100).toFixed(1)}% · re-pegs past ${band}%`;
 }
+
+// Applied once at load: browser.i18n resolves synchronously, so there is no
+// flash of untranslated text.
+localizeDocument();

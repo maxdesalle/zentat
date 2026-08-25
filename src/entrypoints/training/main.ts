@@ -1,5 +1,6 @@
 import { storage } from 'wxt/utils/storage';
 import { formatZecWithSymbol } from '../../lib/conversion/format';
+import { localizeDocument } from '../../lib/i18n';
 import type { HeldRate } from '../../lib/rates/held';
 import { getHeldRate, getRates, type RatesData } from '../../lib/storage/rates';
 import { getSettings } from '../../lib/storage/settings';
@@ -121,3 +122,7 @@ async function init(): Promise<void> {
 }
 
 void init();
+
+// Applied once at load: browser.i18n resolves synchronously, so there is no
+// flash of untranslated text.
+localizeDocument();

@@ -238,7 +238,7 @@ body.preload * {
 
 .nym-status {
   display: none;
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: 11px;
   font-weight: 600;
   padding: 2px 7px;

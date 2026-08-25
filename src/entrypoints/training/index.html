@@ -9,7 +9,7 @@
   <body>
     <main class="stage">
       <header class="head">
-        <h1 class="title">How much is that in ZEC?</h1>
+        <h1 class="title" data-i18n="trainingTitle">How much is that in ZEC?</h1>
         <p class="lede">
           Guess before you look. Getting the rough size right is the skill —
           you are not being marked on decimal places.
@@ -24,7 +24,7 @@
         </div>
 
         <form class="guess" id="guess-form">
-          <label class="guess-label" for="guess">Your guess, in ZEC</label>
+          <label class="guess-label" for="guess" data-i18n="trainingGuessLabel">Your guess, in ZEC</label>
           <div class="guess-row">
             <input
               type="number"
@@ -36,14 +36,14 @@
               placeholder="0.005"
               required
             />
-            <button type="submit" class="btn btn-primary" id="submit">Check</button>
+            <button type="submit" class="btn btn-primary" id="submit" data-i18n="trainingCheck">Check</button>
           </div>
         </form>
 
         <div class="result" id="result" hidden aria-live="polite">
           <p class="verdict" id="verdict"></p>
           <p class="truth" id="truth"></p>
-          <button type="button" class="btn btn-primary" id="next">Next</button>
+          <button type="button" class="btn btn-primary" id="next" data-i18n="trainingNext">Next</button>
         </div>
       </section>
 

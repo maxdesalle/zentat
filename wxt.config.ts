@@ -39,8 +39,11 @@ export default defineConfig({
   srcDir: 'src',
   outDir: 'dist',
   manifest: ({ browser }) => ({
-    name: 'Zentat',
-    description: 'Convert fiat prices to ZEC inline',
+    // Localised through _locales; the manifest itself is translated too, so
+    // the store listing name and description follow the user's language.
+    default_locale: 'en',
+    name: '__MSG_extName__',
+    description: '__MSG_extDescription__',
     // activeTab powers the popup's "disable on this site" button without any
     // blanket host access. Note: NO <all_urls> host permission — the content
     // script's own `matches` key injects it, and extension-context fetches

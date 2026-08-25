@@ -497,7 +497,7 @@ textarea {
   margin-bottom: var(--s3, 12px);
   padding: 10px 12px;
   border-radius: 8px;
-  border-left: 3px solid var(--zec, #f4b728);
+  border-inline-start: 3px solid var(--zec, #f4b728);
   background: color-mix(in srgb, var(--zec, #f4b728) 10%, transparent);
   font-size: 12.5px;
 }

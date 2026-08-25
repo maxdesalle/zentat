@@ -2,6 +2,7 @@ import { storage } from 'wxt/utils/storage';
 import { type Anchor, createAnchor, driftedAnchors, MAX_ANCHORS } from '../../lib/anchors';
 import { SUPPORTED_CURRENCIES } from '../../lib/currencies';
 import type { NymStatus } from '../../lib/fetch/types';
+import { localizeDocument } from '../../lib/i18n';
 import { getRates } from '../../lib/storage/rates';
 import {
   DEFAULT_SETTINGS,
@@ -419,3 +420,7 @@ function renderWeanStage(settings: Settings) {
     ? describeStage(stage)
     : `${describeStage(stage)} Next step in ${days} day${days === 1 ? '' : 's'}.`;
 }
+
+// Applied once at load: browser.i18n resolves synchronously, so there is no
+// flash of untranslated text.
+localizeDocument();
