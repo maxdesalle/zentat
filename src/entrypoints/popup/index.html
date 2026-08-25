@@ -44,54 +44,28 @@
           <span id="updated">--</span>
           <span class="nym-status" id="nym-status"></span>
         </div>
+        <div class="rate-honesty" id="rate-honesty"></div>
         <p class="status-line" id="status-line" hidden></p>
       </div>
 
-      <div class="site-filter-section">
-        <button
-          class="site-filter-toggle"
-          id="site-filter-toggle"
-          aria-expanded="false"
-          aria-controls="site-filter-content"
-        >
-          <span>Site Filtering</span>
-          <span class="toggle-icon" id="toggle-icon" aria-hidden="true">▼</span>
-        </button>
-        <div class="site-filter-content" id="site-filter-content">
-          <div class="site-mode">
-            <label class="radio-option">
-              <input type="radio" name="siteMode" value="blocklist" />
-              <span class="radio-label">Everywhere except blocked</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="siteMode" value="allowlist" />
-              <span class="radio-label">Only on allowed sites</span>
-            </label>
-          </div>
-          <div class="site-lists">
-            <div class="site-list" id="blocklist-container">
-              <textarea
-                id="blockedSites"
-                aria-label="Blocked sites, one per line"
-                placeholder="Blocked sites (one per line)&#10;example.com"
-                rows="3"
-              ></textarea>
-            </div>
-            <div class="site-list" id="allowlist-container">
-              <textarea
-                id="allowedSites"
-                aria-label="Allowed sites, one per line"
-                placeholder="Allowed sites (one per line)&#10;amazon.com"
-                rows="3"
-              ></textarea>
-            </div>
-          </div>
+
+      <section class="position" id="position" hidden>
+        <div class="position-head">
+          <span class="position-label" data-i18n="popupYourMonth">Your month</span>
+          <span class="position-net" id="position-net">--</span>
         </div>
-      </div>
+        <div class="position-detail">
+          <span id="position-in">--</span>
+          <span class="separator">·</span>
+          <span id="position-out">--</span>
+        </div>
+        <p class="position-gaps" id="position-gaps" hidden></p>
+      </section>
 
       <div class="actions">
-        <button id="refresh" class="btn btn-secondary">Refresh</button>
-        <button id="options" class="btn btn-primary">Options</button>
+        <button id="refresh" class="btn btn-secondary" data-i18n="popupRefresh">Refresh</button>
+        <button id="practice" class="btn btn-secondary" data-i18n="popupPractice">Practice</button>
+        <button id="options" class="btn btn-primary" data-i18n="popupOptions">Options</button>
       </div>
     </div>
     <script type="module" src="./main.ts"></script>

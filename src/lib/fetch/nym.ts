@@ -3,25 +3,11 @@ import { debug } from '../log';
 import { clearNymDatabases, isAllowedNymUrl, type NymFetchResult } from '../nym/shared';
 import type { Fetcher, FetcherResponse, NymStatus } from './types';
 
-// Detect environment: Firefox has window in background, Chrome needs offscreen
-// Check for Firefox by looking at the manifest version and offscreen API availability
-function detectFirefox(): boolean {
-  // In Firefox MV2, window exists and chrome.offscreen does not
-  // In Chrome MV3, we're in a service worker (no window) OR chrome.offscreen exists
-  if (typeof window === 'undefined') {
-    // Service worker context (Chrome MV3)
-    return false;
-  }
-  // Window exists - check if offscreen API is available
-  if (typeof chrome !== 'undefined' && chrome.offscreen) {
-    // Chrome with offscreen API
-    return false;
-  }
-  // Window exists but no offscreen API - Firefox or older Chrome
-  return true;
-}
-
-const isFirefox = detectFirefox();
+// Build-time, not runtime sniffing. The old detectFirefox() inferred the
+// browser from "window exists AND chrome.offscreen doesn't" — which is also
+// true inside the Chrome offscreen document (it exposes only chrome.runtime),
+// in content scripts, and on Safari.
+const isFirefox = Boolean(import.meta.env.FIREFOX);
 
 // The live status is kept in memory for background-side consumers AND mirrored
 // to storage so the popup/options UI can show the real connection state
@@ -63,7 +49,34 @@ export async function getStoredNymStatus(): Promise<NymStatus> {
 
 let firefoxClientModule: typeof import('../nym/client') | null = null;
 
+// Compile-time constant, so on Firefox this branch and the 22.9MB Nym bundle
+// behind it are dead-code-eliminated rather than shipped.
+//
+// Why the Firefox build carries no Nym at all: addons-linter refuses to parse
+// any single JavaScript file over 5MB, and @nymproject/mix-fetch-full-fat is
+// one 22.9MB index.js because the -full-fat variants base64-inline the WASM and
+// the worker into the JS. That single file is the reason Zentat has no AMO
+// listing — and no AMO listing means no Firefox Android either, which is the
+// only browser on a phone that can run this extension at all.
+//
+// The better end state is the standard @nymproject/mix-fetch package, which
+// ships the WASM as separate binaries the linter never parses (largest JS file:
+// ~100KB) and would restore Nym on Firefox. That swap needs bundler wiring and,
+// more importantly, a live mixnet round-trip to verify, so it is deliberately
+// not being made blind. This gets the extension into the store today.
+// Both builds carry Nym again: the standard package ships its WASM as separate
+// .wasm files (which addons-linter treats as binary and never parses) and loads
+// its worker from a real extension URL rather than a blob: URL, which Firefox
+// MV3 forbids outright. The -full-fat variant failed on both counts.
+export const NYM_AVAILABLE = true;
+
 async function getFirefoxClient() {
+  // Firefox-only by construction. Chrome reaches the client through the
+  // offscreen document instead, and without this guard the dynamic import
+  // below survives into the Chrome service worker — which then parses the
+  // whole Nym bundle on every cold start, for every user, to reach code it
+  // never executes.
+  if (!import.meta.env.FIREFOX) throw new Error('Direct Nym client is Firefox-only');
   if (!firefoxClientModule) {
     firefoxClientModule = await import('../nym/client');
   }
@@ -183,11 +196,21 @@ function createChromeNymFetcher(timeoutMs: number): Fetcher {
       }
       await ensureOffscreenDocument();
 
-      const response = (await chrome.runtime.sendMessage({
-        type: 'nymFetch',
-        url,
-        timeoutMs,
-      })) as NymFetchResult | undefined;
+      let response: NymFetchResult | undefined;
+      try {
+        response = (await chrome.runtime.sendMessage({
+          type: 'nymFetch',
+          url,
+          timeoutMs,
+        })) as NymFetchResult | undefined;
+      } catch (error) {
+        // Tearing the document down under an in-flight message REJECTS the
+        // promise ("message channel closed") rather than resolving undefined,
+        // so the falsy-response branch below never ran and offscreenCreated
+        // stayed true — the next fetch then messaged into a dead context.
+        offscreenCreated = false;
+        throw error instanceof Error ? error : new Error(String(error));
+      }
 
       if (!response) {
         offscreenCreated = false;
@@ -230,7 +253,24 @@ async function destroyChromeNymConnection(): Promise<void> {
     // Document might not exist, ignore
   }
 
-  // IndexedDB is per-origin, shared with the offscreen document
+  // Deliberately NOT clearing IndexedDB here.
+  //
+  // Wiping it discards the client's identity and its gateway registration, so
+  // the next setup registers with a BRAND NEW gateway. Doing that on every
+  // failure walks through the network until it hits "there are no more new
+  // gateways on the network - it seems this client has already registered with
+  // all nodes it could have" — a real error string in the WASM, and one this
+  // code used to handle rather than avoid. At three retries a cycle it was
+  // burning on the order of a hundred registrations a day per user, which is
+  // both antisocial toward a ~575-gateway network and a distinctive signature.
+  //
+  // Closing the document is enough to get a fresh client. Identity is wiped
+  // only by the explicit user-facing reset.
+}
+
+/** Discard the client's identity and gateway registration. User-initiated only. */
+export async function resetNymIdentity(): Promise<void> {
+  await destroyChromeNymConnection();
   await clearNymDatabases();
 }
 

@@ -1,16 +1,27 @@
-import { getRates, type RatesData, watchRates } from '../../lib/storage/rates';
+import { setDisplayLocale } from '../../lib/conversion/format';
+import type { HeldRate } from '../../lib/rates/held';
+import {
+  getHeldRate,
+  getRates,
+  type RatesData,
+  watchHeldRate,
+  watchRates,
+} from '../../lib/storage/rates';
 import {
   getSettings,
   isSiteAllowed,
   type Settings,
   watchSettings,
 } from '../../lib/storage/settings';
+import { installCopyHandler } from './converter';
 import { convertPricesInDocument, revertConversions } from './converter';
 import { startObserver, stopObserver, updateObserverConfig } from './observer';
 
 let currentRates: RatesData | null = null;
+let currentHeld: HeldRate | null = null;
 let currentSettings: Settings | null = null;
 let running = false;
+let uninstallCopy: (() => void) | null = null;
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -19,9 +30,17 @@ export default defineContentScript({
   runAt: 'document_start',
 
   async main() {
+    // Render in the page's locale, the same one the parser reads prices under.
+    setDisplayLocale(document.documentElement.lang || undefined);
+    await resolvePolicyHost();
     try {
       // Load cached data (no network requests are ever made from this context)
-      const [rates, settings] = await Promise.all([getRates(), getSettings()]);
+      const [rates, settings, held] = await Promise.all([
+        getRates(),
+        getSettings(),
+        getHeldRate(),
+      ]);
+      currentHeld = held;
 
       currentRates = rates;
       currentSettings = settings;
@@ -31,6 +50,15 @@ export default defineContentScript({
       // (previously Alt+Z was one-way on such tabs until a full reload).
       watchSettings(onSettingsChange);
       watchRates(onRatesChange);
+      // A re-peg is a real change to what the numbers mean, so it re-converts.
+      // Ordinary spot movement inside the band does not, which is the point.
+      watchHeldRate((held: HeldRate | null) => {
+        currentHeld = held;
+        if (currentRates && currentSettings && isActive(currentSettings)) {
+          revertConversions();
+          convertPricesInDocument(currentRates, currentSettings, heldForDisplay());
+        }
+      });
       browser.runtime.onMessage.addListener(handleMessage);
 
       if (!isActive(settings)) return;
@@ -42,8 +70,30 @@ export default defineContentScript({
   },
 });
 
+/**
+ * The hostname a site policy should be judged against.
+ *
+ * A subframe's own hostname is the wrong key: blocking `bank.com` must also
+ * stop conversion inside the `secure.bankcdn.com` iframe it embeds, and an
+ * `about:blank` or `srcdoc` subframe reports an empty hostname that matches no
+ * pattern at all — so it converted regardless of the user's blocklist.
+ */
+let policyHost = window.location.hostname;
+
+async function resolvePolicyHost(): Promise<void> {
+  if (window.top === window.self && policyHost) return;
+  try {
+    const response = await browser.runtime.sendMessage({ type: 'getTopHost' }) as
+      | { host?: string }
+      | undefined;
+    if (response?.host) policyHost = response.host;
+  } catch {
+    // Fall back to the frame's own host — no worse than before.
+  }
+}
+
 function isActive(settings: Settings): boolean {
-  return settings.enabled && isSiteAllowed(window.location.hostname, settings);
+  return settings.enabled && isSiteAllowed(policyHost, settings);
 }
 
 function whenDomReady(fn: () => void): void {
@@ -52,6 +102,11 @@ function whenDomReady(fn: () => void): void {
   } else {
     fn();
   }
+}
+
+/** Null when the user asked for spot, so the conversion path falls back to it. */
+function heldForDisplay(): HeldRate | null {
+  return currentSettings?.rateMode === 'spot' ? null : currentHeld;
 }
 
 function start(): void {
@@ -63,11 +118,14 @@ function start(): void {
   // approach blanked <body> on EVERY site until rates + DOMContentLoaded + a
   // full scan completed — a universal page-load regression that outweighed the
   // brief fiat flash it prevented.
-  convertPricesInDocument(currentRates, currentSettings);
-  startObserver(currentRates, currentSettings);
+  convertPricesInDocument(currentRates, currentSettings, heldForDisplay());
+  startObserver(currentRates, currentSettings, heldForDisplay());
+  uninstallCopy = installCopyHandler();
 }
 
 function stop(): void {
+  uninstallCopy?.();
+  uninstallCopy = null;
   running = false;
   stopObserver();
   revertConversions();
@@ -115,10 +173,49 @@ function onRatesChange(rates: RatesData): void {
   updateObserverConfig(rates, currentSettings);
 }
 
+// A transient answer for the context-menu conversion. Rendered here rather
+// than as a notification so it needs no extra permission and appears where the
+// user is already looking.
+let toastTimer: number | null = null;
+
+function showToast(text: string, ok: boolean): void {
+  document.getElementById('zentat-toast')?.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'zentat-toast';
+  toast.textContent = text;
+  toast.setAttribute('role', 'status');
+  toast.style.cssText = [
+    'position:fixed',
+    'z-index:2147483647',
+    'bottom:24px',
+    'left:50%',
+    'transform:translateX(-50%)',
+    'padding:10px 16px',
+    'border-radius:10px',
+    'font:600 14px/1.4 system-ui,sans-serif',
+    'color:#1a1400',
+    `background:${ok ? '#f4b728' : '#e0e0e0'}`,
+    'box-shadow:0 6px 24px rgba(0,0,0,0.28)',
+    'max-width:min(90vw,420px)',
+    'pointer-events:none',
+  ].join(';');
+
+  (document.body || document.documentElement).appendChild(toast);
+
+  if (toastTimer !== null) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.remove(), 3200) as unknown as number;
+}
+
 function handleMessage(message: unknown): void {
   if (typeof message !== 'object' || message === null) return;
 
-  const msg = message as { type?: string };
+  const msg = message as { type?: string; text?: string; ok?: boolean };
+
+  if (msg.type === 'quickResult' && msg.text) {
+    showToast(msg.text, msg.ok !== false);
+    return;
+  }
 
   // Enabled/disabled state arrives via the settings watcher — there is
   // deliberately no 'toggle' echo here (the old echo re-toggled from

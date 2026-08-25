@@ -1,26 +1,38 @@
+import { compareToAnchors, formatComparisons } from '../../lib/anchors';
 import { convertPrice } from '../../lib/conversion/convert';
+import { setPageUnit } from '../../lib/conversion/format';
+import { adapterFor, isWholeReplacement } from '../../lib/detection/adapters';
 import type { ParsedPrice } from '../../lib/detection/parser';
 import { bolPriceContainerSet, isSkippedTag } from '../../lib/detection/walker';
+import { divergence, type HeldRate } from '../../lib/rates/held';
 import { isRatesUsable, type RatesData } from '../../lib/storage/rates';
 import type { Settings } from '../../lib/storage/settings';
+import { weanStage } from '../../lib/weaning';
 import { detectPrices } from './detector';
 import { flushObserverRecords } from './state';
 
-// Container-level marker (element whose contents were converted)
-const CONVERTED_MARKER = 'zentat-processed';
-// Marker for elements whose DIRECT text was converted while their children are
-// handled separately — must not block child conversion via closest()
-const PARTIAL_MARKER = 'zentat-processed-partial';
-// Inline span that wraps a single converted price
-const SPAN_CLASS = 'zentat-converted';
-const STYLE_ID = 'zentat-style';
+import {
+  CONVERTED_MARKER,
+  PARTIAL_MARKER,
+  rememberContainer,
+  rememberSpan,
+  SPAN_CLASS,
+  spanOriginalText,
+  takeContainer,
+} from './markers';
 
 interface Replacement {
   original: string;
   converted: string;
+  /** Carried so the tooltip can express the price against the user's anchors. */
+  zecAmount: number;
 }
 
-export function convertPricesInDocument(rates: RatesData, settings: Settings): number {
+export function convertPricesInDocument(
+  rates: RatesData,
+  settings: Settings,
+  held?: HeldRate | null,
+): number {
   if (!settings.enabled) return 0;
   // Never convert with unusable rates: empty (nothing fetched yet) or older
   // than a day — silently converting at a wildly stale rate is worse than
@@ -28,15 +40,33 @@ export function convertPricesInDocument(rates: RatesData, settings: Settings): n
   if (!isRatesUsable(rates)) return 0;
   if (!document.body) return 0;
 
-  ensureStyles();
-  return convertPricesInNode(document.body, rates, settings);
+  return convertPricesInNode(document.body, rates, settings, held);
 }
 
-export function convertPricesInNode(root: Node, rates: RatesData, settings: Settings): number {
+export function convertPricesInNode(
+  root: Node,
+  rates: RatesData,
+  settings: Settings,
+  held?: HeldRate | null,
+): number {
   if (!settings.enabled) return 0;
   if (!isRatesUsable(rates)) return 0;
 
   const detections = detectPrices(root, settings.currencies);
+
+  // Choose one unit for everything in this pass, so a page never shows one
+  // price in zats beside another in ZEC — two scales the eye cannot compare.
+  setPageUnit(
+    detections.flatMap(({ prices }) =>
+      prices
+        .map((parsed) =>
+          convertPrice(parsed, rates, settings.precision, settings.displayUnit, held)
+        )
+        .filter((result): result is NonNullable<typeof result> => result !== null)
+        .map((result) => result.zecAmount)
+    ),
+  );
+
   let convertedCount = 0;
 
   try {
@@ -50,22 +80,22 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
 
       let converted = false;
 
-      const hostname = window.location.hostname;
-      const isAmazonPrice = node.classList.contains('a-price');
-      const isBolPrice = bolPriceContainerSet.has(node);
-      // Structured-container replacement is destructive (drops child markup),
-      // so on Coolblue it is limited to short, price-only elements instead of
-      // firing for every element on the site.
-      const isCoolbluePrice = isHost(hostname, ['coolblue.nl', 'coolblue.be'])
-        && originalText.trim().length <= 32;
-      const isDigitalOceanPrice = isHost(hostname, ['digitalocean.com'])
-        && (node.classList.contains('pricing') || node.closest('.pricing') !== null);
+      // One lookup instead of a chain of per-site booleans, each of which had
+      // its own hostname test and its own idea of what counted.
+      const adapter = adapterFor(window.location.hostname);
+      const isBolPrice = adapter?.id === 'bol' && bolPriceContainerSet.has(node);
 
-      if (isAmazonPrice || isBolPrice || isCoolbluePrice || isDigitalOceanPrice) {
+      if (isWholeReplacement(adapter, node) || isBolPrice) {
         // For structured price containers, replace entire content
         const convertedPrices: string[] = [];
         for (const parsed of prices) {
-          const result = convertPrice(parsed, rates, settings.precision, settings.displayUnit);
+          const result = convertPrice(
+            parsed,
+            rates,
+            settings.precision,
+            settings.displayUnit,
+            held,
+          );
           if (result) {
             convertedPrices.push(displayText(parsed.original, result.formatted, settings));
             converted = true;
@@ -73,9 +103,7 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
         }
         if (converted) {
           const newText = convertedPrices.join(' ');
-          if (!node.hasAttribute('data-zentat-original')) {
-            node.setAttribute('data-zentat-original', node.innerHTML);
-          }
+          rememberContainer(node, node.innerHTML, node.getAttribute('title'));
 
           if (isBolPrice) {
             // Bol.com special handling: hide visual spans and update accessibility text
@@ -90,8 +118,15 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
               (accessibilitySpan as HTMLElement).style.fontWeight = 'bold';
             }
           } else {
-            // Amazon/Coolblue: replace entire textContent
-            node.textContent = newText;
+            // Wrap rather than assigning textContent, for three reasons: the
+            // structured path gets the same underline, tooltip and precise
+            // revert as everywhere else; and assigning textContent deleted
+            // Amazon's .a-offscreen span, which is the only price a screen
+            // reader ever saw — sighted users got ZEC and screen-reader users
+            // got nothing. The accessible copy is rewritten, not removed.
+            node.textContent = '';
+            node.appendChild(makeSpan(originalText.trim(), newText));
+            node.appendChild(makeAccessibleCopy(newText));
           }
 
           // Tooltip carries the pre-conversion price (the old code read
@@ -100,7 +135,7 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
         }
       } else {
         // For complex content (Wikipedia, etc.), replace within text nodes to preserve HTML
-        converted = replacePricesInTextNodes(node, prices, rates, settings, directTextOnly);
+        converted = replacePricesInTextNodes(node, prices, rates, settings, held, directTextOnly);
       }
 
       if (converted) {
@@ -117,29 +152,91 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
   return convertedCount;
 }
 
-function isHost(hostname: string, domains: string[]): boolean {
-  return domains.some((d) => hostname === d || hostname.endsWith('.' + d));
-}
-
 function displayText(original: string, formatted: string, settings: Settings): string {
   return settings.displayMode === 'append' ? `${original} (${formatted})` : formatted;
 }
 
-function makeSpan(original: string, converted: string): HTMLSpanElement {
+// The tooltip is where a price stops being a number and starts being a
+// quantity: the ratio line is what a person can actually remember, because it
+// does not move when the ZEC price does.
+function tooltipFor(original: string, zecAmount: number, ctx: ConvertContext): string {
+  const stage = ctx.settings.weanFromFiat
+    ? weanStage(ctx.settings.weanStartedAt)
+    : 'always';
+  // 'delayed' and 'on-demand' are handled by CSS and the Alt-hold peek; only
+  // 'hidden' removes the number from the tooltip entirely.
+  const showFiat = !ctx.settings.hideFiat && stage !== 'hidden';
+  const lines = showFiat ? [`Original: ${original}`] : [];
+  const comparison = formatComparisons(
+    compareToAnchors(zecAmount, ctx.settings.anchors ?? [], ctx.rates),
+  );
+  if (comparison) lines.push(comparison);
+
+  // Always present, never conditional. A warning that only appears sometimes
+  // teaches people that its absence means "no divergence"; a line that is
+  // always there teaches them that a held rate HAS a divergence, which is the
+  // mental model we actually want installed.
+  //
+  // Expressed as a percentage and an age, with no fiat figure, so it survives
+  // hideFiat — a user who has given up their fiat cross-check needs this more,
+  // not less.
+  if (ctx.held) {
+    const gap = divergence(ctx.held, ctx.rates);
+    if (gap !== null) {
+      const sign = gap >= 0 ? '+' : '';
+      lines.push(
+        `Held rate · spot ${sign}${(gap * 100).toFixed(1)}% · set ${
+          describeAge(Date.now() - ctx.held.pegged)
+        }`,
+      );
+    }
+  }
+
+  return lines.join('\n');
+}
+
+function describeAge(ms: number): string {
+  const hours = Math.floor(ms / 3_600_000);
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return days === 1 ? '1 day ago' : `${days} days ago`;
+}
+
+interface ConvertContext {
+  rates: RatesData;
+  settings: Settings;
+  held?: HeldRate | null;
+}
+
+function makeSpan(original: string, converted: string, title?: string): HTMLSpanElement {
   const span = document.createElement('span');
   span.className = SPAN_CLASS;
-  span.setAttribute('data-zentat-original', original);
-  span.setAttribute('title', `Original: ${original}`);
+  span.setAttribute('title', title ?? `Original: ${original}`);
   span.textContent = converted;
+  // Styled inline rather than through an injected stylesheet: a stylesheet with
+  // a known id is a one-selector extension detector. text-decoration (not
+  // border-bottom) avoids a double underline inside links and adds no height;
+  // nowrap keeps "0.42" from splitting off its "ZEC".
+  span.style.textDecoration = 'underline dotted';
+  span.style.textUnderlineOffset = '0.18em';
+  span.style.whiteSpace = 'nowrap';
+  span.style.cursor = 'help';
+  rememberSpan(span, original);
   return span;
 }
 
-// Set a title we can later restore/remove without clobbering the page's own
+// A visually-hidden copy so the accessible name matches what is on screen.
+function makeAccessibleCopy(text: string): HTMLSpanElement {
+  const span = document.createElement('span');
+  span.textContent = text;
+  span.style.cssText =
+    'position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap';
+  return span;
+}
+
+// The page's own title is preserved in the WeakMap by rememberContainer.
 function setOwnTitle(el: Element, title: string): void {
-  const prev = el.getAttribute('title');
-  if (prev !== null && !el.hasAttribute('data-zentat-prev-title')) {
-    el.setAttribute('data-zentat-prev-title', prev);
-  }
   el.setAttribute('title', title);
 }
 
@@ -154,15 +251,17 @@ function replacePricesInTextNodes(
   prices: ParsedPrice[],
   rates: RatesData,
   settings: Settings,
+  held: HeldRate | null | undefined,
   directTextOnly?: boolean,
 ): boolean {
   const replacements: Replacement[] = [];
   for (const parsed of prices) {
-    const result = convertPrice(parsed, rates, settings.precision, settings.displayUnit);
+    const result = convertPrice(parsed, rates, settings.precision, settings.displayUnit, held);
     if (result) {
       replacements.push({
         original: parsed.original,
         converted: displayText(parsed.original, result.formatted, settings),
+        zecAmount: result.zecAmount,
       });
     }
   }
@@ -186,7 +285,7 @@ function replacePricesInTextNodes(
 
   let anyReplaced = false;
   for (const tNode of textNodes) {
-    if (replaceInTextNode(tNode, uniqueReplacements)) {
+    if (replaceInTextNode(tNode, uniqueReplacements, { rates, settings, held })) {
       anyReplaced = true;
     }
   }
@@ -199,11 +298,15 @@ function replacePricesInTextNodes(
     const trimmed = element.textContent?.trim() ?? '';
     const match = uniqueReplacements.find((r) => r.original === trimmed);
     if (match) {
-      if (!element.hasAttribute('data-zentat-original')) {
-        element.setAttribute('data-zentat-original', element.innerHTML);
-      }
+      rememberContainer(element, element.innerHTML, element.getAttribute('title'));
       element.textContent = '';
-      element.appendChild(makeSpan(match.original, match.converted));
+      element.appendChild(
+        makeSpan(
+          match.original,
+          match.converted,
+          tooltipFor(match.original, match.zecAmount, { rates, settings, held }),
+        ),
+      );
       anyReplaced = true;
     }
   }
@@ -234,7 +337,11 @@ function collectTextNodes(element: Element): Text[] {
   return textNodes;
 }
 
-function replaceInTextNode(tNode: Text, replacements: Replacement[]): boolean {
+function replaceInTextNode(
+  tNode: Text,
+  replacements: Replacement[],
+  ctx: ConvertContext,
+): boolean {
   const content = tNode.nodeValue || '';
   const fragment = document.createDocumentFragment();
   let cursor = 0;
@@ -260,7 +367,9 @@ function replaceInTextNode(tNode: Text, replacements: Replacement[]): boolean {
     if (bestIdx > cursor) {
       fragment.appendChild(document.createTextNode(content.slice(cursor, bestIdx)));
     }
-    fragment.appendChild(makeSpan(best.original, best.converted));
+    fragment.appendChild(
+      makeSpan(best.original, best.converted, tooltipFor(best.original, best.zecAmount, ctx)),
+    );
     cursor = bestIdx + best.original.length;
     replacedAny = true;
   }
@@ -274,13 +383,46 @@ function replaceInTextNode(tNode: Text, replacements: Replacement[]): boolean {
   return true;
 }
 
-// Subtle affordance so users can tell which numbers Zentat rewrote
-function ensureStyles(): void {
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement('style');
-  style.id = STYLE_ID;
-  style.textContent = `.${SPAN_CLASS} { border-bottom: 1px dotted currentColor; cursor: help; }`;
-  (document.head || document.documentElement)?.appendChild(style);
+/**
+ * Copy the fiat, not the ZEC.
+ *
+ * Read in ZEC, copy in fiat. That asymmetry is what makes replacing the price
+ * safe as a default: the user thinks in ZEC while browsing, and the number that
+ * lands in a payment field, a spreadsheet or a message is still the one the
+ * merchant will actually charge.
+ */
+export function installCopyHandler(): () => void {
+  const onCopy = (event: ClipboardEvent) => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const fragment = range.cloneContents();
+    const clones = fragment.querySelectorAll(`.${SPAN_CLASS}`);
+    if (clones.length === 0) return;
+
+    // cloneContents() produces new nodes, so the WeakMap cannot be consulted on
+    // them. Both lists are in document order, so pair them positionally; if the
+    // counts disagree, leave the clipboard alone rather than guess.
+    const live = Array.from(document.querySelectorAll(`.${SPAN_CLASS}`))
+      .filter((el) => range.intersectsNode(el));
+    if (live.length !== clones.length) return;
+
+    let replaced = false;
+    clones.forEach((clone, index) => {
+      const original = spanOriginalText(live[index]);
+      if (original === undefined) return;
+      clone.replaceWith(document.createTextNode(original));
+      replaced = true;
+    });
+    if (!replaced) return;
+
+    event.clipboardData?.setData('text/plain', fragment.textContent ?? '');
+    event.preventDefault();
+  };
+
+  document.addEventListener('copy', onCopy, true);
+  return () => document.removeEventListener('copy', onCopy, true);
 }
 
 export function revertConversions(): void {
@@ -302,7 +444,10 @@ function revertWithin(root: ParentNode): void {
   // Span-level conversions: precise swap back to a text node — page listeners
   // on surrounding elements survive.
   for (const span of Array.from(root.querySelectorAll(`.${SPAN_CLASS}`))) {
-    const original = span.getAttribute('data-zentat-original') ?? span.textContent ?? '';
+    // A span we did not create has no WeakMap entry — leave the page's own
+    // markup alone rather than rewriting it from an attribute it controls.
+    const original = spanOriginalText(span);
+    if (original === undefined) continue;
     span.parentNode?.replaceChild(document.createTextNode(original), span);
   }
 
@@ -312,16 +457,12 @@ function revertWithin(root: ParentNode): void {
 }
 
 function revertContainer(el: Element): void {
-  const originalHtml = el.getAttribute('data-zentat-original');
-  if (originalHtml !== null) {
-    // Structured-container conversion (Amazon-style): restore the snapshot
-    el.innerHTML = originalHtml;
-    el.removeAttribute('data-zentat-original');
-    // Only structured containers get a title from us — restore or drop it
-    const prevTitle = el.getAttribute('data-zentat-prev-title');
-    if (prevTitle !== null) {
-      el.setAttribute('title', prevTitle);
-      el.removeAttribute('data-zentat-prev-title');
+  // Only a snapshot WE took is ever written back. The page cannot supply one.
+  const state = takeContainer(el);
+  if (state) {
+    el.innerHTML = state.html;
+    if (state.prevTitle !== null) {
+      el.setAttribute('title', state.prevTitle);
     } else {
       el.removeAttribute('title');
     }

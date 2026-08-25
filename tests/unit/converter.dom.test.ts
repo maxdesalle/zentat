@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CONVERTED_MARKER, SPAN_CLASS } from '../../src/entrypoints/content/markers';
 
 vi.mock('wxt/utils/storage', () => ({
   storage: {
@@ -15,7 +16,11 @@ vi.mock('wxt/utils/storage', () => ({
   },
 }));
 
-import { convertPricesInNode, revertConversions } from '../../src/entrypoints/content/converter';
+import {
+  convertPricesInNode,
+  installCopyHandler,
+  revertConversions,
+} from '../../src/entrypoints/content/converter';
 import type { RatesData } from '../../src/lib/storage/rates';
 import { DEFAULT_SETTINGS, type Settings } from '../../src/lib/storage/settings';
 
@@ -44,11 +49,15 @@ describe('convertPricesInNode', () => {
     const count = convertPricesInNode(document.body, freshRates(), settings());
     expect(count).toBeGreaterThan(0);
 
-    const span = document.querySelector('.zentat-converted');
+    const span = document.querySelector(`.${SPAN_CLASS}`);
     expect(span).not.toBeNull();
-    expect(span!.getAttribute('data-zentat-original')).toBe('$19.99');
+    expect(span!.getAttribute('title')).toBe('Original: $19.99');
+    // Pin the number, not just the unit: $19.99 x 0.00125 = 0.0249875 ZEC.
+    expect(span!.textContent).toBe('0.0250 ZEC');
     // The tooltip must show the ORIGINAL fiat price, not the converted value
     expect(span!.getAttribute('title')).toBe('Original: $19.99');
+    // Pin the number, not just the unit: $19.99 x 0.00125 = 0.0249875 ZEC.
+    expect(span!.textContent).toBe('0.0250 ZEC');
     expect(span!.textContent).toContain('ZEC');
     expect(span!.textContent).not.toContain('$19.99');
     // Surrounding text and structure survive
@@ -63,15 +72,15 @@ describe('convertPricesInNode', () => {
 
     revertConversions();
     expect(document.body.textContent).toContain('$19.99');
-    expect(document.querySelector('.zentat-converted')).toBeNull();
-    expect(document.querySelector('.zentat-processed')).toBeNull();
+    expect(document.querySelector(`.${SPAN_CLASS}`)).toBeNull();
+    expect(document.querySelector(`.${CONVERTED_MARKER}`)).toBeNull();
   });
 
   it('append mode keeps the original price visible', () => {
     document.body.innerHTML = '<p>$19.99</p>';
     convertPricesInNode(document.body, freshRates(), settings({ displayMode: 'append' }));
-    const span = document.querySelector('.zentat-converted')!;
-    expect(span.textContent).toMatch(/^\$19\.99 \(.+ZEC\)$/);
+    const span = document.querySelector(`.${SPAN_CLASS}`)!;
+    expect(span.textContent).toBe('$19.99 (0.0250 ZEC)');
   });
 
   it('never rewrites prices inside buttons', () => {
@@ -79,15 +88,15 @@ describe('convertPricesInNode', () => {
     convertPricesInNode(document.body, freshRates(), settings());
     expect(document.querySelector('button')!.textContent).toBe('Pay $49.99 now');
     // The non-button price still converts
-    expect(document.querySelector('p .zentat-converted')).not.toBeNull();
+    expect(document.querySelector(`p .${SPAN_CLASS}`)).not.toBeNull();
   });
 
   it('converts prices split across inline child nodes', () => {
     document.body.innerHTML = '<div id="split"><span>$</span><span>99</span></div>';
     const count = convertPricesInNode(document.body, freshRates(), settings());
     expect(count).toBe(1);
-    const span = document.querySelector('#split .zentat-converted')!;
-    expect(span.getAttribute('data-zentat-original')).toBe('$99');
+    const span = document.querySelector(`#split .${SPAN_CLASS}`)!;
+    expect(span.getAttribute('title')).toBe('Original: $99');
     revertConversions();
     expect(document.getElementById('split')!.textContent).toBe('$99');
   });
@@ -95,7 +104,7 @@ describe('convertPricesInNode', () => {
   it("converts a parent's direct text even when a child also holds a price", () => {
     document.body.innerHTML = '<p id="pair">$10 – <span class="sale">$8</span></p>';
     convertPricesInNode(document.body, freshRates(), settings());
-    const spans = document.querySelectorAll('#pair .zentat-converted');
+    const spans = document.querySelectorAll(`#pair .${SPAN_CLASS}`);
     // Both the parent's $10 and the child's $8 convert
     expect(spans.length).toBe(2);
     expect(document.body.textContent).not.toContain('$10');
@@ -127,5 +136,129 @@ describe('convertPricesInNode', () => {
     document.body.innerHTML = '<div><style>.x{content:"$19.99"}</style><p>$5</p></div>';
     convertPricesInNode(document.body, freshRates(), settings());
     expect(document.querySelector('style')!.textContent).toContain('$19.99');
+  });
+});
+
+describe('anchors turn a price into a quantity', () => {
+  it('adds a ratio line to the tooltip', () => {
+    document.body.innerHTML = '<p>$700.00</p>';
+    const anchors = [
+      { id: 'a', label: 'coffees', amount: 5, currency: 'USD', zecWhenSet: 0.00625 },
+    ];
+    convertPricesInNode(document.body, freshRates(), settings({ anchors }));
+
+    const span = document.querySelector(`.${SPAN_CLASS}`)!;
+    expect(span.getAttribute('title')).toBe('Original: $700.00\n≈ 140 coffees');
+  });
+
+  it('leaves the tooltip alone when no anchors are set', () => {
+    document.body.innerHTML = '<p>$700.00</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    expect(document.querySelector(`.${SPAN_CLASS}`)!.getAttribute('title'))
+      .toBe('Original: $700.00');
+  });
+});
+
+describe('copying a converted price yields the fiat', () => {
+  it('swaps ZEC back to the original in clipboard text', () => {
+    document.body.innerHTML = '<p id="p">Total: $19.99 today</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    const uninstall = installCopyHandler();
+
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('p')!);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    let copied: string | null = null;
+    const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', {
+      value: { setData: (_type: string, data: string) => (copied = data) },
+    });
+    document.dispatchEvent(event);
+    uninstall();
+
+    expect(copied).toBe('Total: $19.99 today');
+  });
+
+  it('leaves a selection with no converted price alone', () => {
+    document.body.innerHTML = '<p id="p">no prices here</p>';
+    const uninstall = installCopyHandler();
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('p')!);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    let called = false;
+    const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', {
+      value: { setData: () => (called = true) },
+    });
+    document.dispatchEvent(event);
+    uninstall();
+
+    expect(called).toBe(false);
+  });
+});
+
+describe('hide-fiat mode', () => {
+  it('drops the original from the tooltip but keeps the ratio', () => {
+    document.body.innerHTML = '<p>$700.00</p>';
+    const anchors = [
+      { id: 'a', label: 'coffees', amount: 5, currency: 'USD', zecWhenSet: 0.00625 },
+    ];
+    convertPricesInNode(document.body, freshRates(), settings({ hideFiat: true, anchors }));
+    expect(document.querySelector(`.${SPAN_CLASS}`)!.getAttribute('title')).toBe('≈ 140 coffees');
+  });
+
+  it('still gives the fiat back on copy — thinking in ZEC, not unable to pay', () => {
+    document.body.innerHTML = '<p id="p">$19.99</p>';
+    convertPricesInNode(document.body, freshRates(), settings({ hideFiat: true }));
+    const uninstall = installCopyHandler();
+
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('p')!);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    let copied: string | null = null;
+    const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', {
+      value: { setData: (_t: string, d: string) => (copied = d) },
+    });
+    document.dispatchEvent(event);
+    uninstall();
+
+    expect(copied).toBe('$19.99');
+  });
+});
+
+describe('the held rate reaches the page', () => {
+  const held = { peg: 0.001, pegged: Date.now() - 2 * 3_600_000 };
+
+  it('converts at the held rate, not spot', () => {
+    document.body.innerHTML = '<p>$100.00</p>';
+    // Spot is 0.00125; the peg is 0.001, inside the band.
+    convertPricesInNode(document.body, freshRates(), settings(), held);
+    expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('0.1000 ZEC');
+  });
+
+  it('always discloses the gap from spot, with no fiat figure', () => {
+    document.body.innerHTML = '<p>$100.00</p>';
+    convertPricesInNode(document.body, freshRates(), settings({ hideFiat: true }), held);
+    const title = document.querySelector(`.${SPAN_CLASS}`)!.getAttribute('title')!;
+    // Survives hideFiat: a percentage and an age, never a fiat amount.
+    expect(title).toContain('Held rate · spot +25.0%');
+    expect(title).toContain('2h ago');
+    expect(title).not.toContain('$');
+  });
+
+  it('falls back to spot when the user asked for it', () => {
+    document.body.innerHTML = '<p>$100.00</p>';
+    convertPricesInNode(document.body, freshRates(), settings(), null);
+    expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('0.1250 ZEC');
   });
 });

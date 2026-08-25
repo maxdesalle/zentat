@@ -1,7 +1,12 @@
 import { storage } from 'wxt/utils/storage';
+import { formatZecWithSymbol } from '../../lib/conversion/format';
 import type { NymStatus } from '../../lib/fetch/types';
+import { localizeDocument } from '../../lib/i18n';
+import { monthlyPosition } from '../../lib/liabilities';
+import { divergence } from '../../lib/rates/held';
 import {
   getFetchStatus,
+  getHeldRate,
   getRates,
   isRatesStale,
   type RateFetchStatus,
@@ -10,6 +15,7 @@ import {
   watchRates,
 } from '../../lib/storage/rates';
 import { getSettings, setSettings, type Settings, watchSettings } from '../../lib/storage/settings';
+import { isSiteAllowed, matchesPattern, siteToggleKey } from '../../lib/storage/site-filter';
 
 const enabledCheckbox = document.getElementById('enabled') as HTMLInputElement;
 const stateLine = document.getElementById('state-line')!;
@@ -30,14 +36,6 @@ const siteName = document.getElementById('site-name')!;
 const siteToggleBtn = document.getElementById('site-toggle') as HTMLButtonElement;
 
 // Site filtering elements
-const siteFilterToggle = document.getElementById('site-filter-toggle')!;
-const siteFilterContent = document.getElementById('site-filter-content')!;
-const toggleIcon = document.getElementById('toggle-icon')!;
-const siteModeRadios = document.querySelectorAll<HTMLInputElement>('input[name="siteMode"]');
-const blockedSitesTextarea = document.getElementById('blockedSites') as HTMLTextAreaElement;
-const allowedSitesTextarea = document.getElementById('allowedSites') as HTMLTextAreaElement;
-const blocklistContainer = document.getElementById('blocklist-container')!;
-const allowlistContainer = document.getElementById('allowlist-container')!;
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 let currentSettings: Settings | null = null;
@@ -60,9 +58,9 @@ async function init() {
   enabledCheckbox.checked = settings.enabled;
   updateStateLine(settings.enabled);
   updateRateDisplay();
-  populateSiteFiltering(settings);
   updateNymStatus(settings.nymEnabled, nymStatus ?? 'disconnected');
   void initSiteRow();
+  if (currentSettings) void renderPosition(currentSettings, currentRates);
 
   // First paint is done — allow toggle transitions from now on, so the switch
   // doesn't visibly animate OFF→ON on every open.
@@ -76,11 +74,13 @@ async function init() {
     updateNymStatus(s.nymEnabled, null);
     updateSiteRow();
     updateRateDisplay();
+    void renderPosition(s, currentRates);
   });
 
   watchRates((r) => {
     currentRates = r;
     updateRateDisplay();
+    if (currentSettings) void renderPosition(currentSettings, r);
   });
 
   watchFetchStatus((s) => {
@@ -102,35 +102,12 @@ async function init() {
 
   refreshBtn.addEventListener('click', onRefreshClick);
 
+  document.getElementById('practice')!.addEventListener('click', () => {
+    void browser.tabs.create({ url: browser.runtime.getURL('/training.html') });
+  });
+
   optionsBtn.addEventListener('click', () => {
     browser.runtime.openOptionsPage();
-  });
-
-  // Site filter toggle
-  siteFilterToggle.addEventListener('click', () => {
-    const isExpanded = siteFilterContent.classList.toggle('expanded');
-    siteFilterToggle.classList.toggle('expanded', isExpanded);
-    siteFilterToggle.setAttribute('aria-expanded', String(isExpanded));
-    toggleIcon.classList.toggle('expanded', isExpanded);
-  });
-
-  // Site mode radios
-  siteModeRadios.forEach((radio) => {
-    radio.addEventListener('change', () => {
-      updateSiteListVisibility();
-      debouncedSave();
-    });
-  });
-
-  // Site list textareas - auto-save on change
-  blockedSitesTextarea.addEventListener('input', debouncedSave);
-  allowedSitesTextarea.addEventListener('input', debouncedSave);
-
-  // The popup document dies the instant it loses focus, killing pending
-  // debounce timers — flush unsaved site-filter edits before that happens.
-  window.addEventListener('blur', flushPendingSave);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') flushPendingSave();
   });
 }
 
@@ -192,46 +169,31 @@ function updateSiteRow() {
   siteName.textContent = currentHostname;
 
   const s = currentSettings;
-  if (s.siteMode === 'blocklist') {
-    const blocked = s.blockedSites.includes(currentHostname);
-    siteToggleBtn.textContent = blocked ? 'Enable here' : 'Disable here';
-    siteToggleBtn.onclick = async () => {
-      const blockedSites = blocked
-        ? s.blockedSites.filter((h) => h !== currentHostname)
-        : [...s.blockedSites, currentHostname!];
+  const host = currentHostname;
+  // The label has to come from the same predicate that decides conversion.
+  // Reading exact list membership meant www.amazon.com showed "Disable here"
+  // while amazon.com in the blocklist was already blocking it.
+  const converting = isSiteAllowed(host, s);
+  siteToggleBtn.textContent = converting ? 'Disable here' : 'Enable here';
+
+  siteToggleBtn.onclick = async () => {
+    const key = siteToggleKey(host);
+    if (s.siteMode === 'blocklist') {
+      const blockedSites = converting
+        ? [...s.blockedSites, key]
+        // Remove every pattern that applies, not just an exact string match.
+        : s.blockedSites.filter((p) => !matchesPattern(host, p));
       await setSettings({ blockedSites });
-      blockedSitesTextarea.value = blockedSites.join('\n');
-    };
-  } else {
-    const allowed = s.allowedSites.includes(currentHostname);
-    siteToggleBtn.textContent = allowed ? 'Disable here' : 'Enable here';
-    siteToggleBtn.onclick = async () => {
-      const allowedSites = allowed
-        ? s.allowedSites.filter((h) => h !== currentHostname)
-        : [...s.allowedSites, currentHostname!];
+    } else {
+      const allowedSites = converting
+        ? s.allowedSites.filter((p) => !matchesPattern(host, p))
+        : [...s.allowedSites, key];
       await setSettings({ allowedSites });
-      allowedSitesTextarea.value = allowedSites.join('\n');
-    };
-  }
+    }
+  };
 }
 
 // --- Site filtering form --------------------------------------------------
-
-function populateSiteFiltering(settings: Settings) {
-  siteModeRadios.forEach((radio) => {
-    radio.checked = radio.value === settings.siteMode;
-  });
-  blockedSitesTextarea.value = settings.blockedSites.join('\n');
-  allowedSitesTextarea.value = settings.allowedSites.join('\n');
-  updateSiteListVisibility();
-}
-
-function updateSiteListVisibility() {
-  const selectedMode = document.querySelector<HTMLInputElement>('input[name="siteMode"]:checked')
-    ?.value;
-  blocklistContainer.classList.toggle('active', selectedMode === 'blocklist');
-  allowlistContainer.classList.toggle('active', selectedMode === 'allowlist');
-}
 
 function updateNymStatus(nymEnabled: boolean, status: NymStatus | null) {
   nymStatusEl.classList.remove('connecting', 'connected', 'error', 'inactive');
@@ -260,38 +222,6 @@ function updateNymStatus(nymEnabled: boolean, status: NymStatus | null) {
   }
 }
 
-function debouncedSave() {
-  if (saveTimeout) clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(saveSiteFiltering, 500);
-}
-
-function flushPendingSave() {
-  if (saveTimeout) {
-    clearTimeout(saveTimeout);
-    saveTimeout = null;
-    void saveSiteFiltering();
-  }
-}
-
-async function saveSiteFiltering() {
-  const siteMode = document.querySelector<HTMLInputElement>('input[name="siteMode"]:checked')
-    ?.value as
-      | 'blocklist'
-      | 'allowlist';
-
-  const blockedSites = blockedSitesTextarea.value
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const allowedSites = allowedSitesTextarea.value
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  await setSettings({ siteMode, blockedSites, allowedSites });
-}
-
 // --- Rate display ---------------------------------------------------------
 
 function updateRateDisplay() {
@@ -310,7 +240,12 @@ function updateRateDisplay() {
     fiatZecValue.textContent = '--';
   }
 
-  sourceEl.textContent = rates?.source || '--';
+  // CoinGecko's terms require visible attribution wherever their data is shown.
+  void renderRateHonesty();
+
+  sourceEl.textContent = rates?.source === 'coingecko'
+    ? 'Powered by CoinGecko'
+    : rates?.source || '--';
 
   // Freshness with an honest empty/loading/error state instead of dead dashes
   updatedEl.classList.remove('stale', 'very-stale');
@@ -342,12 +277,15 @@ function formatRate(rate: number): string {
   return rate.toPrecision(4);
 }
 
+// The code is rendered in its own element next to this value, so formatting
+// with style:'currency' produced "1 ZEC = $47.62 USD". The code is also the
+// unambiguous half — "$" is USD, CAD, AUD and MXN.
 function formatFiatPrice(price: number, currency: string): string {
-  try {
-    return price.toLocaleString(undefined, { style: 'currency', currency });
-  } catch {
-    return price.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  }
+  const digits = currency === 'JPY' || currency === 'KRW' ? 0 : 2;
+  return price.toLocaleString(undefined, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 }
 
 function formatRelativeTime(timestamp: number): string {
@@ -367,3 +305,72 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 init();
+
+// ---------------------------------------------------------------------------
+// Your month, in ZEC
+//
+// Deliberately in the popup rather than buried in options: a number you see
+// daily is one you eventually think in, and this is the number the whole
+// unit-of-account claim rests on.
+// ---------------------------------------------------------------------------
+
+const positionSection = document.getElementById('position')!;
+const positionNet = document.getElementById('position-net')!;
+const positionIn = document.getElementById('position-in')!;
+const positionOut = document.getElementById('position-out')!;
+const positionGaps = document.getElementById('position-gaps')!;
+
+async function renderPosition(settings: Settings, rates: RatesData | null) {
+  const liabilities = settings.liabilities ?? [];
+  if (liabilities.length === 0 || !rates) {
+    positionSection.hidden = true;
+    return;
+  }
+
+  const held = settings.rateMode === 'spot' ? null : await getHeldRate();
+  const { incoming, outgoing, net, unpriced } = monthlyPosition(liabilities, rates, held);
+
+  positionSection.hidden = false;
+  positionNet.textContent = `${net >= 0 ? '+' : ''}${formatZecWithSymbol(net, 'coarse')}`;
+  positionNet.classList.toggle('negative', net < 0);
+  positionIn.textContent = `in ${formatZecWithSymbol(incoming, 'coarse')}`;
+  positionOut.textContent = `out ${formatZecWithSymbol(outgoing, 'coarse')}`;
+
+  // Say what is missing rather than quietly reporting a smaller total.
+  positionGaps.hidden = unpriced.length === 0;
+  positionGaps.textContent = unpriced.length > 0
+    ? `No rate for ${unpriced.join(', ')} — not counted.`
+    : '';
+}
+
+/**
+ * Rate honesty.
+ *
+ * The unit only earns trust if the conversion never lies or hides. So the
+ * popup states which rate is actually being applied, and how far it currently
+ * sits from the market — not only when that gap is large.
+ */
+async function renderRateHonesty(): Promise<void> {
+  const line = document.getElementById('rate-honesty');
+  if (!line || !currentSettings || !currentRates) return;
+
+  if (currentSettings.rateMode === 'spot') {
+    line.textContent = 'Showing the market rate.';
+    return;
+  }
+
+  const held = await getHeldRate();
+  const gap = held ? divergence(held, currentRates) : null;
+  if (gap === null) {
+    line.textContent = 'Held rate — settling on first fetch.';
+    return;
+  }
+
+  const sign = gap >= 0 ? '+' : '';
+  const band = Math.round(currentSettings.heldBand * 100);
+  line.textContent = `Held rate · market ${sign}${(gap * 100).toFixed(1)}% · re-pegs past ${band}%`;
+}
+
+// Applied once at load: browser.i18n resolves synchronously, so there is no
+// flash of untranslated text.
+localizeDocument();

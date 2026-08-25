@@ -10,13 +10,103 @@
   <body>
     <div class="container">
       <header class="header">
-        <h1>Zentat Options</h1>
+        <h1 data-i18n="optionsTitle">Zentat Options</h1>
         <p class="subtitle">
           Configure your fiat-to-ZEC conversion preferences. Changes save automatically.
         </p>
       </header>
 
       <main class="main">
+        <section class="section">
+          <div class="nym-header">
+            <div class="nym-info">
+              <h2>Hide fiat</h2>
+              <p class="section-desc">
+                No original prices anywhere &mdash; not on hover, not in the popup.
+                For when you want to stop translating and start thinking in ZEC.
+                Copying a price still gives you the original, so you can still pay.
+              </p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="hideFiat" />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 data-i18n="optionsDisplayRate">Display rate</h2>
+          <p class="section-desc">
+            A rate that changes several times a day is not one you can remember.
+            The held rate moves only when ZEC leaves a band, so the number stays
+            put long enough to be worth learning &mdash; and it is never further
+            from the market than the band you pick.
+          </p>
+          <div class="precision-options">
+            <label class="radio-option">
+              <input type="radio" name="rateMode" value="held" />
+              <span class="radio-label">Held &mdash; never more than 10% from market</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="rateMode" value="spot" />
+              <span class="radio-label">Market rate &mdash; changes throughout the day</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="nym-header">
+            <div class="nym-info">
+              <h2>Wean off fiat</h2>
+              <p class="section-desc">
+                Fades original prices out over about six weeks instead of asking
+                you to quit them in one step. Copying a price still gives you
+                fiat throughout &mdash; the goal is to stop translating, not to
+                be unable to pay.
+              </p>
+              <p class="anchor-hint" id="wean-stage"></p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="weanFromFiat" />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </section>
+
+        <section class="section" id="anchors-section">
+          <h2>Your price anchors</h2>
+          <p class="section-desc">
+            A few things you actually buy. Zentat then shows any price as a
+            multiple of them &mdash; &ldquo;&asymp; 14 coffees&rdquo; &mdash; on hover.
+            Ratios stay true no matter what ZEC does, which is what makes them
+            worth remembering.
+          </p>
+          <div class="anchor-drift" id="anchor-drift" hidden></div>
+          <ul class="anchor-list" id="anchor-list"></ul>
+          <form class="anchor-form" id="anchor-form">
+            <input
+              type="text"
+              id="anchor-label"
+              placeholder="coffees"
+              maxlength="24"
+              aria-label="What it is"
+              required
+            />
+            <input
+              type="number"
+              id="anchor-amount"
+              placeholder="5.00"
+              step="any"
+              min="0"
+              aria-label="What it costs"
+              required
+            />
+            <select class="select" id="anchor-currency" aria-label="Currency"></select>
+            <button type="submit" class="anchor-add">Add</button>
+          </form>
+          <p class="anchor-hint" id="anchor-hint"></p>
+        </section>
+
         <section class="section">
           <div class="row-header">
             <div>
@@ -57,7 +147,7 @@
         <section class="section">
           <div class="row-header">
             <div>
-              <h2>Currencies</h2>
+              <h2 data-i18n="optionsCurrencies">Currencies</h2>
               <p class="section-desc">Select which currencies to detect and convert</p>
             </div>
             <div class="mini-actions">
@@ -120,6 +210,12 @@
             significant figures.
           </p>
           <div class="precision-options">
+            <label class="radio-option">
+              <input type="radio" name="precision" value="coarse" />
+              <span class="radio-label">
+                Coarse &mdash; &ldquo;&asymp;0.12 ZEC&rdquo;, the digits the rate can justify
+              </span>
+            </label>
             <label class="radio-option">
               <input type="radio" name="precision" value="auto" />
               <span class="radio-label">Auto (4 significant figures)</span>

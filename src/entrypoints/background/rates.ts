@@ -2,12 +2,16 @@ import { storage } from 'wxt/utils/storage';
 import { createFetcher } from '../../lib/fetch';
 import { destroyNymConnection } from '../../lib/fetch/nym';
 import { debug } from '../../lib/log';
+import { updateHeldRate } from '../../lib/rates/held';
 import { fetchRatesWithRetry } from '../../lib/rates/provider';
+import { validateRates } from '../../lib/rates/validate';
 import {
+  getHeldRate,
   getRates,
   isRatesStale,
   mergeRates,
   setFetchStatus,
+  setHeldRate,
   setRates,
 } from '../../lib/storage/rates';
 import { getSettings } from '../../lib/storage/settings';
@@ -15,7 +19,9 @@ import { getSettings } from '../../lib/storage/settings';
 // Max Nym attempts per refresh cycle (each retry gets a new gateway). Kept low
 // and combined with a cross-cycle backoff so a broken mixnet connection doesn't
 // burn a distinctive stream of fresh gateway registrations every alarm cycle.
-const NYM_MAX_RETRIES = 3;
+// Nym's own client retries one gateway ten times before giving up on it, so
+// churning to a new gateway is a last resort rather than a first response.
+const NYM_MAX_RETRIES = 2;
 const NYM_BACKOFF_MS = 15 * 60 * 1000;
 
 // Small random delay before each scheduled fetch so the extension's network
@@ -92,7 +98,9 @@ async function doRefresh(force: boolean): Promise<boolean> {
         if (attempt < NYM_MAX_RETRIES) {
           debug('Nym failed, destroying for new gateway...');
           await destroyNymConnection();
-          await sleep(2000);
+          // Matches the gateway client's own 5s backoff ladder; 2s just retries the
+          // same congested state.
+          await sleep(15_000);
         }
       }
 
@@ -131,7 +139,29 @@ async function doRefresh(force: boolean): Promise<boolean> {
 // serves USD/EUR) never wipes the other currencies' recent rates.
 async function storeRates(data: Awaited<ReturnType<typeof getRates>>): Promise<void> {
   const current = await getRates();
-  await setRates(mergeRates(current, data));
+  const { rates, rejected } = validateRates(data, current);
+
+  if (rejected.length > 0) {
+    debug(`Rejected implausible rates: ${rejected.join(', ')}`);
+  }
+  if (Object.keys(rates).length === 0) {
+    await setFetchStatus('error', 'Rates failed a plausibility check');
+    return;
+  }
+
+  const merged = mergeRates(current, { ...data, rates });
+  await setRates(merged);
+
+  // The held rate is derived here, once, so every surface reads the same peg
+  // rather than each re-deriving it and drifting.
+  const settings = await getSettings();
+  const previous = await getHeldRate();
+  const { held, repegged } = updateHeldRate(previous, merged, settings.heldBand);
+  if (held && held !== previous) await setHeldRate(held);
+  if (repegged) {
+    debug(`Held rate re-pegged: ZEC moved past ${Math.round(settings.heldBand * 100)}%`);
+  }
+
   await setFetchStatus('ok');
 }
 

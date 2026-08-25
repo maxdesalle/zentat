@@ -1,5 +1,8 @@
 import { storage } from 'wxt/utils/storage';
+import type { Anchor } from '../anchors';
+import type { Precision } from '../conversion/format';
 import { CURRENCY_CODES } from '../currencies';
+import type { Liability } from '../liabilities';
 import { isSiteAllowed, type SiteFilterSettings } from './site-filter';
 
 export { isSiteAllowed } from './site-filter';
@@ -11,11 +14,45 @@ export type RateSource = 'auto' | 'coingecko' | 'kraken';
 export interface Settings extends SiteFilterSettings {
   enabled: boolean;
   currencies: string[];
-  precision: 'auto' | number;
+  precision: Precision;
   displayCurrency: string;
   displayMode: DisplayMode;
   displayUnit: DisplayUnit;
   rateSource: RateSource;
+  /** Things the user buys, used to express prices as ratios they can picture. */
+  anchors: Anchor[];
+  /**
+   * Rent, salary, subscriptions — the numbers a person's economic life is
+   * actually denominated in. Until these exist in ZEC, converted shop prices
+   * do not make it the user's unit.
+   */
+  liabilities: Liability[];
+  /**
+   * Advanced mode: no fiat anywhere — not on hover, not in the popup. You
+   * cannot claim to think in a unit you can escape with one hover, so this is
+   * the switch that makes the claim real. Off by default; it is a commitment,
+   * not a default.
+   */
+  /**
+   * 'held' shows a rate that only moves when ZEC leaves a band, so the number
+   * is stable enough to remember; 'spot' shows the market rate, which changes
+   * several times a day and is what a payment actually settles at.
+   */
+  rateMode: 'held' | 'spot';
+  /** The band, and the accuracy bound disclosed to the user. */
+  heldBand: number;
+  hideFiat: boolean;
+  /**
+   * Fade the original price out of the tooltip over weeks rather than
+   * requiring the user to quit it cold.
+   *
+   * Habituation is the product, so the off-ramp from fiat needs designing as
+   * deliberately as the on-ramp. hideFiat is a cliff most people will not
+   * jump; this is the ramp to it, and it ends by turning hideFiat on.
+   */
+  weanFromFiat: boolean;
+  /** When weaning started, so the schedule is measured from a real date. */
+  weanStartedAt: number;
   nymEnabled: boolean;
   nymTimeoutMs: number;
 }
@@ -34,6 +71,15 @@ export const DEFAULT_SETTINGS: Settings = {
   displayMode: 'replace',
   displayUnit: 'auto',
   rateSource: 'auto',
+  anchors: [],
+  liabilities: [],
+  // Held by default: the whole product depends on the number being memorable,
+  // and spot is not.
+  rateMode: 'held',
+  heldBand: 0.1,
+  hideFiat: false,
+  weanFromFiat: false,
+  weanStartedAt: 0,
   nymEnabled: false,
   nymTimeoutMs: 60000,
 };

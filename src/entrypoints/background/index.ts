@@ -3,6 +3,7 @@ import { debug } from '../../lib/log';
 import { getRates, isRatesStale, watchRates } from '../../lib/storage/rates';
 import { getSettings, setSettings, watchSettings } from '../../lib/storage/settings';
 import { handleAlarm, setupAlarms } from './alarms';
+import { setupQuickConvert } from './quick';
 import { refreshRates } from './rates';
 
 const STALE_BADGE_AGE_MS = 30 * 60 * 1000;
@@ -13,12 +14,12 @@ export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(async (details) => {
     await setupAlarms(true);
     if (details.reason === 'install') {
-      // Lightweight welcome: the options page explains what converts, the
-      // Alt+Z shortcut, and which currencies are enabled. (Pages that were
-      // already open convert after their next reload — injecting into them
-      // would require blanket host permissions this extension avoids.)
+      // A real welcome, not the settings page. Someone who has just clicked
+      // 'Add extension' should see a price convert before they see a form —
+      // and the flow ends by opening a FRESH tab, because tabs that were
+      // already open do not convert until reloaded.
       try {
-        await browser.runtime.openOptionsPage();
+        await browser.tabs.create({ url: browser.runtime.getURL('/welcome.html') });
       } catch {
         // Not critical
       }
@@ -74,6 +75,21 @@ export default defineBackground(() => {
       return true;
     }
 
+    // A subframe cannot read window.top.location cross-origin, but the
+    // background knows the tab's URL. Without this, blocking a site does not
+    // stop conversion inside the payment iframe it embeds — which is exactly
+    // the frame where being wrong costs money.
+    if (msg.type === 'getTopHost') {
+      let host = '';
+      try {
+        host = _sender.tab?.url ? new URL(_sender.tab.url).hostname : '';
+      } catch {
+        host = '';
+      }
+      sendResponse({ host });
+      return true;
+    }
+
     if (msg.type === 'getStatus') {
       Promise.all([getSettings(), getRates(), getStoredNymStatus()])
         .then(([settings, rates, nymStatus]) => {
@@ -110,6 +126,7 @@ export default defineBackground(() => {
 
   // Ensure alarms are set up (in case onInstalled/onStartup didn't fire)
   void setupAlarms();
+  setupQuickConvert();
   refreshRates(false)
     .then((success) => debug(`Initial rate fetch ${success ? 'succeeded' : 'failed'}`))
     .catch((error) => console.error('Zentat: Initial rate fetch error:', error));

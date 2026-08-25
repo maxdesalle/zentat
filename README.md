@@ -45,7 +45,7 @@ Zentat automatically detects and converts fiat currency prices on any webpage to
 
 **Chrome**: Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/zentat/).
 
-**Firefox**: Firefox Add-ons doesn't accept the Nym library due to file size limits, so install the signed `.xpi` from [GitHub Releases](https://github.com/maxdesalle/zentat/releases): download it, then open `about:addons` → gear menu → **Install Add-on From File…** and select the file. (An unsigned `.zip` only works as a temporary add-on via `about:debugging` and is removed on restart.)
+**Firefox**: Install from [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/zentat/), including Firefox for Android.
 
 ## Privacy
 

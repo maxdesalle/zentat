@@ -1,0 +1,128 @@
+{
+  "extName": {
+    "message": "Zentat"
+  },
+  "extDescription": {
+    "message": "Converte preços em moeda fiduciária para ZEC"
+  },
+  "popupConverting": {
+    "message": "Convertendo preços"
+  },
+  "popupPaused": {
+    "message": "Pausado"
+  },
+  "popupDisableHere": {
+    "message": "Desativar em $SITE$",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupEnableHere": {
+    "message": "Ativar em $SITE$",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupRefresh": {
+    "message": "Atualizar"
+  },
+  "popupPractice": {
+    "message": "Praticar"
+  },
+  "popupOptions": {
+    "message": "Opções"
+  },
+  "popupYourMonth": {
+    "message": "Seu mês"
+  },
+  "popupNoRate": {
+    "message": "Ainda sem cotação"
+  },
+  "rateHeld": {
+    "message": "Cotação fixada"
+  },
+  "rateMarket": {
+    "message": "Mostrando a cotação de mercado."
+  },
+  "rateOriginal": {
+    "message": "Original: $PRICE$",
+    "placeholders": {
+      "price": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsTitle": {
+    "message": "Opções do Zentat"
+  },
+  "optionsDisplayRate": {
+    "message": "Cotação exibida"
+  },
+  "optionsHeldOption": {
+    "message": "Fixada — nunca mais de 10% do mercado"
+  },
+  "optionsSpotOption": {
+    "message": "Cotação de mercado — muda ao longo do dia"
+  },
+  "optionsWeanTitle": {
+    "message": "Largar a moeda fiduciária"
+  },
+  "optionsHideFiat": {
+    "message": "Ocultar moeda fiduciária"
+  },
+  "optionsAnchors": {
+    "message": "Suas referências de preço"
+  },
+  "optionsCurrencies": {
+    "message": "Moedas"
+  },
+  "optionsSaved": {
+    "message": "Salvo"
+  },
+  "welcomeHeadline": {
+    "message": "Preços, em ZEC."
+  },
+  "welcomeContinue": {
+    "message": "Continuar"
+  },
+  "welcomeSkip": {
+    "message": "Pular"
+  },
+  "welcomeWhereShop": {
+    "message": "Onde você compra?"
+  },
+  "welcomeReady": {
+    "message": "Tudo pronto."
+  },
+  "welcomeTryIt": {
+    "message": "Abrir uma loja e testar"
+  },
+  "trainingTitle": {
+    "message": "Quanto é isso em ZEC?"
+  },
+  "trainingGuessLabel": {
+    "message": "Seu palpite, em ZEC"
+  },
+  "trainingCheck": {
+    "message": "Verificar"
+  },
+  "trainingNext": {
+    "message": "Próximo"
+  },
+  "trainingSpotOn": {
+    "message": "Na mosca"
+  },
+  "trainingClose": {
+    "message": "Perto"
+  },
+  "trainingInRegion": {
+    "message": "Por aí"
+  },
+  "trainingWayOff": {
+    "message": "Bem longe"
+  }
+}

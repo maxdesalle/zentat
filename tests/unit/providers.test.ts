@@ -105,15 +105,24 @@ describe('fetchFromKraken', () => {
 
 describe('fetchRates', () => {
   it('falls back from CoinGecko to Kraken', async () => {
+    // Provider order is rotated per call, so pin the source to make this test
+    // about failover rather than about which operator happens to go first.
     const { fetcher, calls } = fetcherReturning({
       'api.coingecko.com': { ok: false, status: 429 },
       'api.kraken.com': { ok: true, body: KRAKEN_FIXTURE },
     });
-    const result = await fetchRates(fetcher);
+    // Rotation randomises which provider goes first, so drive it until the
+    // failover path is the one exercised rather than retrying once and hoping.
+    let result = await fetchRates(fetcher);
+    for (let attempt = 0; attempt < 20 && calls.length < 2; attempt++) {
+      calls.length = 0;
+      result = await fetchRates(fetcher);
+    }
+    expect(calls.length).toBe(2);
+
     expect(result.success).toBe(true);
     expect(result.data?.source).toBe('kraken');
     expect(result.errors.some((e) => e.includes('CoinGecko'))).toBe(true);
-    expect(calls).toHaveLength(2);
   });
 
   it('honors a pinned rate source', async () => {
@@ -135,5 +144,40 @@ describe('fetchRates', () => {
     const result = await fetchRates(fetcher);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(2);
+  });
+});
+
+describe('provider rotation', () => {
+  it('does not always start with the same operator', async () => {
+    // A fixed order gives the first provider a complete per-IP record of when
+    // the extension refreshes.
+    const firstContacted = new Set<string>();
+
+    for (let i = 0; i < 60; i++) {
+      let first: string | null = null;
+      const fetcher = {
+        fetch: async (url: string) => {
+          first ??= new URL(url).hostname;
+          throw new Error('unreachable');
+        },
+      };
+      await fetchRates(fetcher, 'auto');
+      if (first) firstContacted.add(first);
+    }
+
+    expect(firstContacted.size).toBe(2);
+  });
+
+  it('still tries every provider before giving up', async () => {
+    const seen = new Set<string>();
+    const fetcher = {
+      fetch: async (url: string) => {
+        seen.add(new URL(url).hostname);
+        throw new Error('unreachable');
+      },
+    };
+    const result = await fetchRates(fetcher, 'auto');
+    expect(result.success).toBe(false);
+    expect(seen.size).toBe(2);
   });
 });

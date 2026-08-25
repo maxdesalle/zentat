@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 // Tests the REAL implementation (extracted into a pure module) — the previous
 // version of this file tested an inline copy that had drifted from shipped
 // behavior (no case-insensitivity, no plain-domain subdomain matching).
-import { isSiteAllowed, type SiteFilterSettings } from '../../src/lib/storage/site-filter';
+import {
+  isSiteAllowed,
+  matchesPattern,
+  type SiteFilterSettings,
+  siteToggleKey,
+} from '../../src/lib/storage/site-filter';
 
 const baseSettings: SiteFilterSettings = {
   blockedSites: [],
@@ -76,5 +81,30 @@ describe('isSiteAllowed', () => {
       expect(isSiteAllowed('amazon.com', settings)).toBe(true);
       expect(isSiteAllowed('amazon.co.uk', settings)).toBe(false);
     });
+  });
+});
+
+describe('per-site toggle writes what the filter actually matches', () => {
+  it('normalises to the registrable domain so subdomains follow', () => {
+    expect(siteToggleKey('www.amazon.com')).toBe('amazon.com');
+    expect(siteToggleKey('smile.amazon.co.uk')).toBe('amazon.co.uk');
+    expect(siteToggleKey('shop.example.com.br')).toBe('example.com.br');
+    expect(siteToggleKey('example.com')).toBe('example.com');
+  });
+
+  it('re-enabling clears every pattern that was blocking the site', () => {
+    const blocked = ['amazon.com', '*.amazon.com', 'unrelated.com'];
+    const remaining = blocked.filter((p) => !matchesPattern('www.amazon.com', p));
+    expect(remaining).toEqual(['unrelated.com']);
+  });
+
+  it('the label predicate agrees with the conversion predicate', () => {
+    const settings = {
+      siteMode: 'blocklist' as const,
+      blockedSites: ['amazon.com'],
+      allowedSites: [],
+    };
+    // The old label read exact list membership and said "Disable here" here.
+    expect(isSiteAllowed('www.amazon.com', settings)).toBe(false);
   });
 });

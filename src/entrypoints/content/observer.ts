@@ -1,34 +1,64 @@
+import { collectShadowRoots } from '../../lib/detection/shadow';
+import type { HeldRate } from '../../lib/rates/held';
 import type { RatesData } from '../../lib/storage/rates';
 import type { Settings } from '../../lib/storage/settings';
-import { convertPricesInNode, revertElement } from './converter';
+import {
+  convertPricesInDocument,
+  convertPricesInNode,
+  revertConversions,
+  revertElement,
+} from './converter';
+import { CONVERTED_MARKER, SPAN_CLASS } from './markers';
 import { setActiveObserver } from './state';
 
 interface ObserverConfig {
   rates: RatesData;
   settings: Settings;
+  held?: HeldRate | null;
 }
 
 let observer: MutationObserver | null = null;
 let config: ObserverConfig | null = null;
 let pendingRoots: Set<Element> = new Set();
 let rafId: number | null = null;
+let fallbackId: number | null = null;
+let uninstallRouteHooks: (() => void) | null = null;
 
-export function startObserver(rates: RatesData, settings: Settings): void {
-  config = { rates, settings };
+// How long to wait before converting without a rendering frame.
+const HIDDEN_FLUSH_MS = 250;
+// Bound the queue so an infinite-scroll page cannot retain unbounded detached
+// subtrees; past this we simply rescan the body once.
+const MAX_PENDING_ROOTS = 200;
+
+export function startObserver(
+  rates: RatesData,
+  settings: Settings,
+  held?: HeldRate | null,
+): void {
+  config = { rates, settings, held };
   if (observer) return;
   if (!document.body) return; // No body element (e.g., API endpoints)
 
   observer = new MutationObserver(handleMutations);
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    characterData: true,
-  });
+  // A light-DOM observer receives no records for mutations inside a shadow
+  // tree, so each root needs its own observation. Without this, components
+  // convert once and then never again as they re-render.
+  observeShadowRoots(document.body);
+  uninstallRouteHooks = installRouteHooks();
+
+  observer.observe(document.body, OBSERVE_OPTIONS);
   // Registers this observer for the converter's takeRecords() self-mutation
   // guard. There is deliberately NO polling loop: the observer plus the
   // rAF-batched queue below covers dynamic content without a permanent
   // full-document rescan every 2 seconds.
-  setActiveObserver(observer);
+  setActiveObserver(observer, {
+    // Page mutations swept up by the drain are replayed rather than dropped.
+    replay: handleMutations,
+    isOwnWrite: (node) => {
+      const el = node instanceof Element ? node : node.parentElement;
+      return el?.closest(`.${SPAN_CLASS}, .${CONVERTED_MARKER}`) !== null;
+    },
+  });
 }
 
 function handleMutations(mutations: MutationRecord[]): void {
@@ -39,8 +69,8 @@ function handleMutations(mutations: MutationRecord[]): void {
     for (const node of mutation.addedNodes) {
       if (node.nodeType === Node.ELEMENT_NODE) {
         const element = node as Element;
-        if (!element.closest('.zentat-processed') && !element.closest('.zentat-converted')) {
-          pendingRoots.add(element);
+        if (!element.closest(`.${CONVERTED_MARKER}`) && !element.closest(`.${SPAN_CLASS}`)) {
+          addPending(element);
         }
       }
       // Text node added inside a previously-converted element: the page
@@ -48,13 +78,13 @@ function handleMutations(mutations: MutationRecord[]): void {
       // conversion and queue a fresh pass.
       if (node.nodeType === Node.TEXT_NODE) {
         const parent = node.parentElement;
-        if (!parent || parent.closest('.zentat-converted')) continue;
-        const marked = parent.closest('.zentat-processed');
+        if (!parent || parent.closest(`.${SPAN_CLASS}`)) continue;
+        const marked = parent.closest(`.${CONVERTED_MARKER}`);
         if (marked) {
           revertElement(marked);
-          pendingRoots.add(marked);
+          addPending(marked);
         } else {
-          pendingRoots.add(parent);
+          addPending(parent);
         }
       }
     }
@@ -65,39 +95,155 @@ function handleMutations(mutations: MutationRecord[]): void {
     if (mutation.type === 'characterData') {
       const target = mutation.target;
       const element = target instanceof Element ? target : target.parentElement;
-      if (!element || element.closest('.zentat-converted')) continue;
-      const marked = element.closest('.zentat-processed');
+      if (!element || element.closest(`.${SPAN_CLASS}`)) continue;
+      const marked = element.closest(`.${CONVERTED_MARKER}`);
       if (marked) {
         revertElement(marked);
-        pendingRoots.add(marked);
+        addPending(marked);
       } else {
         // Never touch attributes (like title) of elements Zentat didn't convert
-        pendingRoots.add(element);
+        addPending(element);
       }
     }
   }
 
-  if (pendingRoots.size > 0 && rafId === null) {
+  schedule();
+}
+
+// rAF never fires in a document that is not being rendered — a display:none
+// iframe or a background tab queues roots forever and drains none, so prices
+// there stay fiat indefinitely and the queue grows without bound. The timer is
+// the fallback that keeps those documents converting.
+const OBSERVE_OPTIONS: MutationObserverInit = {
+  childList: true,
+  subtree: true,
+  characterData: true,
+};
+
+// Roots already under observation, so re-probing after a mutation is cheap and
+// idempotent. Weak so a detached component does not pin its root.
+const observedShadowRoots = new WeakSet<ShadowRoot>();
+
+function observeShadowRoots(root: ParentNode): void {
+  if (!observer) return;
+  for (const shadow of collectShadowRoots(root)) {
+    if (observedShadowRoots.has(shadow)) continue;
+    observedShadowRoots.add(shadow);
+    observer.observe(shadow, OBSERVE_OPTIONS);
+  }
+}
+
+// document.body.contains() is false for anything inside a shadow tree, so the
+// liveness check has to climb out through each host first — otherwise every
+// shadow-hosted price is discarded as detached.
+function isStillInPage(node: Node): boolean {
+  let current: Node | null = node;
+  while (current) {
+    const rootNode = current.getRootNode();
+    if (rootNode === document) return document.contains(current);
+    if (rootNode instanceof ShadowRoot) {
+      current = rootNode.host;
+      continue;
+    }
+    return false;
+  }
+  return false;
+}
+
+function addPending(el: Element): void {
+  if (pendingRoots.size >= MAX_PENDING_ROOTS) {
+    pendingRoots.clear();
+    if (document.body) pendingRoots.add(document.body);
+    return;
+  }
+  pendingRoots.add(el);
+}
+
+function schedule(): void {
+  if (pendingRoots.size === 0) return;
+  if (rafId === null) {
     rafId = requestAnimationFrame(() => {
       rafId = null;
       processPendingNodes();
     });
   }
+  if (fallbackId === null) {
+    fallbackId = setTimeout(() => {
+      fallbackId = null;
+      processPendingNodes();
+    }, HIDDEN_FLUSH_MS) as unknown as number;
+  }
 }
 
 function processPendingNodes(): void {
   if (!config) return;
-  const roots = Array.from(pendingRoots);
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  if (fallbackId !== null) {
+    clearTimeout(fallbackId);
+    fallbackId = null;
+  }
+  // A root that contains another queued root subsumes it; walking both is
+  // wasted work on high-churn pages, where one batch can queue ~3x the roots
+  // it needs to.
+  const roots = Array.from(pendingRoots)
+    .filter((root, _i, all) => !all.some((other) => other !== root && other.contains(root)));
   pendingRoots.clear();
 
   for (const root of roots) {
-    if (document.body?.contains(root)) {
-      convertPricesInNode(root, config.rates, config.settings);
+    // A newly-added component brings its own shadow root with it.
+    observeShadowRoots(root);
+    if (isStillInPage(root)) {
+      convertPricesInNode(root, config.rates, config.settings, config.held);
     }
   }
 }
 
+/**
+ * SPA route changes.
+ *
+ * A framework that recycles DOM nodes across routes replaces their content
+ * without necessarily producing a mutation the observer acts on, leaving our
+ * marker classes on nodes that no longer hold a converted price. Those nodes
+ * are then skipped forever — this is the "prices stop converting after I click
+ * around" report.
+ *
+ * history.pushState and replaceState are patched because neither fires an
+ * event; popstate covers back/forward.
+ */
+function installRouteHooks(): () => void {
+  const onRouteChange = () => {
+    if (!config) return;
+    // Drop stale markers, then re-run over the new content.
+    revertConversions();
+    convertPricesInDocument(config.rates, config.settings, config.held);
+    observeShadowRoots(document.body);
+  };
+
+  const { pushState, replaceState } = history;
+  const wrap = (original: typeof history.pushState) =>
+    function(this: History, ...args: Parameters<typeof history.pushState>) {
+      const result = original.apply(this, args);
+      queueMicrotask(onRouteChange);
+      return result;
+    };
+
+  history.pushState = wrap(pushState);
+  history.replaceState = wrap(replaceState);
+  window.addEventListener('popstate', onRouteChange);
+
+  return () => {
+    history.pushState = pushState;
+    history.replaceState = replaceState;
+    window.removeEventListener('popstate', onRouteChange);
+  };
+}
+
 export function stopObserver(): void {
+  uninstallRouteHooks?.();
+  uninstallRouteHooks = null;
   if (observer) {
     observer.disconnect();
     observer = null;
