@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to Zentat</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <!-- 1. Show it working before asking for anything. -->
+      <section class="screen is-active" id="screen-1">
+        <h1 class="headline">Prices, in ZEC.</h1>
+
+        <div class="demo" aria-live="polite">
+          <div class="demo-product">Wireless headphones</div>
+          <div class="demo-price">
+            <span class="demo-fiat" id="demo-fiat">$348.00</span>
+            <span class="demo-arrow" aria-hidden="true">→</span>
+            <span class="demo-zec" id="demo-zec">—</span>
+          </div>
+        </div>
+
+        <p class="lede">
+          Zentat rewrites prices as you browse, so you stop doing the
+          conversion in your head and start pricing things in ZEC.
+        </p>
+
+        <p class="fine">
+          Rate lookups go to a public price API. Nothing else leaves your
+          browser — no page content, no browsing history, no account.
+        </p>
+
+        <div class="actions">
+          <button class="btn btn-primary" data-next="2">Continue</button>
+        </div>
+      </section>
+
+      <!-- 2. One question, already answered. -->
+      <section class="screen" id="screen-2">
+        <h1 class="headline">Where do you shop?</h1>
+        <p class="lede">
+          Zentat detects all 12 supported currencies whatever you pick. This
+          just sets the rate shown in your toolbar.
+        </p>
+
+        <div class="currency-choices" id="currency-choices" role="radiogroup"
+             aria-label="Reference currency"></div>
+
+        <div class="actions">
+          <button class="btn btn-ghost" data-next="3">Skip</button>
+          <button class="btn btn-primary" data-next="3">Continue</button>
+        </div>
+      </section>
+
+      <!-- 3. Escort them to a real conversion. -->
+      <section class="screen" id="screen-3">
+        <h1 class="headline">You're set.</h1>
+
+        <ul class="tips">
+          <li><kbd>Alt</kbd>+<kbd>Z</kbd><span>Pause or resume anywhere</span></li>
+          <li><span class="tip-icon" aria-hidden="true">◉</span><span>Click the toolbar icon for the rate, or to turn Zentat off for just the site you're on</span></li>
+          <li><span class="tip-icon" aria-hidden="true">⌘</span><span>Copy a converted price and you get the original back — you read in ZEC, you paste in dollars</span></li>
+        </ul>
+
+        <p class="warn">
+          Tabs you already had open need a reload before prices convert there.
+        </p>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="try-it">Open a store and try it</button>
+          <button class="btn btn-ghost" id="open-options">Settings</button>
+        </div>
+      </section>
+
+      <nav class="dots" aria-label="Progress">
+        <span class="dot is-on" data-dot="1"></span>
+        <span class="dot" data-dot="2"></span>
+        <span class="dot" data-dot="3"></span>
+      </nav>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

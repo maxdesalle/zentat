@@ -14,12 +14,12 @@ export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(async (details) => {
     await setupAlarms(true);
     if (details.reason === 'install') {
-      // Lightweight welcome: the options page explains what converts, the
-      // Alt+Z shortcut, and which currencies are enabled. (Pages that were
-      // already open convert after their next reload — injecting into them
-      // would require blanket host permissions this extension avoids.)
+      // A real welcome, not the settings page. Someone who has just clicked
+      // 'Add extension' should see a price convert before they see a form —
+      // and the flow ends by opening a FRESH tab, because tabs that were
+      // already open do not convert until reloaded.
       try {
-        await browser.runtime.openOptionsPage();
+        await browser.tabs.create({ url: browser.runtime.getURL('/welcome.html') });
       } catch {
         // Not critical
       }
