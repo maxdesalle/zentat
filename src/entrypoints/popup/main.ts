@@ -310,7 +310,10 @@ function updateRateDisplay() {
     fiatZecValue.textContent = '--';
   }
 
-  sourceEl.textContent = rates?.source || '--';
+  // CoinGecko's terms require visible attribution wherever their data is shown.
+  sourceEl.textContent = rates?.source === 'coingecko'
+    ? 'Powered by CoinGecko'
+    : rates?.source || '--';
 
   // Freshness with an honest empty/loading/error state instead of dead dashes
   updatedEl.classList.remove('stale', 'very-stale');
@@ -342,12 +345,15 @@ function formatRate(rate: number): string {
   return rate.toPrecision(4);
 }
 
+// The code is rendered in its own element next to this value, so formatting
+// with style:'currency' produced "1 ZEC = $47.62 USD". The code is also the
+// unambiguous half — "$" is USD, CAD, AUD and MXN.
 function formatFiatPrice(price: number, currency: string): string {
-  try {
-    return price.toLocaleString(undefined, { style: 'currency', currency });
-  } catch {
-    return price.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  }
+  const digits = currency === 'JPY' || currency === 'KRW' ? 0 : 2;
+  return price.toLocaleString(undefined, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 }
 
 function formatRelativeTime(timestamp: number): string {

@@ -3,6 +3,7 @@ import { createFetcher } from '../../lib/fetch';
 import { destroyNymConnection } from '../../lib/fetch/nym';
 import { debug } from '../../lib/log';
 import { fetchRatesWithRetry } from '../../lib/rates/provider';
+import { validateRates } from '../../lib/rates/validate';
 import {
   getRates,
   isRatesStale,
@@ -131,7 +132,17 @@ async function doRefresh(force: boolean): Promise<boolean> {
 // serves USD/EUR) never wipes the other currencies' recent rates.
 async function storeRates(data: Awaited<ReturnType<typeof getRates>>): Promise<void> {
   const current = await getRates();
-  await setRates(mergeRates(current, data));
+  const { rates, rejected } = validateRates(data, current);
+
+  if (rejected.length > 0) {
+    debug(`Rejected implausible rates: ${rejected.join(', ')}`);
+  }
+  if (Object.keys(rates).length === 0) {
+    await setFetchStatus('error', 'Rates failed a plausibility check');
+    return;
+  }
+
+  await setRates(mergeRates(current, { ...data, rates }));
   await setFetchStatus('ok');
 }
 
