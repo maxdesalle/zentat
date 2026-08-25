@@ -60,8 +60,7 @@ export function detectPrices(
       documentLang,
       pageCurrency,
       inPriceContainer,
-    )
-      .filter((price) => !claimed.has(node));
+    );
     if (prices.length > 0) {
       results.push({ node, text, prices, directTextOnly });
     }
