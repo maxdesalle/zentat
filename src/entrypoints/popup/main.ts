@@ -1,7 +1,10 @@
 import { storage } from 'wxt/utils/storage';
+import { formatZecWithSymbol } from '../../lib/conversion/format';
 import type { NymStatus } from '../../lib/fetch/types';
+import { monthlyPosition } from '../../lib/liabilities';
 import {
   getFetchStatus,
+  getHeldRate,
   getRates,
   isRatesStale,
   type RateFetchStatus,
@@ -55,6 +58,7 @@ async function init() {
   updateRateDisplay();
   updateNymStatus(settings.nymEnabled, nymStatus ?? 'disconnected');
   void initSiteRow();
+  if (currentSettings) void renderPosition(currentSettings, currentRates);
 
   // First paint is done — allow toggle transitions from now on, so the switch
   // doesn't visibly animate OFF→ON on every open.
@@ -68,11 +72,13 @@ async function init() {
     updateNymStatus(s.nymEnabled, null);
     updateSiteRow();
     updateRateDisplay();
+    void renderPosition(s, currentRates);
   });
 
   watchRates((r) => {
     currentRates = r;
     updateRateDisplay();
+    if (currentSettings) void renderPosition(currentSettings, r);
   });
 
   watchFetchStatus((s) => {
@@ -291,3 +297,40 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 init();
+
+// ---------------------------------------------------------------------------
+// Your month, in ZEC
+//
+// Deliberately in the popup rather than buried in options: a number you see
+// daily is one you eventually think in, and this is the number the whole
+// unit-of-account claim rests on.
+// ---------------------------------------------------------------------------
+
+const positionSection = document.getElementById('position')!;
+const positionNet = document.getElementById('position-net')!;
+const positionIn = document.getElementById('position-in')!;
+const positionOut = document.getElementById('position-out')!;
+const positionGaps = document.getElementById('position-gaps')!;
+
+async function renderPosition(settings: Settings, rates: RatesData | null) {
+  const liabilities = settings.liabilities ?? [];
+  if (liabilities.length === 0 || !rates) {
+    positionSection.hidden = true;
+    return;
+  }
+
+  const held = settings.rateMode === 'spot' ? null : await getHeldRate();
+  const { incoming, outgoing, net, unpriced } = monthlyPosition(liabilities, rates, held);
+
+  positionSection.hidden = false;
+  positionNet.textContent = `${net >= 0 ? '+' : ''}${formatZecWithSymbol(net, 'coarse')}`;
+  positionNet.classList.toggle('negative', net < 0);
+  positionIn.textContent = `in ${formatZecWithSymbol(incoming, 'coarse')}`;
+  positionOut.textContent = `out ${formatZecWithSymbol(outgoing, 'coarse')}`;
+
+  // Say what is missing rather than quietly reporting a smaller total.
+  positionGaps.hidden = unpriced.length === 0;
+  positionGaps.textContent = unpriced.length > 0
+    ? `No rate for ${unpriced.join(', ')} — not counted.`
+    : '';
+}

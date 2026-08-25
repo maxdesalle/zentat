@@ -2,6 +2,7 @@ import { storage } from 'wxt/utils/storage';
 import type { Anchor } from '../anchors';
 import type { Precision } from '../conversion/format';
 import { CURRENCY_CODES } from '../currencies';
+import type { Liability } from '../liabilities';
 import { isSiteAllowed, type SiteFilterSettings } from './site-filter';
 
 export { isSiteAllowed } from './site-filter';
@@ -20,6 +21,12 @@ export interface Settings extends SiteFilterSettings {
   rateSource: RateSource;
   /** Things the user buys, used to express prices as ratios they can picture. */
   anchors: Anchor[];
+  /**
+   * Rent, salary, subscriptions — the numbers a person's economic life is
+   * actually denominated in. Until these exist in ZEC, converted shop prices
+   * do not make it the user's unit.
+   */
+  liabilities: Liability[];
   /**
    * Advanced mode: no fiat anywhere — not on hover, not in the popup. You
    * cannot claim to think in a unit you can escape with one hover, so this is
@@ -54,6 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
   displayUnit: 'auto',
   rateSource: 'auto',
   anchors: [],
+  liabilities: [],
   // Held by default: the whole product depends on the number being memorable,
   // and spot is not.
   rateMode: 'held',
