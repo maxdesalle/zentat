@@ -6,6 +6,7 @@ import {
   getSettings,
   setSettings,
   type Settings,
+  watchSettings,
 } from '../../lib/storage/settings';
 
 const enabledCheckbox = document.getElementById('enabled') as HTMLInputElement;
@@ -35,6 +36,9 @@ const saveIndicator = document.getElementById('save-indicator') as HTMLDivElemen
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 let indicatorTimeout: ReturnType<typeof setTimeout> | null = null;
 
+let lastKnown: Settings | null = null;
+let saving = false;
+
 async function init() {
   // Build currency checkboxes and the display-currency select from the single
   // shared currency list (previously three hardcoded copies drifted apart)
@@ -56,8 +60,19 @@ async function init() {
   }
 
   const settings = await getSettings();
+  lastKnown = settings;
   populateForm(settings);
   void updateNymPill(settings.nymEnabled);
+
+  // Without this, the form is a snapshot taken at load. A change made from the
+  // popup (or a second options tab, or Alt+Z) was invisible here, and the next
+  // edit wrote the whole stale form back over it — silently undoing it.
+  watchSettings((next) => {
+    if (saving) return;
+    lastKnown = next;
+    populateForm(next);
+    void updateNymPill(next.nymEnabled);
+  });
 
   storage.watch<NymStatus>('local:nymStatus', () => {
     void updateNymPill(nymEnabledCheckbox.checked);
@@ -238,13 +253,35 @@ function getFormValues(): Partial<Settings> {
 }
 
 async function save() {
+  saving = true;
   try {
-    await setSettings(getFormValues());
+    // Send only what this form actually changed. Writing all twelve fields
+    // meant every save carried whatever the DOM last happened to hold.
+    const values = getFormValues();
+    const changed: Partial<Settings> = {};
+    for (const [key, value] of Object.entries(values) as [keyof Settings, unknown][]) {
+      if (!sameValue(lastKnown?.[key], value)) {
+        (changed as Record<string, unknown>)[key] = value;
+      }
+    }
+    if (Object.keys(changed).length === 0) return;
+
+    await setSettings(changed);
+    lastKnown = { ...(lastKnown as Settings), ...changed };
     showSaved('Saved ✓');
   } catch (error) {
     console.error('Save error:', error);
     showSaved('Could not save — storage error', true);
+  } finally {
+    saving = false;
   }
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((v, i) => v === b[i]);
+  }
+  return a === b;
 }
 
 function showSaved(message: string, isError: boolean = false) {

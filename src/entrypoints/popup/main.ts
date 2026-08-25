@@ -10,6 +10,7 @@ import {
   watchRates,
 } from '../../lib/storage/rates';
 import { getSettings, setSettings, type Settings, watchSettings } from '../../lib/storage/settings';
+import { isSiteAllowed, matchesPattern, siteToggleKey } from '../../lib/storage/site-filter';
 
 const enabledCheckbox = document.getElementById('enabled') as HTMLInputElement;
 const stateLine = document.getElementById('state-line')!;
@@ -192,27 +193,30 @@ function updateSiteRow() {
   siteName.textContent = currentHostname;
 
   const s = currentSettings;
-  if (s.siteMode === 'blocklist') {
-    const blocked = s.blockedSites.includes(currentHostname);
-    siteToggleBtn.textContent = blocked ? 'Enable here' : 'Disable here';
-    siteToggleBtn.onclick = async () => {
-      const blockedSites = blocked
-        ? s.blockedSites.filter((h) => h !== currentHostname)
-        : [...s.blockedSites, currentHostname!];
+  const host = currentHostname;
+  // The label has to come from the same predicate that decides conversion.
+  // Reading exact list membership meant www.amazon.com showed "Disable here"
+  // while amazon.com in the blocklist was already blocking it.
+  const converting = isSiteAllowed(host, s);
+  siteToggleBtn.textContent = converting ? 'Disable here' : 'Enable here';
+
+  siteToggleBtn.onclick = async () => {
+    const key = siteToggleKey(host);
+    if (s.siteMode === 'blocklist') {
+      const blockedSites = converting
+        ? [...s.blockedSites, key]
+        // Remove every pattern that applies, not just an exact string match.
+        : s.blockedSites.filter((p) => !matchesPattern(host, p));
       await setSettings({ blockedSites });
       blockedSitesTextarea.value = blockedSites.join('\n');
-    };
-  } else {
-    const allowed = s.allowedSites.includes(currentHostname);
-    siteToggleBtn.textContent = allowed ? 'Disable here' : 'Enable here';
-    siteToggleBtn.onclick = async () => {
-      const allowedSites = allowed
-        ? s.allowedSites.filter((h) => h !== currentHostname)
-        : [...s.allowedSites, currentHostname!];
+    } else {
+      const allowedSites = converting
+        ? s.allowedSites.filter((p) => !matchesPattern(host, p))
+        : [...s.allowedSites, key];
       await setSettings({ allowedSites });
       allowedSitesTextarea.value = allowedSites.join('\n');
-    };
-  }
+    }
+  };
 }
 
 // --- Site filtering form --------------------------------------------------

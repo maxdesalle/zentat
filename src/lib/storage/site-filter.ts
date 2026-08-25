@@ -35,3 +35,22 @@ export function matchesPattern(hostname: string, pattern: string): boolean {
 
   return false;
 }
+
+/**
+ * The domain a per-site toggle should write. Storing the exact hostname made
+ * "Disable here" on www.example.com leave example.com converting, which reads
+ * as the button not working; matchesPattern already covers subdomains.
+ */
+export function siteToggleKey(hostname: string): string {
+  const parts = hostname.toLowerCase().replace(/^www\./, '').split('.');
+  if (parts.length <= 2) return parts.join('.');
+  // Keep two-part public suffixes intact (co.uk, com.au, com.br).
+  const tail = parts.slice(-2).join('.');
+  const isCompoundSuffix = /^(co|com|net|org|gov|ac|edu)\.[a-z]{2}$/.test(tail);
+  return parts.slice(isCompoundSuffix ? -3 : -2).join('.');
+}
+
+/** Every stored pattern that currently applies to this hostname. */
+export function patternsMatching(hostname: string, patterns: string[]): string[] {
+  return patterns.filter((pattern) => matchesPattern(hostname, pattern));
+}
