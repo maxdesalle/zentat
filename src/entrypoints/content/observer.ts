@@ -1,6 +1,7 @@
 import type { RatesData } from '../../lib/storage/rates';
 import type { Settings } from '../../lib/storage/settings';
 import { convertPricesInNode, revertElement } from './converter';
+import { CONVERTED_MARKER, SPAN_CLASS } from './markers';
 import { setActiveObserver } from './state';
 
 interface ObserverConfig {
@@ -39,7 +40,7 @@ function handleMutations(mutations: MutationRecord[]): void {
     for (const node of mutation.addedNodes) {
       if (node.nodeType === Node.ELEMENT_NODE) {
         const element = node as Element;
-        if (!element.closest('.zentat-processed') && !element.closest('.zentat-converted')) {
+        if (!element.closest(`.${CONVERTED_MARKER}`) && !element.closest(`.${SPAN_CLASS}`)) {
           pendingRoots.add(element);
         }
       }
@@ -48,8 +49,8 @@ function handleMutations(mutations: MutationRecord[]): void {
       // conversion and queue a fresh pass.
       if (node.nodeType === Node.TEXT_NODE) {
         const parent = node.parentElement;
-        if (!parent || parent.closest('.zentat-converted')) continue;
-        const marked = parent.closest('.zentat-processed');
+        if (!parent || parent.closest(`.${SPAN_CLASS}`)) continue;
+        const marked = parent.closest(`.${CONVERTED_MARKER}`);
         if (marked) {
           revertElement(marked);
           pendingRoots.add(marked);
@@ -65,8 +66,8 @@ function handleMutations(mutations: MutationRecord[]): void {
     if (mutation.type === 'characterData') {
       const target = mutation.target;
       const element = target instanceof Element ? target : target.parentElement;
-      if (!element || element.closest('.zentat-converted')) continue;
-      const marked = element.closest('.zentat-processed');
+      if (!element || element.closest(`.${SPAN_CLASS}`)) continue;
+      const marked = element.closest(`.${CONVERTED_MARKER}`);
       if (marked) {
         revertElement(marked);
         pendingRoots.add(marked);

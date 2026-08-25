@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CONVERTED_MARKER, SPAN_CLASS } from '../../src/entrypoints/content/markers';
 
 vi.mock('wxt/utils/storage', () => ({
   storage: {
@@ -44,9 +45,9 @@ describe('convertPricesInNode', () => {
     const count = convertPricesInNode(document.body, freshRates(), settings());
     expect(count).toBeGreaterThan(0);
 
-    const span = document.querySelector('.zentat-converted');
+    const span = document.querySelector(`.${SPAN_CLASS}`);
     expect(span).not.toBeNull();
-    expect(span!.getAttribute('data-zentat-original')).toBe('$19.99');
+    expect(span!.getAttribute('title')).toBe('Original: $19.99');
     // The tooltip must show the ORIGINAL fiat price, not the converted value
     expect(span!.getAttribute('title')).toBe('Original: $19.99');
     expect(span!.textContent).toContain('ZEC');
@@ -63,14 +64,14 @@ describe('convertPricesInNode', () => {
 
     revertConversions();
     expect(document.body.textContent).toContain('$19.99');
-    expect(document.querySelector('.zentat-converted')).toBeNull();
-    expect(document.querySelector('.zentat-processed')).toBeNull();
+    expect(document.querySelector(`.${SPAN_CLASS}`)).toBeNull();
+    expect(document.querySelector(`.${CONVERTED_MARKER}`)).toBeNull();
   });
 
   it('append mode keeps the original price visible', () => {
     document.body.innerHTML = '<p>$19.99</p>';
     convertPricesInNode(document.body, freshRates(), settings({ displayMode: 'append' }));
-    const span = document.querySelector('.zentat-converted')!;
+    const span = document.querySelector(`.${SPAN_CLASS}`)!;
     expect(span.textContent).toMatch(/^\$19\.99 \(.+ZEC\)$/);
   });
 
@@ -79,15 +80,15 @@ describe('convertPricesInNode', () => {
     convertPricesInNode(document.body, freshRates(), settings());
     expect(document.querySelector('button')!.textContent).toBe('Pay $49.99 now');
     // The non-button price still converts
-    expect(document.querySelector('p .zentat-converted')).not.toBeNull();
+    expect(document.querySelector(`p .${SPAN_CLASS}`)).not.toBeNull();
   });
 
   it('converts prices split across inline child nodes', () => {
     document.body.innerHTML = '<div id="split"><span>$</span><span>99</span></div>';
     const count = convertPricesInNode(document.body, freshRates(), settings());
     expect(count).toBe(1);
-    const span = document.querySelector('#split .zentat-converted')!;
-    expect(span.getAttribute('data-zentat-original')).toBe('$99');
+    const span = document.querySelector(`#split .${SPAN_CLASS}`)!;
+    expect(span.getAttribute('title')).toBe('Original: $99');
     revertConversions();
     expect(document.getElementById('split')!.textContent).toBe('$99');
   });
@@ -95,7 +96,7 @@ describe('convertPricesInNode', () => {
   it("converts a parent's direct text even when a child also holds a price", () => {
     document.body.innerHTML = '<p id="pair">$10 – <span class="sale">$8</span></p>';
     convertPricesInNode(document.body, freshRates(), settings());
-    const spans = document.querySelectorAll('#pair .zentat-converted');
+    const spans = document.querySelectorAll(`#pair .${SPAN_CLASS}`);
     // Both the parent's $10 and the child's $8 convert
     expect(spans.length).toBe(2);
     expect(document.body.textContent).not.toContain('$10');

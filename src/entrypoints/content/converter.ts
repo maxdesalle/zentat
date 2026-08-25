@@ -6,14 +6,15 @@ import type { Settings } from '../../lib/storage/settings';
 import { detectPrices } from './detector';
 import { flushObserverRecords } from './state';
 
-// Container-level marker (element whose contents were converted)
-const CONVERTED_MARKER = 'zentat-processed';
-// Marker for elements whose DIRECT text was converted while their children are
-// handled separately — must not block child conversion via closest()
-const PARTIAL_MARKER = 'zentat-processed-partial';
-// Inline span that wraps a single converted price
-const SPAN_CLASS = 'zentat-converted';
-const STYLE_ID = 'zentat-style';
+import {
+  CONVERTED_MARKER,
+  PARTIAL_MARKER,
+  rememberContainer,
+  rememberSpan,
+  SPAN_CLASS,
+  spanOriginalText,
+  takeContainer,
+} from './markers';
 
 interface Replacement {
   original: string;
@@ -28,7 +29,6 @@ export function convertPricesInDocument(rates: RatesData, settings: Settings): n
   if (!isRatesUsable(rates)) return 0;
   if (!document.body) return 0;
 
-  ensureStyles();
   return convertPricesInNode(document.body, rates, settings);
 }
 
@@ -73,9 +73,7 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
         }
         if (converted) {
           const newText = convertedPrices.join(' ');
-          if (!node.hasAttribute('data-zentat-original')) {
-            node.setAttribute('data-zentat-original', node.innerHTML);
-          }
+          rememberContainer(node, node.innerHTML, node.getAttribute('title'));
 
           if (isBolPrice) {
             // Bol.com special handling: hide visual spans and update accessibility text
@@ -128,18 +126,22 @@ function displayText(original: string, formatted: string, settings: Settings): s
 function makeSpan(original: string, converted: string): HTMLSpanElement {
   const span = document.createElement('span');
   span.className = SPAN_CLASS;
-  span.setAttribute('data-zentat-original', original);
   span.setAttribute('title', `Original: ${original}`);
   span.textContent = converted;
+  // Styled inline rather than through an injected stylesheet: a stylesheet with
+  // a known id is a one-selector extension detector. text-decoration (not
+  // border-bottom) avoids a double underline inside links and adds no height;
+  // nowrap keeps "0.42" from splitting off its "ZEC".
+  span.style.textDecoration = 'underline dotted';
+  span.style.textUnderlineOffset = '0.18em';
+  span.style.whiteSpace = 'nowrap';
+  span.style.cursor = 'help';
+  rememberSpan(span, original);
   return span;
 }
 
-// Set a title we can later restore/remove without clobbering the page's own
+// The page's own title is preserved in the WeakMap by rememberContainer.
 function setOwnTitle(el: Element, title: string): void {
-  const prev = el.getAttribute('title');
-  if (prev !== null && !el.hasAttribute('data-zentat-prev-title')) {
-    el.setAttribute('data-zentat-prev-title', prev);
-  }
   el.setAttribute('title', title);
 }
 
@@ -199,9 +201,7 @@ function replacePricesInTextNodes(
     const trimmed = element.textContent?.trim() ?? '';
     const match = uniqueReplacements.find((r) => r.original === trimmed);
     if (match) {
-      if (!element.hasAttribute('data-zentat-original')) {
-        element.setAttribute('data-zentat-original', element.innerHTML);
-      }
+      rememberContainer(element, element.innerHTML, element.getAttribute('title'));
       element.textContent = '';
       element.appendChild(makeSpan(match.original, match.converted));
       anyReplaced = true;
@@ -274,15 +274,6 @@ function replaceInTextNode(tNode: Text, replacements: Replacement[]): boolean {
   return true;
 }
 
-// Subtle affordance so users can tell which numbers Zentat rewrote
-function ensureStyles(): void {
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement('style');
-  style.id = STYLE_ID;
-  style.textContent = `.${SPAN_CLASS} { border-bottom: 1px dotted currentColor; cursor: help; }`;
-  (document.head || document.documentElement)?.appendChild(style);
-}
-
 export function revertConversions(): void {
   revertWithin(document);
   flushObserverRecords();
@@ -302,7 +293,10 @@ function revertWithin(root: ParentNode): void {
   // Span-level conversions: precise swap back to a text node — page listeners
   // on surrounding elements survive.
   for (const span of Array.from(root.querySelectorAll(`.${SPAN_CLASS}`))) {
-    const original = span.getAttribute('data-zentat-original') ?? span.textContent ?? '';
+    // A span we did not create has no WeakMap entry — leave the page's own
+    // markup alone rather than rewriting it from an attribute it controls.
+    const original = spanOriginalText(span);
+    if (original === undefined) continue;
     span.parentNode?.replaceChild(document.createTextNode(original), span);
   }
 
@@ -312,16 +306,12 @@ function revertWithin(root: ParentNode): void {
 }
 
 function revertContainer(el: Element): void {
-  const originalHtml = el.getAttribute('data-zentat-original');
-  if (originalHtml !== null) {
-    // Structured-container conversion (Amazon-style): restore the snapshot
-    el.innerHTML = originalHtml;
-    el.removeAttribute('data-zentat-original');
-    // Only structured containers get a title from us — restore or drop it
-    const prevTitle = el.getAttribute('data-zentat-prev-title');
-    if (prevTitle !== null) {
-      el.setAttribute('title', prevTitle);
-      el.removeAttribute('data-zentat-prev-title');
+  // Only a snapshot WE took is ever written back. The page cannot supply one.
+  const state = takeContainer(el);
+  if (state) {
+    el.innerHTML = state.html;
+    if (state.prevTitle !== null) {
+      el.setAttribute('title', state.prevTitle);
     } else {
       el.removeAttribute('title');
     }

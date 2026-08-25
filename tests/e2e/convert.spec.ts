@@ -55,9 +55,11 @@ test('converts prices, keeps buttons fiat, and tooltips show the original', asyn
   const page = await context.newPage();
   await page.goto(FIXTURE_URL);
 
-  const converted = page.locator('#usd .zentat-converted');
+  // Marker classes are randomized per page (see content/markers.ts), so the
+  // e2e asserts on structure and text rather than on an internal class name.
+  const converted = page.locator('#usd span[title^="Original: "]');
   await expect(converted).toHaveCount(1);
-  await expect(converted).toHaveAttribute('data-zentat-original', '$19.99');
+  await expect(converted).toHaveAttribute('title', 'Original: $19.99');
   await expect(converted).toHaveAttribute('title', 'Original: $19.99');
   await expect(converted).toContainText('ZEC');
 
