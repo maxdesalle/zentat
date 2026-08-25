@@ -64,8 +64,30 @@ function testPaths(source) {
   return paths;
 }
 
+// Suites that are deliberately not tree-shaped, with the reason. A tree
+// describes what a unit SHOULD do; these record what the world DID, which is an
+// open-ended list rather than a branching structure. Anything not named here
+// must have a tree — that is what stops "we do BTT" from quietly becoming "we
+// did BTT once".
+const NOT_TREE_SHAPED = new Map([
+  ['parser.regressions', 'bugs found in the wild, one entry per page that broke'],
+  ['walker.markup', 'the same, for real-site markup shapes'],
+  ['walker.budget', 'timing and cost behaviour, measured rather than branched'],
+  ['converter.security', 'adversarial input, which is open-ended by nature'],
+]);
+
 const trees = readdirSync(treeDir).filter((name) => name.endsWith('.tree'));
 let failed = false;
+
+for (const testName of readdirSync(testDir).filter((name) => name.endsWith('.test.ts'))) {
+  const base = testName.replace(/\.test\.ts$/, '');
+  if (NOT_TREE_SHAPED.has(base) || trees.includes(`${base}.tree`)) continue;
+  console.error(
+    `${testName}: no tests/trees/${base}.tree, and not listed as deliberately`
+      + ' untreed in scripts/check-trees.mjs',
+  );
+  failed = true;
+}
 
 for (const treeName of trees) {
   const base = treeName.replace(/\.tree$/, '');

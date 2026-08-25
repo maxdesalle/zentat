@@ -1,9 +1,10 @@
 # Branching Tree Technique
 
-Every module under `src/lib` has a `.tree` file here describing the complete
-branching structure of its behaviour, and a test file whose shape mirrors that
-tree exactly. `src/lib` is at 100% line, branch, function and statement
-coverage, and CI fails below that.
+Every module has a `.tree` file here describing the complete branching
+structure of its behaviour, and a test file whose shape mirrors that tree
+exactly. `src/` is at 100% line, branch, function and statement coverage, and
+CI fails below that — entrypoints included, apart from page bootstrap and
+message wiring.
 
 The point is that the specification is written _before_ and _separately from_
 the implementation of the tests, in a form a human can read end to end and ask
@@ -65,7 +66,9 @@ mechanically that no branch was written down and then never tested.
 ## What is not a tree
 
 Four suites are deliberately not tree-shaped, and it would be dishonest to
-pretend otherwise:
+pretend otherwise. They are named in `scripts/check-trees.mjs`, which fails on
+any OTHER test file without a tree — so "we do BTT" cannot quietly become "we
+did BTT once":
 
 | Suite                | Why                                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------------------- |
