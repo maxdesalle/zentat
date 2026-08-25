@@ -253,7 +253,24 @@ async function destroyChromeNymConnection(): Promise<void> {
     // Document might not exist, ignore
   }
 
-  // IndexedDB is per-origin, shared with the offscreen document
+  // Deliberately NOT clearing IndexedDB here.
+  //
+  // Wiping it discards the client's identity and its gateway registration, so
+  // the next setup registers with a BRAND NEW gateway. Doing that on every
+  // failure walks through the network until it hits "there are no more new
+  // gateways on the network - it seems this client has already registered with
+  // all nodes it could have" — a real error string in the WASM, and one this
+  // code used to handle rather than avoid. At three retries a cycle it was
+  // burning on the order of a hundred registrations a day per user, which is
+  // both antisocial toward a ~575-gateway network and a distinctive signature.
+  //
+  // Closing the document is enough to get a fresh client. Identity is wiped
+  // only by the explicit user-facing reset.
+}
+
+/** Discard the client's identity and gateway registration. User-initiated only. */
+export async function resetNymIdentity(): Promise<void> {
+  await destroyChromeNymConnection();
   await clearNymDatabases();
 }
 

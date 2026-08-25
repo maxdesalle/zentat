@@ -16,7 +16,9 @@ import { getSettings } from '../../lib/storage/settings';
 // Max Nym attempts per refresh cycle (each retry gets a new gateway). Kept low
 // and combined with a cross-cycle backoff so a broken mixnet connection doesn't
 // burn a distinctive stream of fresh gateway registrations every alarm cycle.
-const NYM_MAX_RETRIES = 3;
+// Nym's own client retries one gateway ten times before giving up on it, so
+// churning to a new gateway is a last resort rather than a first response.
+const NYM_MAX_RETRIES = 2;
 const NYM_BACKOFF_MS = 15 * 60 * 1000;
 
 // Small random delay before each scheduled fetch so the extension's network
@@ -93,7 +95,9 @@ async function doRefresh(force: boolean): Promise<boolean> {
         if (attempt < NYM_MAX_RETRIES) {
           debug('Nym failed, destroying for new gateway...');
           await destroyNymConnection();
-          await sleep(2000);
+          // Matches the gateway client's own 5s backoff ladder; 2s just retries the
+          // same congested state.
+          await sleep(15_000);
         }
       }
 

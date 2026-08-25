@@ -11,6 +11,21 @@ const ALL_PROVIDERS: { name: string; key: RateSource; fetch: RateProvider }[] = 
   { name: 'Kraken', key: 'kraken', fetch: fetchFromKraken },
 ];
 
+/**
+ * Start from a different provider each call.
+ *
+ * A fixed order meant the first provider saw ~100% of every user's requests and
+ * therefore their complete refresh cadence — a per-IP record of when the
+ * extension is running. Alternating splits that between operators so neither
+ * holds the whole pattern, and it costs one line. Failover still tries all of
+ * them, so reliability is unchanged.
+ */
+function rotate<T>(items: T[]): T[] {
+  if (items.length < 2) return items;
+  const start = Math.floor(Math.random() * items.length);
+  return [...items.slice(start), ...items.slice(0, start)];
+}
+
 export interface FetchResult {
   success: boolean;
   data?: RatesData;
@@ -23,7 +38,7 @@ export async function fetchRates(
 ): Promise<FetchResult> {
   const errors: string[] = [];
   const providers = source === 'auto'
-    ? ALL_PROVIDERS
+    ? rotate(ALL_PROVIDERS)
     : ALL_PROVIDERS.filter((p) => p.key === source);
 
   for (const provider of providers) {

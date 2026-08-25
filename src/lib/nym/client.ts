@@ -2,8 +2,7 @@
 
 import { createMixFetch, disconnectMixFetch, type IMixFetch } from '@nymproject/mix-fetch';
 import { debug } from '../log';
-import { NYM_CLIENT_ID } from './shared';
-import { clearNymDatabases, type NymFetchResult } from './shared';
+import { NYM_CLIENT_ID, type NymFetchResult } from './shared';
 
 export type { NymFetchResult } from './shared';
 
@@ -11,7 +10,18 @@ let mixFetchInstance: IMixFetch | null = null;
 let initializingPromise: Promise<IMixFetch> | null = null;
 let lastSuccessfulFetch: number = 0;
 
-const DEFAULT_TIMEOUT_MS = 60000;
+// Deliberately browser-shaped. Nym's own v2 client added a header shim for
+// exactly this reason: CDN bot management rejects requests without canonical
+// browser headers.
+const BROWSER_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
+  + '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
+// 60s reads as generous and is actually tight: the gateway client retries the
+// SAME gateway ten times at 5s intervals before declaring it dead, so it can
+// legitimately spend ~50s recovering. A 60s deadline fires mid-ladder and tears
+// down a client that was about to succeed. Nobody is waiting on a background
+// job, so generosity here is free while a false timeout costs a registration.
+const DEFAULT_TIMEOUT_MS = 120_000;
 
 class DeadlineError extends Error {
   constructor(label: string) {
@@ -96,7 +106,13 @@ async function attemptFetch(url: string, deadline: number): Promise<NymFetchResu
   // Access-Control-Allow-Origin matching our extension id — which no public
   // API will ever send. This is Nym's escape hatch for exactly that.
   const response = await withDeadline(
-    instance.mixFetch(url, { mode: 'unsafe-ignore-cors' }),
+    instance.mixFetch(url, {
+      mode: 'unsafe-ignore-cors',
+      // CoinGecko 403s a request with no User-Agent. v1 lets Go supply
+      // "Go-http-client/1.1", which works today but is one Cloudflare bot rule
+      // from not working — and it advertises the transport to the API.
+      headers: { 'User-Agent': BROWSER_USER_AGENT },
+    }),
     deadline,
     'request',
   );
@@ -200,8 +216,9 @@ export async function destroyNymClient(): Promise<void> {
   initializingPromise = null;
   lastSuccessfulFetch = 0;
 
-  // Clear Nym's stored registration data
-  await clearNymDatabases();
+  // Identity and gateway registration are deliberately left alone — see the
+  // note in fetch/nym.ts. Recreating the client is what recovers; re-registering
+  // with a new gateway every time is what exhausts the network.
 }
 
 export function resetNymClient(): void {
