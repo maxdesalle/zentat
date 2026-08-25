@@ -1,4 +1,5 @@
 import { QUICK_DETECT_PATTERN } from './patterns';
+import { collectShadowRoots, hasShadowDom } from './shadow';
 
 // Elements to skip entirely. Tag names are compared upper-cased because SVG
 // and MathML elements report lowercase tagName in HTML documents.
@@ -176,7 +177,15 @@ export function walkPriceElements(root: Node): WalkResult[] {
     }
   }
 
-  const allElements = (root as Element).getElementsByTagName?.('*') || [];
+  // Shadow trees are invisible to getElementsByTagName, so they are walked as
+  // additional roots. Probed first: most pages have none and should not pay.
+  const shadowRoots = hasShadowDom(root as ParentNode)
+    ? collectShadowRoots(root as ParentNode)
+    : [];
+  const allElements = [
+    ...Array.from((root as Element).getElementsByTagName?.('*') || []),
+    ...shadowRoots.flatMap((shadow) => Array.from(shadow.querySelectorAll('*'))),
+  ];
 
   for (const element of allElements) {
     if (!(element instanceof Element)) continue;

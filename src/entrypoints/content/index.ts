@@ -24,6 +24,7 @@ export default defineContentScript({
   async main() {
     // Render in the page's locale, the same one the parser reads prices under.
     setDisplayLocale(document.documentElement.lang || undefined);
+    await resolvePolicyHost();
     try {
       // Load cached data (no network requests are ever made from this context)
       const [rates, settings] = await Promise.all([getRates(), getSettings()]);
@@ -47,8 +48,30 @@ export default defineContentScript({
   },
 });
 
+/**
+ * The hostname a site policy should be judged against.
+ *
+ * A subframe's own hostname is the wrong key: blocking `bank.com` must also
+ * stop conversion inside the `secure.bankcdn.com` iframe it embeds, and an
+ * `about:blank` or `srcdoc` subframe reports an empty hostname that matches no
+ * pattern at all — so it converted regardless of the user's blocklist.
+ */
+let policyHost = window.location.hostname;
+
+async function resolvePolicyHost(): Promise<void> {
+  if (window.top === window.self && policyHost) return;
+  try {
+    const response = await browser.runtime.sendMessage({ type: 'getTopHost' }) as
+      | { host?: string }
+      | undefined;
+    if (response?.host) policyHost = response.host;
+  } catch {
+    // Fall back to the frame's own host — no worse than before.
+  }
+}
+
 function isActive(settings: Settings): boolean {
-  return settings.enabled && isSiteAllowed(window.location.hostname, settings);
+  return settings.enabled && isSiteAllowed(policyHost, settings);
 }
 
 function whenDomReady(fn: () => void): void {

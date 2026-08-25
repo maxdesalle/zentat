@@ -1,6 +1,12 @@
+import { collectShadowRoots } from '../../lib/detection/shadow';
 import type { RatesData } from '../../lib/storage/rates';
 import type { Settings } from '../../lib/storage/settings';
-import { convertPricesInNode, revertElement } from './converter';
+import {
+  convertPricesInDocument,
+  convertPricesInNode,
+  revertConversions,
+  revertElement,
+} from './converter';
 import { CONVERTED_MARKER, SPAN_CLASS } from './markers';
 import { setActiveObserver } from './state';
 
@@ -14,6 +20,7 @@ let config: ObserverConfig | null = null;
 let pendingRoots: Set<Element> = new Set();
 let rafId: number | null = null;
 let fallbackId: number | null = null;
+let uninstallRouteHooks: (() => void) | null = null;
 
 // How long to wait before converting without a rendering frame.
 const HIDDEN_FLUSH_MS = 250;
@@ -27,11 +34,13 @@ export function startObserver(rates: RatesData, settings: Settings): void {
   if (!document.body) return; // No body element (e.g., API endpoints)
 
   observer = new MutationObserver(handleMutations);
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    characterData: true,
-  });
+  // A light-DOM observer receives no records for mutations inside a shadow
+  // tree, so each root needs its own observation. Without this, components
+  // convert once and then never again as they re-render.
+  observeShadowRoots(document.body);
+  uninstallRouteHooks = installRouteHooks();
+
+  observer.observe(document.body, OBSERVE_OPTIONS);
   // Registers this observer for the converter's takeRecords() self-mutation
   // guard. There is deliberately NO polling loop: the observer plus the
   // rAF-batched queue below covers dynamic content without a permanent
@@ -99,6 +108,42 @@ function handleMutations(mutations: MutationRecord[]): void {
 // iframe or a background tab queues roots forever and drains none, so prices
 // there stay fiat indefinitely and the queue grows without bound. The timer is
 // the fallback that keeps those documents converting.
+const OBSERVE_OPTIONS: MutationObserverInit = {
+  childList: true,
+  subtree: true,
+  characterData: true,
+};
+
+// Roots already under observation, so re-probing after a mutation is cheap and
+// idempotent. Weak so a detached component does not pin its root.
+const observedShadowRoots = new WeakSet<ShadowRoot>();
+
+function observeShadowRoots(root: ParentNode): void {
+  if (!observer) return;
+  for (const shadow of collectShadowRoots(root)) {
+    if (observedShadowRoots.has(shadow)) continue;
+    observedShadowRoots.add(shadow);
+    observer.observe(shadow, OBSERVE_OPTIONS);
+  }
+}
+
+// document.body.contains() is false for anything inside a shadow tree, so the
+// liveness check has to climb out through each host first — otherwise every
+// shadow-hosted price is discarded as detached.
+function isStillInPage(node: Node): boolean {
+  let current: Node | null = node;
+  while (current) {
+    const rootNode = current.getRootNode();
+    if (rootNode === document) return document.contains(current);
+    if (rootNode instanceof ShadowRoot) {
+      current = rootNode.host;
+      continue;
+    }
+    return false;
+  }
+  return false;
+}
+
 function addPending(el: Element): void {
   if (pendingRoots.size >= MAX_PENDING_ROOTS) {
     pendingRoots.clear();
@@ -142,13 +187,57 @@ function processPendingNodes(): void {
   pendingRoots.clear();
 
   for (const root of roots) {
-    if (document.body?.contains(root)) {
+    // A newly-added component brings its own shadow root with it.
+    observeShadowRoots(root);
+    if (isStillInPage(root)) {
       convertPricesInNode(root, config.rates, config.settings);
     }
   }
 }
 
+/**
+ * SPA route changes.
+ *
+ * A framework that recycles DOM nodes across routes replaces their content
+ * without necessarily producing a mutation the observer acts on, leaving our
+ * marker classes on nodes that no longer hold a converted price. Those nodes
+ * are then skipped forever — this is the "prices stop converting after I click
+ * around" report.
+ *
+ * history.pushState and replaceState are patched because neither fires an
+ * event; popstate covers back/forward.
+ */
+function installRouteHooks(): () => void {
+  const onRouteChange = () => {
+    if (!config) return;
+    // Drop stale markers, then re-run over the new content.
+    revertConversions();
+    convertPricesInDocument(config.rates, config.settings);
+    observeShadowRoots(document.body);
+  };
+
+  const { pushState, replaceState } = history;
+  const wrap = (original: typeof history.pushState) =>
+    function(this: History, ...args: Parameters<typeof history.pushState>) {
+      const result = original.apply(this, args);
+      queueMicrotask(onRouteChange);
+      return result;
+    };
+
+  history.pushState = wrap(pushState);
+  history.replaceState = wrap(replaceState);
+  window.addEventListener('popstate', onRouteChange);
+
+  return () => {
+    history.pushState = pushState;
+    history.replaceState = replaceState;
+    window.removeEventListener('popstate', onRouteChange);
+  };
+}
+
 export function stopObserver(): void {
+  uninstallRouteHooks?.();
+  uninstallRouteHooks = null;
   if (observer) {
     observer.disconnect();
     observer = null;
