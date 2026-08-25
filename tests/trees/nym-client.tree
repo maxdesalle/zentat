@@ -1,0 +1,63 @@
+NymClientTest
+├── setup
+│   ├── given no client exists yet
+│   │   ├── it creates one
+│   │   ├── it forces tls
+│   │   ├── it sets a real per-request timeout
+│   │   ├── it pins the client id
+│   │   └── it disables the poisson stream
+│   ├── given a client already exists
+│   │   └── it reuses it
+│   ├── given setup is already in flight
+│   │   └── it joins the in-flight attempt
+│   └── given setup itself fails
+│       ├── it reports the failure
+│       └── it lets the next call try again
+├── fetching
+│   ├── given the request succeeds
+│   │   ├── it returns the parsed body
+│   │   └── it reports the status
+│   ├── given the origin answers with an http error
+│   │   ├── it reports transport success
+│   │   └── it does not treat the tunnel as broken
+│   ├── given the transport throws a recoverable error
+│   │   ├── it reports failure without asking for a teardown
+│   │   └── it describes a thrown non-error too
+│   ├── given the transport throws a fatal error
+│   │   ├── given the go runtime has exited
+│   │   │   └── it asks for a teardown
+│   │   ├── given the gateway connection failed
+│   │   │   └── it asks for a teardown
+│   │   └── given the network has no more gateways
+│   │       └── it asks for a teardown
+│   ├── given the request ignores its cors mode
+│   │   └── it passes the unsafe-ignore-cors escape hatch
+│   └── given a browser user agent is required
+│       └── it sends one
+├── deadlines
+│   ├── given the deadline expires during setup
+│   │   └── it fails rather than hanging
+│   ├── given the deadline expires during the request
+│   │   └── it fails rather than hanging
+│   ├── given a timeout is not a usable number
+│   │   └── it falls back to the default
+│   ├── given the deadline has already passed before a step begins
+│   │   └── it fails without starting the work
+│   ├── withDeadline
+│   │   ├── given the deadline is already in the past
+│   │   │   └── it rejects without waiting
+│   │   ├── given the promise settles first
+│   │   │   ├── it resolves with the value
+│   │   │   └── it propagates a rejection unchanged
+│   │   └── given the deadline passes first
+│   │       └── it rejects with the labelled step
+│   └── given any failure at all
+│       └── it returns a result rather than throwing
+└── teardown
+    ├── given a client exists
+    │   ├── it disconnects
+    │   └── it leaves the stored identity alone
+    ├── given disconnecting throws
+    │   └── it still clears local state
+    └── given reset is requested
+        └── it drops the instance without disconnecting

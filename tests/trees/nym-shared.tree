@@ -1,0 +1,29 @@
+NymSharedTest
+├── isAllowedNymUrl
+│   ├── when the url is not parseable
+│   │   └── it is rejected
+│   ├── when the url is parseable
+│   │   ├── given the protocol is not https
+│   │   │   └── it is rejected
+│   │   └── given the protocol is https
+│   │       ├── given the host is not on the allowlist
+│   │       │   └── it is rejected
+│   │       └── given the host is on the allowlist
+│   │           └── it is allowed
+│   └── when the url is crafted to look allowed
+│       ├── given credentials embed an allowed host
+│       │   └── it is rejected
+│       ├── given an allowed host is a subdomain of another
+│       │   └── it is rejected
+│       ├── given the host differs only by case
+│       │   └── it is allowed
+│       └── given the host has a trailing dot
+│           └── it is rejected
+└── clearNymDatabases
+    ├── given indexedDB is unavailable
+    │   └── it does nothing
+    ├── given enumerating databases throws
+    │   └── it swallows the error
+    └── given databases exist
+        ├── it deletes those belonging to nym
+        └── it leaves unrelated databases alone

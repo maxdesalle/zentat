@@ -1,0 +1,18 @@
+DirectFetcherTest
+├── given the request succeeds
+│   ├── it reports the status
+│   ├── it reports ok
+│   └── it exposes the parsed body
+├── given the request fails with an http error
+│   └── it reports not ok without throwing
+├── given the request rejects
+│   └── it propagates the rejection
+├── given the request outlives the timeout
+│   └── it aborts the request
+└── hardened defaults
+    ├── when the caller passes no init
+    │   ├── it omits credentials
+    │   ├── it sends no referrer
+    │   └── it bypasses the http cache
+    └── when the caller tries to weaken them
+        └── it overrides the caller
