@@ -31,14 +31,6 @@ const siteName = document.getElementById('site-name')!;
 const siteToggleBtn = document.getElementById('site-toggle') as HTMLButtonElement;
 
 // Site filtering elements
-const siteFilterToggle = document.getElementById('site-filter-toggle')!;
-const siteFilterContent = document.getElementById('site-filter-content')!;
-const toggleIcon = document.getElementById('toggle-icon')!;
-const siteModeRadios = document.querySelectorAll<HTMLInputElement>('input[name="siteMode"]');
-const blockedSitesTextarea = document.getElementById('blockedSites') as HTMLTextAreaElement;
-const allowedSitesTextarea = document.getElementById('allowedSites') as HTMLTextAreaElement;
-const blocklistContainer = document.getElementById('blocklist-container')!;
-const allowlistContainer = document.getElementById('allowlist-container')!;
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 let currentSettings: Settings | null = null;
@@ -61,7 +53,6 @@ async function init() {
   enabledCheckbox.checked = settings.enabled;
   updateStateLine(settings.enabled);
   updateRateDisplay();
-  populateSiteFiltering(settings);
   updateNymStatus(settings.nymEnabled, nymStatus ?? 'disconnected');
   void initSiteRow();
 
@@ -105,33 +96,6 @@ async function init() {
 
   optionsBtn.addEventListener('click', () => {
     browser.runtime.openOptionsPage();
-  });
-
-  // Site filter toggle
-  siteFilterToggle.addEventListener('click', () => {
-    const isExpanded = siteFilterContent.classList.toggle('expanded');
-    siteFilterToggle.classList.toggle('expanded', isExpanded);
-    siteFilterToggle.setAttribute('aria-expanded', String(isExpanded));
-    toggleIcon.classList.toggle('expanded', isExpanded);
-  });
-
-  // Site mode radios
-  siteModeRadios.forEach((radio) => {
-    radio.addEventListener('change', () => {
-      updateSiteListVisibility();
-      debouncedSave();
-    });
-  });
-
-  // Site list textareas - auto-save on change
-  blockedSitesTextarea.addEventListener('input', debouncedSave);
-  allowedSitesTextarea.addEventListener('input', debouncedSave);
-
-  // The popup document dies the instant it loses focus, killing pending
-  // debounce timers — flush unsaved site-filter edits before that happens.
-  window.addEventListener('blur', flushPendingSave);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') flushPendingSave();
   });
 }
 
@@ -208,34 +172,16 @@ function updateSiteRow() {
         // Remove every pattern that applies, not just an exact string match.
         : s.blockedSites.filter((p) => !matchesPattern(host, p));
       await setSettings({ blockedSites });
-      blockedSitesTextarea.value = blockedSites.join('\n');
     } else {
       const allowedSites = converting
         ? s.allowedSites.filter((p) => !matchesPattern(host, p))
         : [...s.allowedSites, key];
       await setSettings({ allowedSites });
-      allowedSitesTextarea.value = allowedSites.join('\n');
     }
   };
 }
 
 // --- Site filtering form --------------------------------------------------
-
-function populateSiteFiltering(settings: Settings) {
-  siteModeRadios.forEach((radio) => {
-    radio.checked = radio.value === settings.siteMode;
-  });
-  blockedSitesTextarea.value = settings.blockedSites.join('\n');
-  allowedSitesTextarea.value = settings.allowedSites.join('\n');
-  updateSiteListVisibility();
-}
-
-function updateSiteListVisibility() {
-  const selectedMode = document.querySelector<HTMLInputElement>('input[name="siteMode"]:checked')
-    ?.value;
-  blocklistContainer.classList.toggle('active', selectedMode === 'blocklist');
-  allowlistContainer.classList.toggle('active', selectedMode === 'allowlist');
-}
 
 function updateNymStatus(nymEnabled: boolean, status: NymStatus | null) {
   nymStatusEl.classList.remove('connecting', 'connected', 'error', 'inactive');
@@ -262,38 +208,6 @@ function updateNymStatus(nymEnabled: boolean, status: NymStatus | null) {
     nymStatusEl.classList.add('connecting');
     nymStatusEl.textContent = 'Nym idle';
   }
-}
-
-function debouncedSave() {
-  if (saveTimeout) clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(saveSiteFiltering, 500);
-}
-
-function flushPendingSave() {
-  if (saveTimeout) {
-    clearTimeout(saveTimeout);
-    saveTimeout = null;
-    void saveSiteFiltering();
-  }
-}
-
-async function saveSiteFiltering() {
-  const siteMode = document.querySelector<HTMLInputElement>('input[name="siteMode"]:checked')
-    ?.value as
-      | 'blocklist'
-      | 'allowlist';
-
-  const blockedSites = blockedSitesTextarea.value
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const allowedSites = allowedSitesTextarea.value
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  await setSettings({ siteMode, blockedSites, allowedSites });
 }
 
 // --- Rate display ---------------------------------------------------------
