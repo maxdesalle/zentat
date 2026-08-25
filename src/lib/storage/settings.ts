@@ -1,4 +1,5 @@
 import { storage } from 'wxt/utils/storage';
+import type { Anchor } from '../anchors';
 import { CURRENCY_CODES } from '../currencies';
 import { isSiteAllowed, type SiteFilterSettings } from './site-filter';
 
@@ -16,6 +17,8 @@ export interface Settings extends SiteFilterSettings {
   displayMode: DisplayMode;
   displayUnit: DisplayUnit;
   rateSource: RateSource;
+  /** Things the user buys, used to express prices as ratios they can picture. */
+  anchors: Anchor[];
   nymEnabled: boolean;
   nymTimeoutMs: number;
 }
@@ -34,6 +37,7 @@ export const DEFAULT_SETTINGS: Settings = {
   displayMode: 'replace',
   displayUnit: 'auto',
   rateSource: 'auto',
+  anchors: [],
   nymEnabled: false,
   nymTimeoutMs: 60000,
 };

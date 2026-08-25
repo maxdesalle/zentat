@@ -1,6 +1,8 @@
 import { storage } from 'wxt/utils/storage';
+import { type Anchor, createAnchor, driftedAnchors, MAX_ANCHORS } from '../../lib/anchors';
 import { SUPPORTED_CURRENCIES } from '../../lib/currencies';
 import type { NymStatus } from '../../lib/fetch/types';
+import { getRates } from '../../lib/storage/rates';
 import {
   DEFAULT_SETTINGS,
   getSettings,
@@ -61,7 +63,9 @@ async function init() {
 
   const settings = await getSettings();
   lastKnown = settings;
+  initAnchors();
   populateForm(settings);
+  void renderAnchors(settings.anchors ?? []);
   void updateNymPill(settings.nymEnabled);
 
   // Without this, the form is a snapshot taken at load. A change made from the
@@ -71,6 +75,7 @@ async function init() {
     if (saving) return;
     lastKnown = next;
     populateForm(next);
+    void renderAnchors(next.anchors ?? []);
     void updateNymPill(next.nymEnabled);
   });
 
@@ -296,3 +301,89 @@ function showSaved(message: string, isError: boolean = false) {
 }
 
 init();
+
+// ---------------------------------------------------------------------------
+// Price anchors
+// ---------------------------------------------------------------------------
+
+const anchorList = document.getElementById('anchor-list')!;
+const anchorForm = document.getElementById('anchor-form') as HTMLFormElement;
+const anchorLabel = document.getElementById('anchor-label') as HTMLInputElement;
+const anchorAmount = document.getElementById('anchor-amount') as HTMLInputElement;
+const anchorCurrency = document.getElementById('anchor-currency') as HTMLSelectElement;
+const anchorHint = document.getElementById('anchor-hint')!;
+const anchorDrift = document.getElementById('anchor-drift')!;
+
+function initAnchors() {
+  for (const { code, name } of SUPPORTED_CURRENCIES) {
+    const option = document.createElement('option');
+    option.value = code;
+    option.textContent = `${code} — ${name}`;
+    anchorCurrency.appendChild(option);
+  }
+
+  anchorForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const rates = await getRates();
+    const anchor = createAnchor(
+      anchorLabel.value,
+      Number(anchorAmount.value),
+      anchorCurrency.value,
+      rates,
+    );
+    if (!anchor) {
+      anchorHint.textContent = 'Need a name, an amount, and a rate for that currency.';
+      return;
+    }
+    const anchors = [...(lastKnown?.anchors ?? []), anchor].slice(0, MAX_ANCHORS);
+    await setSettings({ anchors });
+    anchorForm.reset();
+    anchorCurrency.value = lastKnown?.displayCurrency ?? 'USD';
+  });
+}
+
+async function renderAnchors(anchors: Anchor[]) {
+  anchorList.replaceChildren();
+
+  for (const anchor of anchors) {
+    const item = document.createElement('li');
+    item.className = 'anchor-item';
+
+    const text = document.createElement('span');
+    text.textContent = `${anchor.label} — ${anchor.amount} ${anchor.currency}`;
+    item.appendChild(text);
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'anchor-remove';
+    remove.textContent = 'Remove';
+    remove.setAttribute('aria-label', `Remove ${anchor.label}`);
+    remove.addEventListener('click', async () => {
+      await setSettings({
+        anchors: (lastKnown?.anchors ?? []).filter((a) => a.id !== anchor.id),
+      });
+    });
+    item.appendChild(remove);
+
+    anchorList.appendChild(item);
+  }
+
+  anchorHint.textContent = anchors.length >= MAX_ANCHORS
+    ? `That's the maximum (${MAX_ANCHORS}). Remove one to add another.`
+    : anchors.length === 0
+    ? 'Add one or two — a coffee and your rent go a long way.'
+    : '';
+
+  // Drift is the maintenance ritual that keeps a volatile unit usable: a
+  // memorised level goes quietly wrong, so say so and ask for a re-look.
+  const drifted = driftedAnchors(anchors, await getRates());
+  anchorDrift.hidden = drifted.length === 0;
+  anchorDrift.replaceChildren();
+  for (const { anchor, change } of drifted) {
+    const line = document.createElement('p');
+    const direction = change > 0 ? 'more' : 'less';
+    line.textContent = `${anchor.label} now costs ${Math.round(Math.abs(change) * 100)}% `
+      + `${direction} ZEC than when you set it — worth a re-look.`;
+    anchorDrift.appendChild(line);
+  }
+}

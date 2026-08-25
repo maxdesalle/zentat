@@ -134,3 +134,23 @@ describe('convertPricesInNode', () => {
     expect(document.querySelector('style')!.textContent).toContain('$19.99');
   });
 });
+
+describe('anchors turn a price into a quantity', () => {
+  it('adds a ratio line to the tooltip', () => {
+    document.body.innerHTML = '<p>$700.00</p>';
+    const anchors = [
+      { id: 'a', label: 'coffees', amount: 5, currency: 'USD', zecWhenSet: 0.00625 },
+    ];
+    convertPricesInNode(document.body, freshRates(), settings({ anchors }));
+
+    const span = document.querySelector(`.${SPAN_CLASS}`)!;
+    expect(span.getAttribute('title')).toBe('Original: $700.00\n≈ 140 coffees');
+  });
+
+  it('leaves the tooltip alone when no anchors are set', () => {
+    document.body.innerHTML = '<p>$700.00</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    expect(document.querySelector(`.${SPAN_CLASS}`)!.getAttribute('title'))
+      .toBe('Original: $700.00');
+  });
+});

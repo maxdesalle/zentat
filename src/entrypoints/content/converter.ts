@@ -1,3 +1,4 @@
+import { compareToAnchors, formatComparisons } from '../../lib/anchors';
 import { convertPrice } from '../../lib/conversion/convert';
 import type { ParsedPrice } from '../../lib/detection/parser';
 import { bolPriceContainerSet, isSkippedTag } from '../../lib/detection/walker';
@@ -19,6 +20,8 @@ import {
 interface Replacement {
   original: string;
   converted: string;
+  /** Carried so the tooltip can express the price against the user's anchors. */
+  zecAmount: number;
 }
 
 export function convertPricesInDocument(rates: RatesData, settings: Settings): number {
@@ -130,10 +133,27 @@ function displayText(original: string, formatted: string, settings: Settings): s
   return settings.displayMode === 'append' ? `${original} (${formatted})` : formatted;
 }
 
-function makeSpan(original: string, converted: string): HTMLSpanElement {
+// The tooltip is where a price stops being a number and starts being a
+// quantity: the ratio line is what a person can actually remember, because it
+// does not move when the ZEC price does.
+function tooltipFor(original: string, zecAmount: number, ctx: ConvertContext): string {
+  const lines = [`Original: ${original}`];
+  const comparison = formatComparisons(
+    compareToAnchors(zecAmount, ctx.settings.anchors ?? [], ctx.rates),
+  );
+  if (comparison) lines.push(comparison);
+  return lines.join('\n');
+}
+
+interface ConvertContext {
+  rates: RatesData;
+  settings: Settings;
+}
+
+function makeSpan(original: string, converted: string, title?: string): HTMLSpanElement {
   const span = document.createElement('span');
   span.className = SPAN_CLASS;
-  span.setAttribute('title', `Original: ${original}`);
+  span.setAttribute('title', title ?? `Original: ${original}`);
   span.textContent = converted;
   // Styled inline rather than through an injected stylesheet: a stylesheet with
   // a known id is a one-selector extension detector. text-decoration (not
@@ -181,6 +201,7 @@ function replacePricesInTextNodes(
       replacements.push({
         original: parsed.original,
         converted: displayText(parsed.original, result.formatted, settings),
+        zecAmount: result.zecAmount,
       });
     }
   }
@@ -204,7 +225,7 @@ function replacePricesInTextNodes(
 
   let anyReplaced = false;
   for (const tNode of textNodes) {
-    if (replaceInTextNode(tNode, uniqueReplacements)) {
+    if (replaceInTextNode(tNode, uniqueReplacements, { rates, settings })) {
       anyReplaced = true;
     }
   }
@@ -219,7 +240,13 @@ function replacePricesInTextNodes(
     if (match) {
       rememberContainer(element, element.innerHTML, element.getAttribute('title'));
       element.textContent = '';
-      element.appendChild(makeSpan(match.original, match.converted));
+      element.appendChild(
+        makeSpan(
+          match.original,
+          match.converted,
+          tooltipFor(match.original, match.zecAmount, { rates, settings }),
+        ),
+      );
       anyReplaced = true;
     }
   }
@@ -250,7 +277,11 @@ function collectTextNodes(element: Element): Text[] {
   return textNodes;
 }
 
-function replaceInTextNode(tNode: Text, replacements: Replacement[]): boolean {
+function replaceInTextNode(
+  tNode: Text,
+  replacements: Replacement[],
+  ctx: ConvertContext,
+): boolean {
   const content = tNode.nodeValue || '';
   const fragment = document.createDocumentFragment();
   let cursor = 0;
@@ -276,7 +307,9 @@ function replaceInTextNode(tNode: Text, replacements: Replacement[]): boolean {
     if (bestIdx > cursor) {
       fragment.appendChild(document.createTextNode(content.slice(cursor, bestIdx)));
     }
-    fragment.appendChild(makeSpan(best.original, best.converted));
+    fragment.appendChild(
+      makeSpan(best.original, best.converted, tooltipFor(best.original, best.zecAmount, ctx)),
+    );
     cursor = bestIdx + best.original.length;
     replacedAny = true;
   }

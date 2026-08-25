@@ -17,6 +17,40 @@
       </header>
 
       <main class="main">
+        <section class="section" id="anchors-section">
+          <h2>Your price anchors</h2>
+          <p class="section-desc">
+            A few things you actually buy. Zentat then shows any price as a
+            multiple of them &mdash; &ldquo;&asymp; 14 coffees&rdquo; &mdash; on hover.
+            Ratios stay true no matter what ZEC does, which is what makes them
+            worth remembering.
+          </p>
+          <div class="anchor-drift" id="anchor-drift" hidden></div>
+          <ul class="anchor-list" id="anchor-list"></ul>
+          <form class="anchor-form" id="anchor-form">
+            <input
+              type="text"
+              id="anchor-label"
+              placeholder="coffees"
+              maxlength="24"
+              aria-label="What it is"
+              required
+            />
+            <input
+              type="number"
+              id="anchor-amount"
+              placeholder="5.00"
+              step="any"
+              min="0"
+              aria-label="What it costs"
+              required
+            />
+            <select class="select" id="anchor-currency" aria-label="Currency"></select>
+            <button type="submit" class="anchor-add">Add</button>
+          </form>
+          <p class="anchor-hint" id="anchor-hint"></p>
+        </section>
+
         <section class="section">
           <div class="row-header">
             <div>
