@@ -1,0 +1,78 @@
+ParserTest
+├── parseNumber
+│   ├── given a bare number
+│   │   ├── it parses an integer
+│   │   ├── it parses a decimal
+│   │   └── it parses zero
+│   ├── given grouping separators
+│   │   ├── given US grouping
+│   │   │   ├── it reads a comma as thousands
+│   │   │   └── it reads a dot as the decimal point
+│   │   ├── given EU grouping
+│   │   │   ├── it reads a dot as thousands
+│   │   │   └── it reads a comma as the decimal point
+│   │   ├── given Indian lakh grouping
+│   │   │   └── it reads the two-digit groups
+│   │   └── given Swiss apostrophe grouping
+│   │       ├── it reads a straight apostrophe
+│   │       └── it reads a typographic apostrophe
+│   ├── given exactly three digits after a single dot
+│   │   ├── given the caller expects US decimals
+│   │   │   └── it reads them as a decimal
+│   │   └── given the caller does not
+│   │       └── it reads them as thousands
+│   ├── given a magnitude suffix
+│   │   ├── it reads it case-insensitively
+│   │   └── it applies the right magnitude for each letter
+│   ├── given a spelled-out multiplier
+│   │   ├── it matches the whole word rather than a prefix
+│   │   ├── it handles compound multipliers
+│   │   └── it handles non-English words
+│   └── given input that is not a number
+│       ├── it returns null for letters
+│       └── it returns null for an empty string
+└── parsePrice
+    ├── given a symbol before the amount
+    │   ├── it reads a dollar sign
+    │   ├── it reads a euro sign
+    │   └── it reads a pound sign
+    ├── given a code after the amount
+    │   └── it reads the code
+    ├── given several prices in one string
+    │   └── it returns each of them
+    ├── given a magnitude in the price
+    │   ├── it reads a suffix letter
+    │   └── it reads a spelled-out word
+    ├── given a negative amount
+    │   ├── it skips the negative price
+    │   └── it still reads both ends of a range
+    ├── given an ambiguous symbol
+    │   ├── given the hostname names a country
+    │   │   └── it resolves to that country's currency
+    │   ├── given that currency is not enabled
+    │   │   └── it falls back to an enabled candidate
+    │   ├── given the page language disambiguates
+    │   │   └── it resolves from the language
+    │   └── given nothing disambiguates
+    │       └── it resolves to the default reading
+    ├── given a dollar sign claimed by a prefix
+    │   ├── given the prefix names a supported currency
+    │   │   └── it reads that currency
+    │   └── given the prefix names an unsupported one
+    │       └── it reads nothing rather than guessing US dollars
+    ├── given a hostname-restricted pattern
+    │   ├── it applies on that site
+    │   ├── it does not apply elsewhere
+    │   └── it reads a site's split euro-and-cent markup
+    ├── given two readings of the same text
+    │   ├── given one matches the symbol in the text
+    │   │   └── it keeps the one that matches
+    │   └── given neither matches the symbol
+    │       └── it keeps the first
+    ├── given two readings overlap in position
+    │   ├── it keeps the longer match
+    │   └── it discards the shorter one
+    ├── given a currency is not enabled
+    │   └── it returns nothing for that currency
+    └── given text with no price in it
+        └── it returns nothing
