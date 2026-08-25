@@ -40,6 +40,12 @@ export function parsePrice(
   enabledCurrencies: string[],
   hostname?: string,
   documentLang?: string,
+  /**
+   * Currency the page states in its own structured data. Beats every guess we
+   * would otherwise make from a symbol or a TLD — "$" on a geo-priced .com is
+   * CAD roughly as often as it is USD.
+   */
+  pageCurrency?: string | null,
 ): ParsedPrice[] {
   const results: ParsedPrice[] = [];
   const enabledSet = new Set(enabledCurrencies.map((c) => c.toUpperCase()));
@@ -65,6 +71,12 @@ export function parsePrice(
         if (isNegatedAt(text, parsed.price.startIndex)) continue;
 
         let currency = parsed.price.currency;
+        // An ambiguous symbol resolved by TLD is a guess; the page's own
+        // declaration is not.
+        if (pageCurrency && parsed.symbol && AMBIGUOUS_SYMBOLS[parsed.symbol]) {
+          const candidates = AMBIGUOUS_SYMBOLS[parsed.symbol];
+          if (candidates.includes(pageCurrency)) currency = pageCurrency;
+        }
         // If the locale-resolved currency for an ambiguous symbol is disabled,
         // fall back to another enabled candidate for that symbol instead of
         // silently dropping the price (e.g. "$" resolved to MXN on a .mx site

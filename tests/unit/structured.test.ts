@@ -149,3 +149,19 @@ describe('projections', () => {
     expect(projectionsFor(1000)).toContain('1000');
   });
 });
+
+describe('the oracle beats regex where regex is weakest', () => {
+  it('fixes the currency for the whole page', () => {
+    // A geo-priced .com serving CAD: "$" by TLD would read USD, ~37% out.
+    jsonLd({ offers: { price: '368.00', priceCurrency: 'CAD' } });
+    expect(documentCurrency(readStructuredPrices())).toBe('CAD');
+  });
+
+  it('reads a price regex would get 100x wrong', () => {
+    jsonLd({ offers: { price: '49.99', priceCurrency: 'USD' } });
+    document.body.innerHTML = '<div class="p"><span>$</span><span>49</span><span>99</span></div>';
+    const [located] = locatePrices(document.body, readStructuredPrices());
+    // Regex sees "$4999"; the oracle says 49.99 and the projection finds where.
+    expect(located.price.amount).toBe(49.99);
+  });
+});
