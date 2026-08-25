@@ -44,6 +44,14 @@ function parseZecInput(text: string): number | null {
   return /^z(ats?|atoshis?)$/i.test(match[2]) ? amount / ZATS_PER_ZEC : amount;
 }
 
+/**
+ * ZEC to fiat is always spot, deliberately.
+ *
+ * The two directions are different questions. "What does this thing cost" is a
+ * browsing question and takes the held rate, matching every page. "What is my
+ * money worth" is a valuation question about a balance the user actually holds
+ * — the one case outside checkout where a held rate could cost them.
+ */
 function toFiat(zec: number, rates: RatesData, settings: Settings): QuickResult | null {
   const currency = settings.displayCurrency;
   const rate = rates.rates[currency];

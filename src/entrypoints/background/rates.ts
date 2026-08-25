@@ -2,13 +2,16 @@ import { storage } from 'wxt/utils/storage';
 import { createFetcher } from '../../lib/fetch';
 import { destroyNymConnection } from '../../lib/fetch/nym';
 import { debug } from '../../lib/log';
+import { updateHeldRate } from '../../lib/rates/held';
 import { fetchRatesWithRetry } from '../../lib/rates/provider';
 import { validateRates } from '../../lib/rates/validate';
 import {
+  getHeldRate,
   getRates,
   isRatesStale,
   mergeRates,
   setFetchStatus,
+  setHeldRate,
   setRates,
 } from '../../lib/storage/rates';
 import { getSettings } from '../../lib/storage/settings';
@@ -146,7 +149,19 @@ async function storeRates(data: Awaited<ReturnType<typeof getRates>>): Promise<v
     return;
   }
 
-  await setRates(mergeRates(current, { ...data, rates }));
+  const merged = mergeRates(current, { ...data, rates });
+  await setRates(merged);
+
+  // The held rate is derived here, once, so every surface reads the same peg
+  // rather than each re-deriving it and drifting.
+  const settings = await getSettings();
+  const previous = await getHeldRate();
+  const { held, repegged } = updateHeldRate(previous, merged, settings.heldBand);
+  if (held && held !== previous) await setHeldRate(held);
+  if (repegged) {
+    debug(`Held rate re-pegged: ZEC moved past ${Math.round(settings.heldBand * 100)}%`);
+  }
+
   await setFetchStatus('ok');
 }
 

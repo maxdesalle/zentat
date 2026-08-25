@@ -2,6 +2,7 @@ import { compareToAnchors, formatComparisons } from '../../lib/anchors';
 import { convertPrice } from '../../lib/conversion/convert';
 import type { ParsedPrice } from '../../lib/detection/parser';
 import { bolPriceContainerSet, isSkippedTag } from '../../lib/detection/walker';
+import { divergence, type HeldRate } from '../../lib/rates/held';
 import { isRatesUsable, type RatesData } from '../../lib/storage/rates';
 import type { Settings } from '../../lib/storage/settings';
 import { detectPrices } from './detector';
@@ -24,7 +25,11 @@ interface Replacement {
   zecAmount: number;
 }
 
-export function convertPricesInDocument(rates: RatesData, settings: Settings): number {
+export function convertPricesInDocument(
+  rates: RatesData,
+  settings: Settings,
+  held?: HeldRate | null,
+): number {
   if (!settings.enabled) return 0;
   // Never convert with unusable rates: empty (nothing fetched yet) or older
   // than a day — silently converting at a wildly stale rate is worse than
@@ -32,10 +37,15 @@ export function convertPricesInDocument(rates: RatesData, settings: Settings): n
   if (!isRatesUsable(rates)) return 0;
   if (!document.body) return 0;
 
-  return convertPricesInNode(document.body, rates, settings);
+  return convertPricesInNode(document.body, rates, settings, held);
 }
 
-export function convertPricesInNode(root: Node, rates: RatesData, settings: Settings): number {
+export function convertPricesInNode(
+  root: Node,
+  rates: RatesData,
+  settings: Settings,
+  held?: HeldRate | null,
+): number {
   if (!settings.enabled) return 0;
   if (!isRatesUsable(rates)) return 0;
 
@@ -68,7 +78,13 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
         // For structured price containers, replace entire content
         const convertedPrices: string[] = [];
         for (const parsed of prices) {
-          const result = convertPrice(parsed, rates, settings.precision, settings.displayUnit);
+          const result = convertPrice(
+            parsed,
+            rates,
+            settings.precision,
+            settings.displayUnit,
+            held,
+          );
           if (result) {
             convertedPrices.push(displayText(parsed.original, result.formatted, settings));
             converted = true;
@@ -108,7 +124,7 @@ export function convertPricesInNode(root: Node, rates: RatesData, settings: Sett
         }
       } else {
         // For complex content (Wikipedia, etc.), replace within text nodes to preserve HTML
-        converted = replacePricesInTextNodes(node, prices, rates, settings, directTextOnly);
+        converted = replacePricesInTextNodes(node, prices, rates, settings, held, directTextOnly);
       }
 
       if (converted) {
@@ -142,12 +158,42 @@ function tooltipFor(original: string, zecAmount: number, ctx: ConvertContext): s
     compareToAnchors(zecAmount, ctx.settings.anchors ?? [], ctx.rates),
   );
   if (comparison) lines.push(comparison);
+
+  // Always present, never conditional. A warning that only appears sometimes
+  // teaches people that its absence means "no divergence"; a line that is
+  // always there teaches them that a held rate HAS a divergence, which is the
+  // mental model we actually want installed.
+  //
+  // Expressed as a percentage and an age, with no fiat figure, so it survives
+  // hideFiat — a user who has given up their fiat cross-check needs this more,
+  // not less.
+  if (ctx.held) {
+    const gap = divergence(ctx.held, ctx.rates);
+    if (gap !== null) {
+      const sign = gap >= 0 ? '+' : '';
+      lines.push(
+        `Held rate · spot ${sign}${(gap * 100).toFixed(1)}% · set ${
+          describeAge(Date.now() - ctx.held.pegged)
+        }`,
+      );
+    }
+  }
+
   return lines.join('\n');
+}
+
+function describeAge(ms: number): string {
+  const hours = Math.floor(ms / 3_600_000);
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return days === 1 ? '1 day ago' : `${days} days ago`;
 }
 
 interface ConvertContext {
   rates: RatesData;
   settings: Settings;
+  held?: HeldRate | null;
 }
 
 function makeSpan(original: string, converted: string, title?: string): HTMLSpanElement {
@@ -192,11 +238,12 @@ function replacePricesInTextNodes(
   prices: ParsedPrice[],
   rates: RatesData,
   settings: Settings,
+  held: HeldRate | null | undefined,
   directTextOnly?: boolean,
 ): boolean {
   const replacements: Replacement[] = [];
   for (const parsed of prices) {
-    const result = convertPrice(parsed, rates, settings.precision, settings.displayUnit);
+    const result = convertPrice(parsed, rates, settings.precision, settings.displayUnit, held);
     if (result) {
       replacements.push({
         original: parsed.original,
@@ -225,7 +272,7 @@ function replacePricesInTextNodes(
 
   let anyReplaced = false;
   for (const tNode of textNodes) {
-    if (replaceInTextNode(tNode, uniqueReplacements, { rates, settings })) {
+    if (replaceInTextNode(tNode, uniqueReplacements, { rates, settings, held })) {
       anyReplaced = true;
     }
   }
@@ -244,7 +291,7 @@ function replacePricesInTextNodes(
         makeSpan(
           match.original,
           match.converted,
-          tooltipFor(match.original, match.zecAmount, { rates, settings }),
+          tooltipFor(match.original, match.zecAmount, { rates, settings, held }),
         ),
       );
       anyReplaced = true;

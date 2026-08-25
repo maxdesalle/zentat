@@ -1,5 +1,12 @@
 import { setDisplayLocale } from '../../lib/conversion/format';
-import { getRates, type RatesData, watchRates } from '../../lib/storage/rates';
+import type { HeldRate } from '../../lib/rates/held';
+import {
+  getHeldRate,
+  getRates,
+  type RatesData,
+  watchHeldRate,
+  watchRates,
+} from '../../lib/storage/rates';
 import {
   getSettings,
   isSiteAllowed,
@@ -11,6 +18,7 @@ import { convertPricesInDocument, revertConversions } from './converter';
 import { startObserver, stopObserver, updateObserverConfig } from './observer';
 
 let currentRates: RatesData | null = null;
+let currentHeld: HeldRate | null = null;
 let currentSettings: Settings | null = null;
 let running = false;
 let uninstallCopy: (() => void) | null = null;
@@ -27,7 +35,12 @@ export default defineContentScript({
     await resolvePolicyHost();
     try {
       // Load cached data (no network requests are ever made from this context)
-      const [rates, settings] = await Promise.all([getRates(), getSettings()]);
+      const [rates, settings, held] = await Promise.all([
+        getRates(),
+        getSettings(),
+        getHeldRate(),
+      ]);
+      currentHeld = held;
 
       currentRates = rates;
       currentSettings = settings;
@@ -37,6 +50,15 @@ export default defineContentScript({
       // (previously Alt+Z was one-way on such tabs until a full reload).
       watchSettings(onSettingsChange);
       watchRates(onRatesChange);
+      // A re-peg is a real change to what the numbers mean, so it re-converts.
+      // Ordinary spot movement inside the band does not, which is the point.
+      watchHeldRate((held: HeldRate | null) => {
+        currentHeld = held;
+        if (currentRates && currentSettings && isActive(currentSettings)) {
+          revertConversions();
+          convertPricesInDocument(currentRates, currentSettings, heldForDisplay());
+        }
+      });
       browser.runtime.onMessage.addListener(handleMessage);
 
       if (!isActive(settings)) return;
@@ -82,6 +104,11 @@ function whenDomReady(fn: () => void): void {
   }
 }
 
+/** Null when the user asked for spot, so the conversion path falls back to it. */
+function heldForDisplay(): HeldRate | null {
+  return currentSettings?.rateMode === 'spot' ? null : currentHeld;
+}
+
 function start(): void {
   if (running) return;
   if (!currentRates || !currentSettings || !isActive(currentSettings)) return;
@@ -91,8 +118,8 @@ function start(): void {
   // approach blanked <body> on EVERY site until rates + DOMContentLoaded + a
   // full scan completed — a universal page-load regression that outweighed the
   // brief fiat flash it prevented.
-  convertPricesInDocument(currentRates, currentSettings);
-  startObserver(currentRates, currentSettings);
+  convertPricesInDocument(currentRates, currentSettings, heldForDisplay());
+  startObserver(currentRates, currentSettings, heldForDisplay());
   uninstallCopy = installCopyHandler();
 }
 

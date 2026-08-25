@@ -1,6 +1,11 @@
 /**
  * ZIP-321 payment request URIs.
  *
+ * NOTE ON RATES: everything here must be built from the SPOT rate, never the
+ * held display rate. A held rate is a reference number for browsing; an
+ * `amount=` in a payment URI is what a wallet actually sends. Off by up to the
+ * band means the user overpays or the merchant is underpaid, by real money.
+ *
  * The one rule that governs this whole file: the wire grammar and the display
  * grammar are different things. `formatZecWithSymbol` emits locale separators,
  * grouping, a unit suffix and sometimes zats — all four are invalid in an

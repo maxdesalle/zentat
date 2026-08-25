@@ -1,4 +1,5 @@
 import { collectShadowRoots } from '../../lib/detection/shadow';
+import type { HeldRate } from '../../lib/rates/held';
 import type { RatesData } from '../../lib/storage/rates';
 import type { Settings } from '../../lib/storage/settings';
 import {
@@ -13,6 +14,7 @@ import { setActiveObserver } from './state';
 interface ObserverConfig {
   rates: RatesData;
   settings: Settings;
+  held?: HeldRate | null;
 }
 
 let observer: MutationObserver | null = null;
@@ -28,8 +30,12 @@ const HIDDEN_FLUSH_MS = 250;
 // subtrees; past this we simply rescan the body once.
 const MAX_PENDING_ROOTS = 200;
 
-export function startObserver(rates: RatesData, settings: Settings): void {
-  config = { rates, settings };
+export function startObserver(
+  rates: RatesData,
+  settings: Settings,
+  held?: HeldRate | null,
+): void {
+  config = { rates, settings, held };
   if (observer) return;
   if (!document.body) return; // No body element (e.g., API endpoints)
 
@@ -190,7 +196,7 @@ function processPendingNodes(): void {
     // A newly-added component brings its own shadow root with it.
     observeShadowRoots(root);
     if (isStillInPage(root)) {
-      convertPricesInNode(root, config.rates, config.settings);
+      convertPricesInNode(root, config.rates, config.settings, config.held);
     }
   }
 }
@@ -212,7 +218,7 @@ function installRouteHooks(): () => void {
     if (!config) return;
     // Drop stale markers, then re-run over the new content.
     revertConversions();
-    convertPricesInDocument(config.rates, config.settings);
+    convertPricesInDocument(config.rates, config.settings, config.held);
     observeShadowRoots(document.body);
   };
 

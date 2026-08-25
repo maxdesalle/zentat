@@ -1,4 +1,5 @@
 import { storage } from 'wxt/utils/storage';
+import type { HeldRate } from '../rates/held';
 
 export interface RatesData {
   // Stored as ZEC-per-fiat for fast multiplication
@@ -44,6 +45,22 @@ const ratesItem = storage.defineItem<RatesData>('local:rates', {
 const fetchStatusItem = storage.defineItem<RateFetchStatus>('local:rateFetchStatus', {
   fallback: { state: 'idle', changedAt: 0 },
 });
+
+const heldRateItem = storage.defineItem<HeldRate | null>('local:heldRate', {
+  fallback: null,
+});
+
+export async function getHeldRate(): Promise<HeldRate | null> {
+  return heldRateItem.getValue();
+}
+
+export async function setHeldRate(held: HeldRate | null): Promise<void> {
+  await heldRateItem.setValue(held);
+}
+
+export function watchHeldRate(callback: (held: HeldRate | null) => void): () => void {
+  return heldRateItem.watch(callback);
+}
 
 export async function getRates(): Promise<RatesData> {
   return ratesItem.getValue();

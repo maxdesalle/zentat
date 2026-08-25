@@ -26,6 +26,14 @@ export interface Settings extends SiteFilterSettings {
    * the switch that makes the claim real. Off by default; it is a commitment,
    * not a default.
    */
+  /**
+   * 'held' shows a rate that only moves when ZEC leaves a band, so the number
+   * is stable enough to remember; 'spot' shows the market rate, which changes
+   * several times a day and is what a payment actually settles at.
+   */
+  rateMode: 'held' | 'spot';
+  /** The band, and the accuracy bound disclosed to the user. */
+  heldBand: number;
   hideFiat: boolean;
   nymEnabled: boolean;
   nymTimeoutMs: number;
@@ -46,6 +54,10 @@ export const DEFAULT_SETTINGS: Settings = {
   displayUnit: 'auto',
   rateSource: 'auto',
   anchors: [],
+  // Held by default: the whole product depends on the number being memorable,
+  // and spot is not.
+  rateMode: 'held',
+  heldBand: 0.1,
   hideFiat: false,
   nymEnabled: false,
   nymTimeoutMs: 60000,

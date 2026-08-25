@@ -235,3 +235,30 @@ describe('hide-fiat mode', () => {
     expect(copied).toBe('$19.99');
   });
 });
+
+describe('the held rate reaches the page', () => {
+  const held = { peg: 0.001, pegged: Date.now() - 2 * 3_600_000 };
+
+  it('converts at the held rate, not spot', () => {
+    document.body.innerHTML = '<p>$100.00</p>';
+    // Spot is 0.00125; the peg is 0.001, inside the band.
+    convertPricesInNode(document.body, freshRates(), settings(), held);
+    expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('0.1000 ZEC');
+  });
+
+  it('always discloses the gap from spot, with no fiat figure', () => {
+    document.body.innerHTML = '<p>$100.00</p>';
+    convertPricesInNode(document.body, freshRates(), settings({ hideFiat: true }), held);
+    const title = document.querySelector(`.${SPAN_CLASS}`)!.getAttribute('title')!;
+    // Survives hideFiat: a percentage and an age, never a fiat amount.
+    expect(title).toContain('Held rate · spot +25.0%');
+    expect(title).toContain('2h ago');
+    expect(title).not.toContain('$');
+  });
+
+  it('falls back to spot when the user asked for it', () => {
+    document.body.innerHTML = '<p>$100.00</p>';
+    convertPricesInNode(document.body, freshRates(), settings(), null);
+    expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('0.1250 ZEC');
+  });
+});

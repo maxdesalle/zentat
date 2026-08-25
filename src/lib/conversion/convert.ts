@@ -1,4 +1,5 @@
 import type { ParsedPrice } from '../detection/parser';
+import { type HeldRate, heldRateFor } from '../rates/held';
 import { isCurrencyUsable, type RatesData } from '../storage/rates';
 import { type DisplayUnit, formatZecWithSymbol, type Precision } from './format';
 
@@ -14,8 +15,12 @@ export function convertPrice(
   rates: RatesData,
   precision: Precision = 'auto',
   displayUnit: DisplayUnit = 'auto',
+  /** When present, prices display at the held rate instead of spot. */
+  held?: HeldRate | null,
 ): ConversionResult | null {
-  const rate = rates.rates[parsed.currency];
+  const rate = held
+    ? heldRateFor(held, rates, parsed.currency) ?? undefined
+    : rates.rates[parsed.currency];
   if (rate === undefined) return null;
   // Checked per currency, not map-wide: a fallback provider that only quotes
   // USD/EUR leaves the others frozen, and converting those at a week-old rate
