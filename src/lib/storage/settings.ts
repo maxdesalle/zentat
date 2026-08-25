@@ -1,50 +1,88 @@
 import { storage } from 'wxt/utils/storage';
+import { CURRENCY_CODES } from '../currencies';
+import { isSiteAllowed, type SiteFilterSettings } from './site-filter';
 
-export interface Settings {
+export { isSiteAllowed } from './site-filter';
+
+export type DisplayMode = 'replace' | 'append';
+export type DisplayUnit = 'auto' | 'zec' | 'zats';
+export type RateSource = 'auto' | 'coingecko' | 'kraken';
+
+export interface Settings extends SiteFilterSettings {
   enabled: boolean;
   currencies: string[];
   precision: 'auto' | number;
-  blockedSites: string[];
-  allowedSites: string[];
-  siteMode: 'blocklist' | 'allowlist';
   displayCurrency: string;
+  displayMode: DisplayMode;
+  displayUnit: DisplayUnit;
+  rateSource: RateSource;
   nymEnabled: boolean;
   nymTimeoutMs: number;
 }
 
-const DEFAULT_SETTINGS: Settings = {
+export const DEFAULT_SETTINGS: Settings = {
   enabled: true,
-  currencies: ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY'],
+  // All supported currencies are on by default; the rate fetch retrieves all of
+  // them regardless, so enabling them costs nothing and avoids silently showing
+  // no conversions to users in KRW/INR/BRL/MXN regions.
+  currencies: [...CURRENCY_CODES],
   precision: 'auto',
   blockedSites: [],
   allowedSites: [],
   siteMode: 'blocklist',
   displayCurrency: 'USD',
+  displayMode: 'replace',
+  displayUnit: 'auto',
+  rateSource: 'auto',
   nymEnabled: false,
   nymTimeoutMs: 60000,
 };
 
-const settingsItem = storage.defineItem<Settings>('sync:settings', {
+// Settings are deliberately stored in the local area, not sync: the site
+// block/allow lists reveal which sites the user visits, and the privacy policy
+// promises preferences never leave the device.
+const settingsItem = storage.defineItem<Settings>('local:settings', {
   fallback: DEFAULT_SETTINGS,
 });
 
+// One-time migration from the pre-1.1 'sync:settings' location. Runs at most
+// once per JS context; safe to re-run after service-worker restarts because it
+// only copies when no local value exists yet.
+let migrationDone = false;
+async function migrateFromSyncStorage(): Promise<void> {
+  if (migrationDone) return;
+  migrationDone = true;
+  try {
+    const legacy = await storage.getItem<Settings>('sync:settings');
+    if (legacy) {
+      const local = await storage.getItem<Settings>('local:settings');
+      if (local == null) {
+        await settingsItem.setValue({ ...DEFAULT_SETTINGS, ...legacy });
+      }
+      await storage.removeItem('sync:settings');
+    }
+  } catch {
+    // Sync storage may be unavailable; local fallback covers us.
+  }
+}
+
 export async function getSettings(): Promise<Settings> {
+  await migrateFromSyncStorage();
   const stored = await settingsItem.getValue();
   // Merge with defaults to handle missing fields from older versions
   const merged = { ...DEFAULT_SETTINGS, ...stored };
 
-  // Ensure arrays aren't empty (could happen from corrupted/partial storage)
-  if (!merged.currencies || merged.currencies.length === 0) {
-    merged.currencies = DEFAULT_SETTINGS.currencies;
+  // Repair corrupted values, but respect a deliberately-empty currency list
+  // (empty array = "convert nothing", chosen in the options page).
+  if (!Array.isArray(merged.currencies)) {
+    merged.currencies = [...DEFAULT_SETTINGS.currencies];
   }
-  if (!merged.blockedSites) {
+  if (!Array.isArray(merged.blockedSites)) {
     merged.blockedSites = [];
   }
-  if (!merged.allowedSites) {
+  if (!Array.isArray(merged.allowedSites)) {
     merged.allowedSites = [];
   }
-
-  // Ensure precision has a valid value
   if (merged.precision === undefined || merged.precision === null) {
     merged.precision = DEFAULT_SETTINGS.precision;
   }
@@ -58,36 +96,7 @@ export async function setSettings(settings: Partial<Settings>): Promise<void> {
 }
 
 export function watchSettings(callback: (settings: Settings) => void): () => void {
-  return settingsItem.watch(callback);
-}
-
-export function isSiteAllowed(hostname: string, settings: Settings): boolean {
-  if (settings.siteMode === 'allowlist') {
-    return settings.allowedSites.some((pattern) => matchesPattern(hostname, pattern));
-  }
-  return !settings.blockedSites.some((pattern) => matchesPattern(hostname, pattern));
-}
-
-function matchesPattern(hostname: string, pattern: string): boolean {
-  // Normalize both to lowercase
-  hostname = hostname.toLowerCase();
-  pattern = pattern.toLowerCase();
-
-  // Wildcard pattern: *.example.com matches example.com and any subdomain
-  if (pattern.startsWith('*.')) {
-    const suffix = pattern.slice(2);
-    return hostname === suffix || hostname.endsWith('.' + suffix);
-  }
-
-  // Exact match
-  if (hostname === pattern) {
-    return true;
-  }
-
-  // Subdomain match: "example.com" also matches "www.example.com", "api.example.com", etc.
-  if (hostname.endsWith('.' + pattern)) {
-    return true;
-  }
-
-  return false;
+  return settingsItem.watch((value) => {
+    callback({ ...DEFAULT_SETTINGS, ...value });
+  });
 }

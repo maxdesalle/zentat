@@ -1,6 +1,6 @@
-import type { RatesData } from '../storage/rates';
 import type { ParsedPrice } from '../detection/parser';
-import { formatZecWithSymbol, type Precision } from './format';
+import type { RatesData } from '../storage/rates';
+import { type DisplayUnit, formatZecWithSymbol, type Precision } from './format';
 
 export interface ConversionResult {
   original: string;
@@ -12,7 +12,8 @@ export interface ConversionResult {
 export function convertPrice(
   parsed: ParsedPrice,
   rates: RatesData,
-  precision: Precision = 'auto'
+  precision: Precision = 'auto',
+  displayUnit: DisplayUnit = 'auto',
 ): ConversionResult | null {
   const rate = rates.rates[parsed.currency];
   if (rate === undefined) return null;
@@ -22,8 +23,7 @@ export function convertPrice(
   return {
     original: parsed.original,
     zecAmount,
-    formatted: formatZecWithSymbol(zecAmount, precision),
+    formatted: formatZecWithSymbol(zecAmount, precision, displayUnit),
     currency: parsed.currency,
   };
 }
-

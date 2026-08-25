@@ -17,25 +17,35 @@ Zentat
 
 ## What is Zentat?
 
-Zentat automatically detects and converts fiat currency prices on any webpage to Zcash. Browse Amazon, eBay, news sites, or any website and see prices in ZEC instead of USD, EUR, GBP, and 10+ other currencies.
+Zentat automatically detects and converts fiat currency prices on any webpage to Zcash. Browse Amazon, eBay, news sites, or any website and see prices in ZEC instead of USD, EUR, GBP, and other currencies.
 
 <p align="center">
 <img src="assets/demo.gif" alt="Zentat demo - Before and After comparison" width="800">
 </p>
 
 **Features:**
+
 - Real-time price conversion on any website
-- Supports 13 fiat currencies (USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, KRW, INR, BRL, MXN, and more)
+- Supports 12 fiat currencies (USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, KRW, INR, BRL, MXN)
 - Optional privacy-preserving exchange rate fetching via [Nym](https://nymtech.net)
-- Configurable precision (auto, whole numbers, or 2 decimal places)
-- Hover over converted prices to see the original amount
-- Works with complex price formats (thousand separators, European notation, etc.)
+- Replace prices outright, or append the ZEC value next to the original — your choice
+- Configurable precision (auto significant figures, or 2/4/6/8 decimals) with automatic zats display for small amounts
+- Hover over converted prices (dotted underline) to see the original amount
+- Works with complex price formats (thousand separators, European notation, Indian lakh grouping, Swiss apostrophes, etc.)
+
+## Usage
+
+- **Toggle conversion** anywhere with <kbd>Alt+Z</kbd>, from the toolbar popup, or per-site with the popup's "Disable here" button.
+- **Hover** any converted price (marked with a dotted underline) to see the original fiat amount.
+- **Site filtering**: run Zentat everywhere except a blocklist, or only on an allowlist — configured in the popup or the options page.
+- **Options** (right-click the toolbar icon → Options, or the popup's Options button): currencies, display mode, precision, rate source, and Nym.
+- The toolbar badge shows `OFF` when conversion is paused and `!` when the cached exchange rate is stale.
 
 ## Installation
 
 **Chrome**: Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/zentat/).
 
-**Firefox**: Download `zentat-x.x.x-firefox.zip` from [GitHub Releases](https://github.com/maxdesalle/zentat/releases) and install manually. Firefox Add-ons doesn't support the Nym library due to file size limits.
+**Firefox**: Firefox Add-ons doesn't accept the Nym library due to file size limits, so install the signed `.xpi` from [GitHub Releases](https://github.com/maxdesalle/zentat/releases): download it, then open `about:addons` → gear menu → **Install Add-on From File…** and select the file. (An unsigned `.zip` only works as a temporary add-on via `about:debugging` and is removed on restart.)
 
 ## Privacy
 
@@ -44,8 +54,21 @@ Zentat is designed with privacy as a core principle:
 - **No accounts**: Zentat requires no sign-up or authentication
 - **No tracking**: No analytics, telemetry, or user tracking of any kind
 - **No external requests** (except rate fetching): All price detection and conversion happens locally in your browser
-- **Settings stored locally**: Your preferences never leave your device
-- **Optional Nym integration**: Exchange rate requests can be routed through Nym for network-level privacy, hiding your IP address from the exchange rate API
+- **Settings stored locally**: Your preferences are kept in the browser's local (non-synced) storage and never leave your device
+- **Rate fetching**: Exchange rates come from CoinGecko, with Kraken as an automatic fallback — always the same fixed request, never anything derived from your browsing or settings
+- **Minimal permissions**: No blanket host permissions; extension-context network access is limited to the rate APIs and Nym gateways
+- **Optional Nym integration**: Exchange rate requests can be routed through the Nym mixnet, hiding your IP address from the exchange rate API (never falls back to a direct request while enabled)
+
+See [PRIVACY.md](PRIVACY.md) for the full policy.
+
+## Development
+
+```sh
+just install    # install dependencies (bun or npm)
+just dev        # run in Chrome with hot reload
+just test-unit  # unit tests
+bun run typecheck  # or: npm run typecheck
+```
 
 ## Support
 

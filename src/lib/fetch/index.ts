@@ -1,9 +1,17 @@
-import type { Fetcher } from './types';
 import { createDirectFetcher } from './direct';
 import { createNymFetcher } from './nym';
+import type { Fetcher } from './types';
 
 export { createDirectFetcher } from './direct';
-export { createNymFetcher, getNymStatus, watchNymStatus, resetNymConnection } from './nym';
+export {
+  createNymFetcher,
+  destroyNymConnection,
+  getNymStatus,
+  getStoredNymStatus,
+  resetNymConnection,
+  watchNymStatus,
+  watchStoredNymStatus,
+} from './nym';
 export type { Fetcher, FetcherResponse, NymStatus } from './types';
 
 export interface FetcherOptions {

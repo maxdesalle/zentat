@@ -1,3 +1,6 @@
+import { storage } from 'wxt/utils/storage';
+import { debug } from '../log';
+import { clearNymDatabases, isAllowedNymUrl, type NymFetchResult } from '../nym/shared';
 import type { Fetcher, FetcherResponse, NymStatus } from './types';
 
 // Detect environment: Firefox has window in background, Chrome needs offscreen
@@ -19,7 +22,13 @@ function detectFirefox(): boolean {
 }
 
 const isFirefox = detectFirefox();
-console.log(`Zentat: Browser detected as ${isFirefox ? 'Firefox' : 'Chrome'}`);
+
+// The live status is kept in memory for background-side consumers AND mirrored
+// to storage so the popup/options UI can show the real connection state
+// instead of inferring it from the settings toggle.
+const nymStatusItem = storage.defineItem<NymStatus>('local:nymStatus', {
+  fallback: 'disconnected',
+});
 
 let nymStatus: NymStatus = 'disconnected';
 let statusListeners: Set<(status: NymStatus) => void> = new Set();
@@ -27,6 +36,7 @@ let statusListeners: Set<(status: NymStatus) => void> = new Set();
 function setStatus(status: NymStatus) {
   nymStatus = status;
   statusListeners.forEach((listener) => listener(status));
+  void nymStatusItem.setValue(status).catch(() => {});
 }
 
 export function getNymStatus(): NymStatus {
@@ -37,6 +47,14 @@ export function watchNymStatus(callback: (status: NymStatus) => void): () => voi
   statusListeners.add(callback);
   callback(nymStatus);
   return () => statusListeners.delete(callback);
+}
+
+export function watchStoredNymStatus(callback: (status: NymStatus) => void): () => void {
+  return nymStatusItem.watch(callback);
+}
+
+export async function getStoredNymStatus(): Promise<NymStatus> {
+  return nymStatusItem.getValue();
 }
 
 // ============================================================================
@@ -72,7 +90,7 @@ function createFirefoxNymFetcher(timeoutMs: number): Fetcher {
       }
 
       if (result.fatal) {
-        console.log('Zentat: Fatal Nym error, destroying client');
+        debug('Fatal Nym error, destroying client');
         await client.destroyNymClient();
         setStatus('error');
       }
@@ -128,13 +146,14 @@ async function doCreateOffscreenDocument(): Promise<void> {
 
     if (existingContexts.length > 0) {
       offscreenCreated = true;
-      setStatus('connected');
       return;
     }
   } catch {
     // getContexts might fail, continue to try creating
   }
 
+  // Creating the document is NOT a mixnet connection — status stays
+  // 'connecting' until the first successful fetch through the mixnet.
   setStatus('connecting');
 
   try {
@@ -144,12 +163,10 @@ async function doCreateOffscreenDocument(): Promise<void> {
       justification: 'Run Nym mixnet SDK which requires window object',
     });
     offscreenCreated = true;
-    setStatus('connected');
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (errorMessage.includes('single offscreen document')) {
       offscreenCreated = true;
-      setStatus('connected');
       return;
     }
     console.error('Zentat: Failed to create offscreen document:', error);
@@ -158,24 +175,19 @@ async function doCreateOffscreenDocument(): Promise<void> {
   }
 }
 
-interface NymFetchResponse {
-  success: boolean;
-  data?: unknown;
-  status?: number;
-  error?: string;
-  fatal?: boolean;
-}
-
 function createChromeNymFetcher(timeoutMs: number): Fetcher {
   return {
     async fetch(url: string): Promise<FetcherResponse> {
+      if (nymStatus === 'disconnected') {
+        setStatus('connecting');
+      }
       await ensureOffscreenDocument();
 
       const response = (await chrome.runtime.sendMessage({
         type: 'nymFetch',
         url,
         timeoutMs,
-      })) as NymFetchResponse | undefined;
+      })) as NymFetchResult | undefined;
 
       if (!response) {
         offscreenCreated = false;
@@ -184,12 +196,15 @@ function createChromeNymFetcher(timeoutMs: number): Fetcher {
 
       if (!response.success) {
         if (response.fatal) {
-          console.log('Zentat: Fatal Nym error, destroying offscreen document');
+          debug('Fatal Nym error, destroying offscreen document');
           await destroyChromeNymConnection();
+          setStatus('error');
         }
         throw new Error(response.error || 'Nym fetch failed');
       }
 
+      // Only now has traffic actually gone through the mixnet
+      setStatus('connected');
       return {
         ok: true,
         status: response.status || 200,
@@ -210,22 +225,13 @@ async function destroyChromeNymConnection(): Promise<void> {
 
   try {
     await chrome.offscreen.closeDocument();
-    console.log('Zentat: Offscreen document closed for full reset');
+    debug('Offscreen document closed for full reset');
   } catch {
     // Document might not exist, ignore
   }
 
-  try {
-    const databases = await indexedDB.databases();
-    for (const db of databases) {
-      if (db.name && (db.name.includes('nym') || db.name.includes('wasm'))) {
-        indexedDB.deleteDatabase(db.name);
-        console.log(`Zentat: Cleared Nym database: ${db.name}`);
-      }
-    }
-  } catch {
-    // IndexedDB access might fail, ignore
-  }
+  // IndexedDB is per-origin, shared with the offscreen document
+  await clearNymDatabases();
 }
 
 // ============================================================================
@@ -233,13 +239,15 @@ async function destroyChromeNymConnection(): Promise<void> {
 // ============================================================================
 
 export function createNymFetcher(timeoutMs: number = 60000): Fetcher {
-  if (isFirefox) {
-    console.log('Zentat: Using Firefox direct Nym client');
-    return createFirefoxNymFetcher(timeoutMs);
-  } else {
-    console.log('Zentat: Using Chrome offscreen Nym client');
-    return createChromeNymFetcher(timeoutMs);
-  }
+  const base = isFirefox ? createFirefoxNymFetcher(timeoutMs) : createChromeNymFetcher(timeoutMs);
+  return {
+    async fetch(url: string, init?: RequestInit): Promise<FetcherResponse> {
+      if (!isAllowedNymUrl(url)) {
+        throw new Error(`Refusing to route non-rate-API URL through Nym: ${url}`);
+      }
+      return base.fetch(url, init);
+    },
+  };
 }
 
 export function resetNymConnection(): void {

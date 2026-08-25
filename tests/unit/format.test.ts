@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { formatZec, formatZecWithSymbol } from '../../src/lib/conversion/format';
 
 describe('formatZec', () => {
@@ -36,6 +36,14 @@ describe('formatZec', () => {
       expect(formatZec(1.23456789, 4)).toBe('1.2346');
       expect(formatZec(1.23456789, 8)).toBe('1.23456789');
     });
+
+    it('falls back to significant figures when fixed precision would show zero', () => {
+      // At ZEC ≈ $800, $0.99 ≈ 0.00124 ZEC — "0.00" carries no information
+      expect(formatZec(0.00124, 2)).toBe('0.001240');
+      expect(formatZec(0.00124, 0)).toBe('0.001240');
+      // But a genuine zero still renders as zero
+      expect(formatZec(0, 2)).toBe('0.00');
+    });
   });
 });
 
@@ -45,19 +53,33 @@ describe('formatZecWithSymbol', () => {
     expect(formatZecWithSymbol(0.001234)).toBe('0.001234 ZEC');
   });
 
-  it('uses million for amounts >= 1M', () => {
-    expect(formatZecWithSymbol(1234567)).toBe('1.235 million ZEC');
-    expect(formatZecWithSymbol(12345678)).toBe('12.35 million ZEC');
-    expect(formatZecWithSymbol(123456789)).toBe('123.5 million ZEC');
+  it('uses compact notation for large amounts', () => {
+    expect(formatZecWithSymbol(27150)).toBe('27.15K ZEC');
+    expect(formatZecWithSymbol(1234567)).toBe('1.235M ZEC');
+    expect(formatZecWithSymbol(1234567890)).toBe('1.235B ZEC');
+    expect(formatZecWithSymbol(1234567890000)).toBe('1.235T ZEC');
   });
 
-  it('uses billion for amounts >= 1B', () => {
-    expect(formatZecWithSymbol(1234567890)).toBe('1.235 billion ZEC');
-    expect(formatZecWithSymbol(5466000000)).toBe('5.466 billion ZEC');
+  it('promotes across unit boundaries after rounding', () => {
+    // 999,999,999 must round to "1B", never "1000M"
+    expect(formatZecWithSymbol(999_999_999)).toBe('1B ZEC');
   });
 
-  it('uses trillion for amounts >= 1T', () => {
-    expect(formatZecWithSymbol(1234567890000)).toBe('1.235 trillion ZEC');
-    expect(formatZecWithSymbol(2000000000000)).toBe('2.000 trillion ZEC');
+  it('honors fixed precision for large amounts instead of compact units', () => {
+    expect(formatZecWithSymbol(27150, 0)).toBe('27,150 ZEC');
+    expect(formatZecWithSymbol(27150.5, 2)).toBe('27,150.50 ZEC');
+  });
+
+  it('renders tiny amounts in zats in auto unit mode', () => {
+    // 0.00005 ZEC = 5,000 zats
+    expect(formatZecWithSymbol(0.00005)).toBe('5,000 zats');
+  });
+
+  it('respects an explicit ZEC-only unit', () => {
+    expect(formatZecWithSymbol(0.00005, 'auto', 'zec')).toBe('0.00005000 ZEC');
+  });
+
+  it('respects an explicit zats unit', () => {
+    expect(formatZecWithSymbol(0.5, 'auto', 'zats')).toBe('50,000,000 zats');
   });
 });

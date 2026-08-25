@@ -6,7 +6,13 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'Zentat',
     description: 'Convert fiat prices to ZEC inline',
-    permissions: browser === 'chrome' ? ['storage', 'alarms', 'offscreen'] : ['storage', 'alarms'],
+    // activeTab powers the popup's "disable on this site" button without any
+    // blanket host access. Note: NO <all_urls> host permission — the content
+    // script's own `matches` key injects it, and extension-context fetches
+    // only ever hit the three API hosts below.
+    permissions: browser === 'chrome'
+      ? ['storage', 'alarms', 'offscreen', 'activeTab']
+      : ['storage', 'alarms', 'activeTab'],
     ...(browser === 'firefox' && {
       browser_specific_settings: {
         gecko: {
@@ -15,7 +21,6 @@ export default defineConfig({
       },
     }),
     host_permissions: [
-      '<all_urls>',
       'https://api.coingecko.com/*',
       'https://api.kraken.com/*',
       'wss://*.nymtech.net/*',

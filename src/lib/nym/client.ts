@@ -1,14 +1,10 @@
 // Shared Nym client logic - used by both Firefox background and Chrome offscreen document
 
 import { createMixFetch, disconnectMixFetch, type IMixFetch } from '@nymproject/mix-fetch-full-fat';
+import { debug } from '../log';
+import { clearNymDatabases, type NymFetchResult } from './shared';
 
-export interface NymFetchResult {
-  success: boolean;
-  data?: unknown;
-  status?: number;
-  error?: string;
-  fatal?: boolean;
-}
+export type { NymFetchResult } from './shared';
 
 let mixFetchInstance: IMixFetch | null = null;
 let initializingPromise: Promise<IMixFetch> | null = null;
@@ -18,6 +14,7 @@ let consecutiveFailures: number = 0;
 
 const STALE_CONNECTION_MS = 6 * 60 * 1000; // 6 minutes
 const MAX_CONSECUTIVE_FAILURES = 3;
+const DEFAULT_TIMEOUT_MS = 60000;
 
 // Set up WASM crash detection if window is available
 if (typeof window !== 'undefined') {
@@ -38,6 +35,35 @@ if (typeof window !== 'undefined') {
   });
 }
 
+class DeadlineError extends Error {
+  constructor(label: string) {
+    super(`Nym fetch timeout (${label})`);
+    this.name = 'DeadlineError';
+  }
+}
+
+// Race a promise against an absolute deadline. Every await in a nymFetch call
+// shares ONE deadline, so a reconnect-and-retry path can never hang past the
+// caller's timeout (the old code cleared its timer before retrying, which let
+// the overall call hang forever when the mixnet was unreachable).
+function withDeadline<T>(promise: Promise<T>, deadline: number, label: string): Promise<T> {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) return Promise.reject(new DeadlineError(label));
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new DeadlineError(label)), remaining);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 async function ensureInitialized(): Promise<IMixFetch> {
   if (mixFetchInstance) {
     return mixFetchInstance;
@@ -51,7 +77,7 @@ async function ensureInitialized(): Promise<IMixFetch> {
 
   try {
     mixFetchInstance = await initializingPromise;
-    console.log('Zentat: Nym connected');
+    debug('Nym connected');
     return mixFetchInstance;
   } catch (error) {
     console.error('Zentat: Nym init failed:', error);
@@ -62,7 +88,7 @@ async function ensureInitialized(): Promise<IMixFetch> {
 }
 
 async function reinitialize(): Promise<IMixFetch> {
-  console.log('Zentat: Reconnecting to Nym...');
+  debug('Reconnecting to Nym...');
 
   try {
     await disconnectMixFetch();
@@ -76,7 +102,55 @@ async function reinitialize(): Promise<IMixFetch> {
   return ensureInitialized();
 }
 
+async function attemptFetch(url: string, deadline: number): Promise<NymFetchResult> {
+  const instance = await withDeadline(ensureInitialized(), deadline, 'connect');
+  const response = await withDeadline(instance.mixFetch(url, {}), deadline, 'request');
+
+  if (!response.ok) {
+    return {
+      success: false,
+      status: response.status,
+      error: `HTTP ${response.status}`,
+    };
+  }
+
+  const data = await withDeadline(response.json(), deadline, 'response read');
+  lastSuccessfulFetch = Date.now();
+  return {
+    success: true,
+    status: response.status,
+    data,
+  };
+}
+
+function isReinitError(message: string): boolean {
+  return (
+    message.includes("hasn't been initialised")
+    || message.includes('not initialised')
+    || message.includes('WebSocket')
+    || message.includes('CLOSING')
+    || message.includes('CLOSED')
+    || message.includes('network error')
+    || message.includes('gateway client error')
+    || message.includes('registration handshake')
+  );
+}
+
 export async function nymFetch(url: string, timeoutMs: number): Promise<NymFetchResult> {
+  const timeout = typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs > 0
+    ? timeoutMs
+    : DEFAULT_TIMEOUT_MS;
+  const result = await nymFetchInner(url, Date.now() + timeout);
+
+  if (result.success) {
+    consecutiveFailures = 0;
+  } else if (!result.fatal) {
+    consecutiveFailures++;
+  }
+  return result;
+}
+
+async function nymFetchInner(url: string, deadline: number): Promise<NymFetchResult> {
   // Check if WASM runtime has crashed
   if (wasmCrashed) {
     return {
@@ -88,7 +162,7 @@ export async function nymFetch(url: string, timeoutMs: number): Promise<NymFetch
 
   // Too many consecutive failures
   if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-    console.log(`Zentat: ${consecutiveFailures} consecutive failures, signaling for full restart`);
+    debug(`${consecutiveFailures} consecutive failures, signaling for full restart`);
     consecutiveFailures = 0;
     return {
       success: false,
@@ -97,55 +171,26 @@ export async function nymFetch(url: string, timeoutMs: number): Promise<NymFetch
     };
   }
 
-  const now = Date.now();
+  try {
+    // Proactively reconnect if connection is stale
+    const now = Date.now();
+    if (
+      mixFetchInstance
+      && lastSuccessfulFetch > 0
+      && now - lastSuccessfulFetch > STALE_CONNECTION_MS
+    ) {
+      debug('Connection stale, proactively reconnecting...');
+      await withDeadline(reinitialize(), deadline, 'reconnect');
+    }
 
-  // Proactively reconnect if connection is stale
-  if (mixFetchInstance && lastSuccessfulFetch > 0 && now - lastSuccessfulFetch > STALE_CONNECTION_MS) {
-    console.log('Zentat: Connection stale, proactively reconnecting...');
-    await reinitialize();
-  }
-
-  // Timeout handling
-  let timeoutId: ReturnType<typeof setTimeout>;
-  let timedOut = false;
-  const timeoutPromise = new Promise<NymFetchResult>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      timedOut = true;
-      reject(new Error('Nym fetch timeout'));
-    }, timeoutMs);
-  });
-
-  const fetchPromise = (async (): Promise<NymFetchResult> => {
     try {
-      const instance = await ensureInitialized();
-      const response = await instance.mixFetch(url, {});
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        consecutiveFailures++;
-        return {
-          success: false,
-          status: response.status,
-          error: `HTTP ${response.status}`,
-        };
-      }
-
-      const data = await response.json();
-      lastSuccessfulFetch = Date.now();
-      consecutiveFailures = 0;
-      return {
-        success: true,
-        status: response.status,
-        data,
-      };
+      return await attemptFetch(url, deadline);
     } catch (error) {
-      clearTimeout(timeoutId);
       const errorMessage = error instanceof Error ? error.message : String(error);
 
       // "No more gateways" means we need to clear stored data and fully restart
       if (errorMessage.includes('no more new gateways')) {
-        console.log('Zentat: Exhausted all gateways, need full restart with data clear');
-        consecutiveFailures++;
+        debug('Exhausted all gateways, need full restart with data clear');
         return {
           success: false,
           error: errorMessage,
@@ -153,65 +198,24 @@ export async function nymFetch(url: string, timeoutMs: number): Promise<NymFetch
         };
       }
 
-      // Connection issues - reinitialize and retry once
-      const needsReinit =
-        errorMessage.includes("hasn't been initialised") ||
-        errorMessage.includes('not initialised') ||
-        errorMessage.includes('WebSocket') ||
-        errorMessage.includes('CLOSING') ||
-        errorMessage.includes('CLOSED') ||
-        errorMessage.includes('network error') ||
-        errorMessage.includes('gateway client error') ||
-        errorMessage.includes('registration handshake');
+      if (error instanceof DeadlineError) throw error;
 
-      if (needsReinit) {
-        console.log('Zentat: Nym connection issue, reinitializing...');
-        try {
-          const instance = await reinitialize();
-          const response = await instance.mixFetch(url, {});
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            consecutiveFailures++;
-            return {
-              success: false,
-              status: response.status,
-              error: `HTTP ${response.status}`,
-            };
-          }
-
-          const data = await response.json();
-          lastSuccessfulFetch = Date.now();
-          consecutiveFailures = 0;
-          return {
-            success: true,
-            status: response.status,
-            data,
-          };
-        } catch (retryError) {
-          consecutiveFailures++;
-          return {
-            success: false,
-            error: retryError instanceof Error ? retryError.message : String(retryError),
-          };
-        }
+      // Connection issues - reinitialize and retry once, still bounded by the
+      // same overall deadline
+      if (isReinitError(errorMessage)) {
+        debug('Nym connection issue, reinitializing...');
+        await withDeadline(reinitialize(), deadline, 'reconnect');
+        return await attemptFetch(url, deadline);
       }
 
-      consecutiveFailures++;
       return {
         success: false,
         error: errorMessage,
       };
     }
-  })();
-
-  try {
-    return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (error) {
-    consecutiveFailures++;
-
     if (wasmCrashed) {
-      console.log('Zentat: WASM crashed during fetch, signaling fatal');
+      debug('WASM crashed during fetch, signaling fatal');
       return {
         success: false,
         error: 'WASM runtime crashed',
@@ -219,8 +223,8 @@ export async function nymFetch(url: string, timeoutMs: number): Promise<NymFetch
       };
     }
 
-    if (timedOut) {
-      console.log('Zentat: Fetch timed out, will reconnect on next attempt');
+    if (error instanceof DeadlineError) {
+      debug('Fetch timed out, will reconnect on next attempt');
       reinitialize().catch(() => {});
     }
     return {
@@ -231,7 +235,7 @@ export async function nymFetch(url: string, timeoutMs: number): Promise<NymFetch
 }
 
 export async function destroyNymClient(): Promise<void> {
-  console.log('Zentat: Destroying Nym client...');
+  debug('Destroying Nym client...');
 
   try {
     await disconnectMixFetch();
@@ -246,19 +250,7 @@ export async function destroyNymClient(): Promise<void> {
   lastSuccessfulFetch = 0;
 
   // Clear Nym's stored registration data
-  if (typeof indexedDB !== 'undefined') {
-    try {
-      const databases = await indexedDB.databases();
-      for (const db of databases) {
-        if (db.name && (db.name.includes('nym') || db.name.includes('wasm'))) {
-          indexedDB.deleteDatabase(db.name);
-          console.log(`Zentat: Cleared Nym database: ${db.name}`);
-        }
-      }
-    } catch {
-      // IndexedDB access might fail, ignore
-    }
-  }
+  await clearNymDatabases();
 }
 
 export function resetNymClient(): void {

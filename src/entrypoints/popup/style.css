@@ -1,92 +1,181 @@
+/* Dark-first palette, tokenized so light mode is a token swap.
+   Contrast: secondary text is at least 4.5:1 against its card. */
+:root {
+  --bg: #1c1c1e;
+  --card: #2c2c2e;
+  --card-hover: #3a3a3c;
+  --line: #3a3a3c;
+  --text: #ffffff;
+  --text-secondary: #b5b5ba;
+  --text-tertiary: #98989d;
+  --accent: #6b4eff;
+  --accent-strong: #8266ff;
+  --zec: #f4b728;
+  --ok: #34c759;
+  --warn: #ffb340;
+  --error: #ff6b6b;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f2f2f7;
+    --card: #ffffff;
+    --card-hover: #ebebf0;
+    --line: #d9d9de;
+    --text: #1c1c1e;
+    --text-secondary: #55555c;
+    --text-tertiary: #6e6e76;
+    --accent: #5a3ee8;
+    --accent-strong: #4930c9;
+    --zec: #9c7208;
+    --ok: #1d8b43;
+    --warn: #b26b00;
+    --error: #c93a3a;
+  }
+}
+
 * {
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
 body {
+  width: 320px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
-  line-height: 1.5;
-  color: #ffffff;
-  background: #1c1c1e;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* Suppress transitions during first paint so the enabled toggle doesn't
+   animate OFF→ON on every open */
+body.preload * {
+  transition: none !important;
 }
 
 .popup {
-  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   padding: 16px;
 }
 
+/* Header */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  gap: 12px;
 }
 
 .title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.subtitle kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 4px;
 }
 
 /* Toggle switch */
 .toggle {
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 24px;
+  width: 46px;
+  height: 26px;
+  flex-shrink: 0;
 }
 
 .toggle input {
   opacity: 0;
-  width: 0;
-  height: 0;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  margin: 0;
+  cursor: pointer;
 }
 
 .slider {
   position: absolute;
-  cursor: pointer;
   inset: 0;
-  background-color: #3a3a3c;
-  border-radius: 24px;
+  background: var(--card-hover);
+  border-radius: 13px;
   transition: background-color 0.2s;
+  pointer-events: none;
 }
 
 .slider::before {
-  position: absolute;
   content: '';
-  height: 18px;
-  width: 18px;
+  position: absolute;
+  width: 20px;
+  height: 20px;
   left: 3px;
-  bottom: 3px;
-  background-color: #8e8e93;
+  top: 3px;
+  background: #ffffff;
   border-radius: 50%;
-  transition: transform 0.2s, background-color 0.2s;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .toggle input:checked + .slider {
-  background-color: #6b4eff;
+  background: var(--accent);
 }
 
 .toggle input:checked + .slider::before {
   transform: translateX(20px);
-  background-color: #ffffff;
 }
 
-/* Rate display */
+.toggle input:focus-visible + .slider {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Current site row */
+.site-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--card);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.site-name {
+  font-size: 13px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Rate section */
 .rate-section {
-  background: #2c2c2e;
+  background: var(--card);
   border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .rate-row {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 6px;
 }
 
 .rate-display {
@@ -95,87 +184,105 @@ body {
   gap: 6px;
 }
 
-.rate-display-small {
-  padding-top: 4px;
-  border-top: 1px solid #3a3a3c;
-}
-
 .rate-label {
-  color: #8e8e93;
   font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .rate-value {
   font-size: 22px;
   font-weight: 700;
-  color: #ffffff;
   font-variant-numeric: tabular-nums;
 }
 
+.rate-display-small .rate-label,
 .rate-value-small {
-  font-size: 16px;
+  font-size: 13px;
+}
+
+.rate-value-small {
   font-weight: 600;
-  color: #ffffff;
   font-variant-numeric: tabular-nums;
 }
 
 .rate-unit {
-  color: #f4b728;
+  font-size: 12px;
   font-weight: 600;
+  color: var(--zec);
 }
 
-.rate-unit-usd {
-  color: #8e8e93;
+.rate-unit-fiat {
+  color: var(--text-secondary);
 }
 
 .rate-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
-  color: #636366;
+  color: var(--text-tertiary);
+  flex-wrap: wrap;
+}
+
+.rate-meta .stale {
+  color: var(--warn);
+}
+
+.rate-meta .very-stale {
+  color: var(--error);
 }
 
 .separator {
-  margin: 0 4px;
+  opacity: 0.6;
 }
 
-/* Nym status indicator */
 .nym-status {
   display: none;
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 8px;
 }
 
 .nym-status.visible {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 8px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 500;
-}
-
-.nym-status.connecting {
-  background: rgba(255, 214, 10, 0.2);
-  color: #ffd60a;
+  display: inline-block;
 }
 
 .nym-status.connected {
-  background: rgba(48, 209, 88, 0.2);
-  color: #30d158;
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 15%, transparent);
+}
+
+.nym-status.connecting {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 15%, transparent);
 }
 
 .nym-status.error {
-  background: rgba(255, 69, 58, 0.2);
-  color: #ff453a;
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 15%, transparent);
 }
 
 .nym-status.inactive {
-  background: #3a3a3c;
-  color: #8e8e93;
+  color: var(--text-tertiary);
+  background: var(--card-hover);
 }
 
-/* Site filter section */
+.status-line {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.status-line.error {
+  color: var(--error);
+}
+
+/* Site filtering */
 .site-filter-section {
-  margin-bottom: 12px;
+  background: var(--card);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .site-filter-toggle {
@@ -184,22 +291,22 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
-  background: #2c2c2e;
+  background: none;
   border: none;
-  border-radius: 10px;
-  color: #8e8e93;
+  color: var(--text);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  font-family: inherit;
 }
 
 .site-filter-toggle:hover {
-  background: #3a3a3c;
+  background: var(--card-hover);
 }
 
 .toggle-icon {
   font-size: 10px;
+  color: var(--text-tertiary);
   transition: transform 0.2s;
 }
 
@@ -209,56 +316,35 @@ body {
 
 .site-filter-content {
   display: none;
-  padding: 12px;
-  background: #2c2c2e;
-  border-radius: 0 0 10px 10px;
-  margin-top: -10px;
-  padding-top: 16px;
+  padding: 0 14px 14px;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .site-filter-content.expanded {
-  display: block;
-}
-
-.site-filter-toggle.expanded {
-  border-radius: 10px 10px 0 0;
+  display: flex;
 }
 
 .site-mode {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 12px;
 }
 
 .radio-option {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
-  background: #3a3a3c;
-  border-radius: 8px;
+  font-size: 13px;
   cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.radio-option:hover {
-  background: #48484a;
 }
 
 .radio-option input {
-  accent-color: #6b4eff;
+  accent-color: var(--accent);
 }
 
 .radio-label {
-  font-size: 12px;
-  color: #ffffff;
-}
-
-.site-lists {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  color: var(--text-secondary);
 }
 
 .site-list {
@@ -271,27 +357,22 @@ body {
 
 .site-list textarea {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #3a3a3c;
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 8px;
-  font-family: inherit;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
-  resize: none;
-  background: #3a3a3c;
-  color: #ffffff;
-  transition: border-color 0.2s;
+  padding: 8px;
+  resize: vertical;
 }
 
-.site-list textarea::placeholder {
-  color: #636366;
+.site-list textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
-.site-list textarea:focus {
-  outline: none;
-  border-color: #6b4eff;
-}
-
-/* Buttons */
+/* Actions */
 .actions {
   display: flex;
   gap: 8px;
@@ -299,38 +380,54 @@ body {
 
 .btn {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 12px 14px;
+  padding: 9px 12px;
   border: none;
-  border-radius: 10px;
+  border-radius: 9px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.1s;
-}
-
-.btn:hover {
-  filter: brightness(1.1);
-}
-
-.btn:active {
-  transform: scale(0.98);
-}
-
-.btn-primary {
-  background: #6b4eff;
-  color: #ffffff;
-}
-
-.btn-secondary {
-  background: #3a3a3c;
-  color: #ffffff;
+  transition: background-color 0.15s;
 }
 
 .btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn:focus-visible,
+.site-filter-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.btn-secondary {
+  background: var(--card);
+  color: var(--text);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--card-hover);
+}
+
+.btn-small {
+  flex: none;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: var(--card-hover);
+  color: var(--text);
+}
+
+.btn-small:hover:not(:disabled) {
+  background: var(--accent);
+  color: #ffffff;
 }

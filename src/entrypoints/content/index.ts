@@ -1,126 +1,118 @@
-import { getRates, watchRates, type RatesData } from '../../lib/storage/rates';
-import { getSettings, watchSettings, isSiteAllowed, type Settings } from '../../lib/storage/settings';
+import { getRates, type RatesData, watchRates } from '../../lib/storage/rates';
+import {
+  getSettings,
+  isSiteAllowed,
+  type Settings,
+  watchSettings,
+} from '../../lib/storage/settings';
 import { convertPricesInDocument, revertConversions } from './converter';
 import { startObserver, stopObserver, updateObserverConfig } from './observer';
 
-let hideStyleElement: HTMLStyleElement | null = null;
 let currentRates: RatesData | null = null;
 let currentSettings: Settings | null = null;
-let unwatchSettings: (() => void) | null = null;
-let unwatchRates: (() => void) | null = null;
+let running = false;
 
 export default defineContentScript({
   matches: ['<all_urls>'],
+  // Convert prices inside iframes (embedded checkouts, product widgets) too
+  allFrames: true,
   runAt: 'document_start',
 
   async main() {
-    // Immediately hide body to prevent FOUC
-    injectHideStyle();
-
     try {
-      // Load cached data synchronously (no network)
+      // Load cached data (no network requests are ever made from this context)
       const [rates, settings] = await Promise.all([getRates(), getSettings()]);
 
       currentRates = rates;
       currentSettings = settings;
 
-      // Check if site is allowed
-      const hostname = window.location.hostname;
-      if (!isSiteAllowed(hostname, settings)) {
-        removeHideStyle();
-        return;
-      }
-
-      // Check if extension is enabled
-      if (!settings.enabled) {
-        removeHideStyle();
-        return;
-      }
-
-      // Wait for DOM to be ready, then convert
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', onDomReady, { once: true });
-      } else {
-        onDomReady();
-      }
-
-      // Watch for settings/rate changes
-      unwatchSettings = watchSettings(onSettingsChange);
-      unwatchRates = watchRates(onRatesChange);
-
-      // Listen for toggle command from background
+      // Register reactions BEFORE any early return: a page loaded while the
+      // extension was disabled must still respond when the user re-enables it
+      // (previously Alt+Z was one-way on such tabs until a full reload).
+      watchSettings(onSettingsChange);
+      watchRates(onRatesChange);
       browser.runtime.onMessage.addListener(handleMessage);
+
+      if (!isActive(settings)) return;
+
+      whenDomReady(start);
     } catch (error) {
       console.error('Zentat: Initialization error', error);
-      removeHideStyle();
     }
   },
 });
 
-function injectHideStyle(): void {
-  if (hideStyleElement) return;
+function isActive(settings: Settings): boolean {
+  return settings.enabled && isSiteAllowed(window.location.hostname, settings);
+}
 
-  hideStyleElement = document.createElement('style');
-  hideStyleElement.id = 'zentat-hide';
-  hideStyleElement.textContent = 'body { visibility: hidden !important; }';
-
-  // Insert as early as possible
-  const target = document.head || document.documentElement;
-  if (target) {
-    target.appendChild(hideStyleElement);
+function whenDomReady(fn: () => void): void {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fn, { once: true });
+  } else {
+    fn();
   }
 }
 
-function removeHideStyle(): void {
-  if (hideStyleElement) {
-    hideStyleElement.remove();
-    hideStyleElement = null;
-  }
-}
+function start(): void {
+  if (running) return;
+  if (!currentRates || !currentSettings || !isActive(currentSettings)) return;
+  running = true;
 
-function onDomReady(): void {
-  if (!currentRates || !currentSettings) {
-    removeHideStyle();
-    return;
-  }
-
-  // Convert prices
+  // Note: the page is never hidden while this runs. The old "zero FOUC"
+  // approach blanked <body> on EVERY site until rates + DOMContentLoaded + a
+  // full scan completed — a universal page-load regression that outweighed the
+  // brief fiat flash it prevented.
   convertPricesInDocument(currentRates, currentSettings);
-
-  // Remove hide style
-  removeHideStyle();
-
-  // Start observing for dynamic content
   startObserver(currentRates, currentSettings);
 }
 
+function stop(): void {
+  running = false;
+  stopObserver();
+  revertConversions();
+}
+
 function onSettingsChange(settings: Settings): void {
-  const wasEnabled = currentSettings?.enabled ?? true;
+  const prev = currentSettings;
   currentSettings = settings;
 
-  const hostname = window.location.hostname;
-  const isAllowed = isSiteAllowed(hostname, settings);
-
-  if (!settings.enabled || !isAllowed) {
-    stopObserver();
-    revertConversions();
+  if (!isActive(settings)) {
+    if (running) stop();
     return;
   }
 
-  if (!wasEnabled && settings.enabled && currentRates) {
+  if (!running) {
+    whenDomReady(start);
+    return;
+  }
+
+  // Still active: if a display-affecting setting changed, re-convert the page
+  // so the change applies without a reload.
+  const displayChanged = prev !== null
+    && (prev.precision !== settings.precision
+      || prev.displayMode !== settings.displayMode
+      || prev.displayUnit !== settings.displayUnit
+      || prev.currencies.join(',') !== settings.currencies.join(','));
+
+  if (displayChanged && currentRates) {
+    revertConversions();
     convertPricesInDocument(currentRates, settings);
-    startObserver(currentRates, settings);
-  } else if (currentRates) {
+  }
+  if (currentRates) {
     updateObserverConfig(currentRates, settings);
   }
 }
 
 function onRatesChange(rates: RatesData): void {
   currentRates = rates;
+  if (!currentSettings || !isActive(currentSettings) || !running) return;
 
-  if (currentSettings?.enabled) {
-    updateObserverConfig(rates, currentSettings);
-  }
+  // Re-convert so displayed ZEC values track the fresh rate instead of
+  // freezing at whatever the rate was when the tab loaded.
+  revertConversions();
+  convertPricesInDocument(rates, currentSettings);
+  updateObserverConfig(rates, currentSettings);
 }
 
 function handleMessage(message: unknown): void {
@@ -128,15 +120,10 @@ function handleMessage(message: unknown): void {
 
   const msg = message as { type?: string };
 
-  if (msg.type === 'toggle') {
-    if (currentSettings) {
-      const newEnabled = !currentSettings.enabled;
-      // Settings change will be handled by watcher
-      browser.runtime.sendMessage({ type: 'setEnabled', enabled: newEnabled });
-    }
-  }
-
-  if (msg.type === 'refresh' && currentRates && currentSettings) {
+  // Enabled/disabled state arrives via the settings watcher — there is
+  // deliberately no 'toggle' echo here (the old echo re-toggled from
+  // possibly-stale per-tab state and could undo an Alt+Z press).
+  if (msg.type === 'refresh' && currentRates && currentSettings && isActive(currentSettings)) {
     revertConversions();
     convertPricesInDocument(currentRates, currentSettings);
   }

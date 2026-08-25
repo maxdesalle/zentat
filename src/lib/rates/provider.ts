@@ -4,10 +4,11 @@ import { fetchFromCoinGecko } from './coingecko';
 import { fetchFromKraken } from './kraken';
 
 export type RateProvider = (fetcher: Fetcher) => Promise<RatesData>;
+export type RateSource = 'auto' | 'coingecko' | 'kraken';
 
-const providers: { name: string; fetch: RateProvider }[] = [
-  { name: 'CoinGecko', fetch: fetchFromCoinGecko },
-  { name: 'Kraken', fetch: fetchFromKraken },
+const ALL_PROVIDERS: { name: string; key: RateSource; fetch: RateProvider }[] = [
+  { name: 'CoinGecko', key: 'coingecko', fetch: fetchFromCoinGecko },
+  { name: 'Kraken', key: 'kraken', fetch: fetchFromKraken },
 ];
 
 export interface FetchResult {
@@ -16,8 +17,14 @@ export interface FetchResult {
   errors: string[];
 }
 
-export async function fetchRates(fetcher: Fetcher): Promise<FetchResult> {
+export async function fetchRates(
+  fetcher: Fetcher,
+  source: RateSource = 'auto',
+): Promise<FetchResult> {
   const errors: string[] = [];
+  const providers = source === 'auto'
+    ? ALL_PROVIDERS
+    : ALL_PROVIDERS.filter((p) => p.key === source);
 
   for (const provider of providers) {
     try {
@@ -37,18 +44,19 @@ export async function fetchRates(fetcher: Fetcher): Promise<FetchResult> {
 export interface RetryOptions {
   maxRetries?: number;
   isNym?: boolean;
+  source?: RateSource;
 }
 
 export async function fetchRatesWithRetry(
   fetcher: Fetcher,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): Promise<FetchResult> {
   // Fewer retries for Nym since it's already slow
   const maxRetries = options.maxRetries ?? (options.isNym ? 1 : 2);
   let lastResult: FetchResult = { success: false, errors: [] };
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    lastResult = await fetchRates(fetcher);
+    lastResult = await fetchRates(fetcher, options.source ?? 'auto');
     if (lastResult.success) {
       return lastResult;
     }

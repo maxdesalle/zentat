@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
     <title>Zentat Options</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
@@ -10,52 +11,114 @@
     <div class="container">
       <header class="header">
         <h1>Zentat Options</h1>
-        <p class="subtitle">Configure your fiat-to-ZEC conversion preferences</p>
+        <p class="subtitle">
+          Configure your fiat-to-ZEC conversion preferences. Changes save automatically.
+        </p>
       </header>
 
       <main class="main">
-        <section class="section section-nym">
-          <div class="nym-header">
-            <div class="nym-info">
-              <h2>Nym Mixnet</h2>
-              <p class="section-desc">Route rate lookups through Nym's anonymous network for enhanced privacy</p>
+        <section class="section">
+          <div class="row-header">
+            <div>
+              <h2>Price Conversion</h2>
+              <p class="section-desc">
+                Convert fiat prices on webpages to ZEC. Toggle anytime with <kbd>Alt+Z</kbd> or
+                from the toolbar popup. Hover a converted price to see the original.
+              </p>
             </div>
             <label class="toggle">
-              <input type="checkbox" id="nymEnabled" />
+              <input type="checkbox" id="enabled" aria-label="Enable price conversion" />
               <span class="slider"></span>
             </label>
           </div>
-          <p class="nym-note">Rate updates might be slower. Learn more about Nym <a href="https://nymtech.net/" target="_blank" rel="noopener">here</a>.</p>
+        </section>
+
+        <section class="section section-nym">
+          <div class="row-header">
+            <div>
+              <h2>Nym Mixnet <span class="status-pill" id="nym-pill" hidden></span></h2>
+              <p class="section-desc">
+                Route rate lookups through Nym's anonymous network so the rate API never sees your
+                IP address
+              </p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="nymEnabled" aria-label="Enable Nym mixnet" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <p class="nym-note">
+            The first fetch can take 30–60 seconds while connecting to the mixnet, and updates are
+            slower than direct fetching. Requires the full (non-AMO) build on Firefox. Learn more
+            about Nym <a href="https://nymtech.net/" target="_blank" rel="noopener">here</a>.
+          </p>
         </section>
 
         <section class="section">
-          <h2>Currencies</h2>
-          <p class="section-desc">Select which currencies to detect and convert</p>
+          <div class="row-header">
+            <div>
+              <h2>Currencies</h2>
+              <p class="section-desc">Select which currencies to detect and convert</p>
+            </div>
+            <div class="mini-actions">
+              <button type="button" class="link-btn" id="select-all">Select all</button>
+              <button type="button" class="link-btn" id="select-none">None</button>
+            </div>
+          </div>
           <div class="currency-grid" id="currencies"></div>
+          <p class="hint" id="currency-hint" hidden>
+            No currencies selected — nothing will be converted. Use the toggle above to pause
+            conversion instead if that's what you want.
+          </p>
         </section>
 
         <section class="section">
           <h2>Display Currency</h2>
           <p class="section-desc">Currency to show in the popup rate display</p>
-          <select class="select" id="displayCurrency">
-            <option value="USD">USD - US Dollar</option>
-            <option value="EUR">EUR - Euro</option>
-            <option value="GBP">GBP - British Pound</option>
-            <option value="JPY">JPY - Japanese Yen</option>
-            <option value="CAD">CAD - Canadian Dollar</option>
-            <option value="AUD">AUD - Australian Dollar</option>
-            <option value="CHF">CHF - Swiss Franc</option>
-            <option value="CNY">CNY - Chinese Yuan</option>
-            <option value="KRW">KRW - Korean Won</option>
-            <option value="INR">INR - Indian Rupee</option>
-            <option value="BRL">BRL - Brazilian Real</option>
-            <option value="MXN">MXN - Mexican Peso</option>
-          </select>
+          <select class="select" id="displayCurrency" aria-label="Display currency"></select>
+        </section>
+
+        <section class="section">
+          <h2>Display</h2>
+          <p class="section-desc">How converted prices appear on the page</p>
+          <div class="field-group">
+            <span class="field-label">Mode</span>
+            <div class="precision-options">
+              <label class="radio-option">
+                <input type="radio" name="displayMode" value="replace" />
+                <span class="radio-label">Replace — show only the ZEC amount</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="displayMode" value="append" />
+                <span class="radio-label">Append — "$19.99 (0.052 ZEC)" keeps the original visible</span>
+              </label>
+            </div>
+          </div>
+          <div class="field-group">
+            <span class="field-label">Small amounts</span>
+            <div class="precision-options">
+              <label class="radio-option">
+                <input type="radio" name="displayUnit" value="auto" />
+                <span class="radio-label">Auto — use zats below 0.0001 ZEC</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="displayUnit" value="zec" />
+                <span class="radio-label">Always ZEC</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="displayUnit" value="zats" />
+                <span class="radio-label">Always zats</span>
+              </label>
+            </div>
+          </div>
         </section>
 
         <section class="section">
           <h2>Precision</h2>
-          <p class="section-desc">How many decimal places to show</p>
+          <p class="section-desc">
+            How many decimal places to show. Amounts that would round to zero fall back to
+            significant figures.
+          </p>
           <div class="precision-options">
             <label class="radio-option">
               <input type="radio" name="precision" value="auto" />
@@ -80,6 +143,52 @@
           </div>
         </section>
 
+        <section class="section">
+          <h2>Site Filtering</h2>
+          <p class="section-desc">Choose where Zentat runs</p>
+          <div class="precision-options">
+            <label class="radio-option">
+              <input type="radio" name="siteMode" value="blocklist" />
+              <span class="radio-label">Everywhere except blocked sites</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="siteMode" value="allowlist" />
+              <span class="radio-label">Only on allowed sites</span>
+            </label>
+          </div>
+          <div class="site-lists">
+            <div class="site-list" id="blocklist-container">
+              <label class="field-label" for="blockedSites">Blocked sites (one per line)</label>
+              <textarea id="blockedSites" rows="4" placeholder="example.com&#10;*.bank.com"></textarea>
+            </div>
+            <div class="site-list" id="allowlist-container">
+              <label class="field-label" for="allowedSites">Allowed sites (one per line)</label>
+              <textarea id="allowedSites" rows="4" placeholder="amazon.com"></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Advanced</h2>
+          <div class="field-group">
+            <label class="field-label" for="rateSource">Rate source</label>
+            <select class="select" id="rateSource" aria-label="Rate source">
+              <option value="auto">Automatic (CoinGecko, Kraken fallback)</option>
+              <option value="coingecko">CoinGecko only</option>
+              <option value="kraken">Kraken only (USD/EUR rates)</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="nymTimeout">Nym fetch timeout</label>
+            <select class="select" id="nymTimeout" aria-label="Nym fetch timeout">
+              <option value="30000">30 seconds</option>
+              <option value="60000">60 seconds (default)</option>
+              <option value="120000">2 minutes</option>
+            </select>
+          </div>
+          <button type="button" class="danger-btn" id="reset-defaults">Reset all settings to defaults</button>
+        </section>
+
         <div class="about">
           <p class="about-text">
             Built by <a href="https://x.com/maxdesalle" target="_blank" rel="noopener">Max</a>.
@@ -87,13 +196,14 @@
             New to Zcash? <a href="https://maxdesalle.com/mastering-zcash/" target="_blank" rel="noopener">Start here</a>.
           </p>
         </div>
-
       </main>
 
       <footer class="footer">
         <p class="footer-quote">"Cryptography is the ultimate form of non-violent direct action." — Julian Assange</p>
       </footer>
     </div>
+
+    <div class="save-indicator" id="save-indicator" role="status" aria-live="polite"></div>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
