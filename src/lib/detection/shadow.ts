@@ -38,10 +38,7 @@ export function collectShadowRoots(root: ParentNode, limit = 200): ShadowRoot[] 
 
   while (queue.length > 0 && found.length < limit) {
     const current = queue.shift()!;
-    const hosts = current.querySelectorAll?.('*');
-    if (!hosts) continue;
-
-    for (const host of hosts) {
+    for (const host of current.querySelectorAll('*')) {
       const shadow = shadowRootOf(host);
       if (!shadow) continue;
       found.push(shadow);
@@ -58,9 +55,7 @@ export function collectShadowRoots(root: ParentNode, limit = 200): ShadowRoot[] 
  * have no shadow DOM at all and should not pay for the walk.
  */
 export function hasShadowDom(root: ParentNode): boolean {
-  const elements = root.querySelectorAll?.('*');
-  if (!elements) return false;
-  for (const el of elements) {
+  for (const el of root.querySelectorAll('*')) {
     if (shadowRootOf(el)) return true;
   }
   return false;

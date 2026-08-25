@@ -1,0 +1,29 @@
+ShadowTest
+├── shadowRootOf
+│   ├── given the element has an open root
+│   │   └── it returns that root
+│   ├── given the element has a closed root
+│   │   ├── given the extension API is available
+│   │   │   └── it reaches the root through the API
+│   │   └── given the API is not available
+│   │       └── it reports no root
+│   ├── given the API throws
+│   │   └── it reports no root rather than failing the walk
+│   └── given the element hosts nothing
+│       └── it reports no root
+├── collectShadowRoots
+│   ├── given no shadow roots
+│   │   └── it finds nothing
+│   ├── given one shadow root
+│   │   └── it finds it
+│   ├── given a shadow root nested in another
+│   │   └── it finds both
+│   └── given more roots than the limit
+│       └── it stops at the limit
+└── hasShadowDom
+    ├── given a page with no shadow root
+    │   └── it reports none
+    ├── given a page with one
+    │   └── it reports one
+    └── given the root has no children
+        └── it reports none

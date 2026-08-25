@@ -180,7 +180,6 @@ export function walkPriceElements(root: Node): WalkResult[] {
   ];
 
   for (const element of allElements) {
-    if (!(element instanceof Element)) continue;
     if (processedElements.has(element)) continue;
     if (!isConvertible(element)) continue;
 
@@ -247,7 +246,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
     } else {
       const directText = Array.from(element.childNodes)
         .filter((n) => n.nodeType === Node.TEXT_NODE)
-        .map((n) => n.textContent ?? '')
+        .map((n) => textOf(n))
         .join(' ');
       const directTrimmed = directText.trim();
       if (

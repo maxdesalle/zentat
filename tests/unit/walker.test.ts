@@ -464,10 +464,18 @@ describe('walkPriceElements', () => {
 
   describe('given an element whose class is not a plain string', () => {
     it('is still considered', () => {
-      // SVG elements report className as an SVGAnimatedString. Only <svg>
-      // itself is a skipped tag, so its children reach the class check.
-      render('<svg><text id="p" class="price">$19.99</text></svg>');
-      expect(() => walkPriceElements(document.body)).not.toThrow();
+      // SVG elements report className as an SVGAnimatedString, not a string.
+      // Only <svg> itself is a skipped tag, so its children reach the class
+      // check and a bare .test() on the object would match nothing useful or
+      // throw. happy-dom models SVG className as a plain string, so the shape
+      // is imposed here rather than hoped for.
+      render('<div id="p">$19.99</div>');
+      const element = document.getElementById('p')!;
+      Object.defineProperty(element, 'className', {
+        value: { baseVal: 'price', animVal: 'price' },
+        configurable: true,
+      });
+      expect(walkPriceElements(document.body).map((r) => r.text)).toContain('$19.99');
     });
   });
 
