@@ -4,6 +4,13 @@ export interface RatesData {
   // Stored as ZEC-per-fiat for fast multiplication
   // e.g., { USD: 0.025 } means 1 USD = 0.025 ZEC
   rates: Record<string, number>;
+  // When each individual rate was last fetched. A merged map holds values from
+  // different fetches, so one timestamp for the whole map is a lie: with the
+  // CoinGecko -> Kraken fallback, ten currencies keep week-old values while the
+  // map claims to be seconds old. Absent entries fall back to `updatedAt` so
+  // caches written by older versions still work.
+  rateUpdatedAt?: Record<string, number>;
+  // Newest write across the map. Display and refresh scheduling only.
   updatedAt: number;
   source: string;
 }
@@ -67,18 +74,45 @@ export function isRatesStale(data: RatesData, maxAgeMs: number = REFRESH_TTL_MS)
   return Date.now() - data.updatedAt > maxAgeMs;
 }
 
+/** Age of one currency's rate, falling back to the map-wide timestamp. */
+export function rateAge(data: RatesData, currency: string): number {
+  const at = data.rateUpdatedAt?.[currency.toUpperCase()] ?? data.updatedAt;
+  return at ? Date.now() - at : Infinity;
+}
+
+/**
+ * Whether a specific currency may still be converted. Checked per currency so
+ * a stalled provider stops the currencies it stopped refreshing without taking
+ * down the ones that are still current.
+ */
+export function isCurrencyUsable(data: RatesData, currency: string): boolean {
+  if (data.rates[currency.toUpperCase()] === undefined) return false;
+  return rateAge(data, currency) <= MAX_RATE_AGE_MS;
+}
+
 export function isRatesUsable(data: RatesData): boolean {
-  if (Object.keys(data.rates).length === 0) return false;
-  if (!data.updatedAt) return false;
-  return Date.now() - data.updatedAt <= MAX_RATE_AGE_MS;
+  return Object.keys(data.rates).some((code) => isCurrencyUsable(data, code));
 }
 
 // Merge freshly fetched rates over the existing cache instead of replacing it,
 // so a partial result (e.g. Kraken's USD/EUR-only fallback) never wipes the
 // other currencies' recent rates.
 export function mergeRates(current: RatesData, incoming: RatesData): RatesData {
+  // Only the currencies this fetch actually returned get a new timestamp.
+  // Carrying the rest forward at their real age is what keeps the 24h cap
+  // honest — otherwise pinning the rate source to Kraken freezes eleven of
+  // thirteen currencies while every one of them reports as fresh.
+  const rateUpdatedAt: Record<string, number> = { ...current.rateUpdatedAt };
+  for (const code of Object.keys(current.rates)) {
+    rateUpdatedAt[code] ??= current.updatedAt;
+  }
+  for (const code of Object.keys(incoming.rates)) {
+    rateUpdatedAt[code] = incoming.updatedAt;
+  }
+
   return {
     rates: { ...current.rates, ...incoming.rates },
+    rateUpdatedAt,
     updatedAt: incoming.updatedAt,
     source: incoming.source,
   };
