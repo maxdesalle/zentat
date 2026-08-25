@@ -17,6 +17,23 @@
       </header>
 
       <main class="main">
+        <section class="section">
+          <div class="nym-header">
+            <div class="nym-info">
+              <h2>Hide fiat</h2>
+              <p class="section-desc">
+                No original prices anywhere &mdash; not on hover, not in the popup.
+                For when you want to stop translating and start thinking in ZEC.
+                Copying a price still gives you the original, so you can still pay.
+              </p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="hideFiat" />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </section>
+
         <section class="section" id="anchors-section">
           <h2>Your price anchors</h2>
           <p class="section-desc">
@@ -154,6 +171,12 @@
             significant figures.
           </p>
           <div class="precision-options">
+            <label class="radio-option">
+              <input type="radio" name="precision" value="coarse" />
+              <span class="radio-label">
+                Coarse &mdash; &ldquo;&asymp;0.12 ZEC&rdquo;, the digits the rate can justify
+              </span>
+            </label>
             <label class="radio-option">
               <input type="radio" name="precision" value="auto" />
               <span class="radio-label">Auto (4 significant figures)</span>

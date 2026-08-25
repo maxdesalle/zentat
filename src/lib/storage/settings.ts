@@ -1,5 +1,6 @@
 import { storage } from 'wxt/utils/storage';
 import type { Anchor } from '../anchors';
+import type { Precision } from '../conversion/format';
 import { CURRENCY_CODES } from '../currencies';
 import { isSiteAllowed, type SiteFilterSettings } from './site-filter';
 
@@ -12,13 +13,20 @@ export type RateSource = 'auto' | 'coingecko' | 'kraken';
 export interface Settings extends SiteFilterSettings {
   enabled: boolean;
   currencies: string[];
-  precision: 'auto' | number;
+  precision: Precision;
   displayCurrency: string;
   displayMode: DisplayMode;
   displayUnit: DisplayUnit;
   rateSource: RateSource;
   /** Things the user buys, used to express prices as ratios they can picture. */
   anchors: Anchor[];
+  /**
+   * Advanced mode: no fiat anywhere — not on hover, not in the popup. You
+   * cannot claim to think in a unit you can escape with one hover, so this is
+   * the switch that makes the claim real. Off by default; it is a commitment,
+   * not a default.
+   */
+  hideFiat: boolean;
   nymEnabled: boolean;
   nymTimeoutMs: number;
 }
@@ -38,6 +46,7 @@ export const DEFAULT_SETTINGS: Settings = {
   displayUnit: 'auto',
   rateSource: 'auto',
   anchors: [],
+  hideFiat: false,
   nymEnabled: false,
   nymTimeoutMs: 60000,
 };

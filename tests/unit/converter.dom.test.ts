@@ -202,3 +202,36 @@ describe('copying a converted price yields the fiat', () => {
     expect(called).toBe(false);
   });
 });
+
+describe('hide-fiat mode', () => {
+  it('drops the original from the tooltip but keeps the ratio', () => {
+    document.body.innerHTML = '<p>$700.00</p>';
+    const anchors = [
+      { id: 'a', label: 'coffees', amount: 5, currency: 'USD', zecWhenSet: 0.00625 },
+    ];
+    convertPricesInNode(document.body, freshRates(), settings({ hideFiat: true, anchors }));
+    expect(document.querySelector(`.${SPAN_CLASS}`)!.getAttribute('title')).toBe('≈ 140 coffees');
+  });
+
+  it('still gives the fiat back on copy — thinking in ZEC, not unable to pay', () => {
+    document.body.innerHTML = '<p id="p">$19.99</p>';
+    convertPricesInNode(document.body, freshRates(), settings({ hideFiat: true }));
+    const uninstall = installCopyHandler();
+
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('p')!);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    let copied: string | null = null;
+    const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', {
+      value: { setData: (_t: string, d: string) => (copied = d) },
+    });
+    document.dispatchEvent(event);
+    uninstall();
+
+    expect(copied).toBe('$19.99');
+  });
+});

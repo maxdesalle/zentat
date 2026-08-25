@@ -22,6 +22,7 @@ const displayModeRadios = () =>
 const displayUnitRadios = () =>
   document.querySelectorAll<HTMLInputElement>('input[name="displayUnit"]');
 const siteModeRadios = () => document.querySelectorAll<HTMLInputElement>('input[name="siteMode"]');
+const hideFiatCheckbox = document.getElementById('hideFiat') as HTMLInputElement;
 const nymEnabledCheckbox = document.getElementById('nymEnabled') as HTMLInputElement;
 const nymPill = document.getElementById('nym-pill') as HTMLSpanElement;
 const blockedSitesTextarea = document.getElementById('blockedSites') as HTMLTextAreaElement;
@@ -195,7 +196,7 @@ function populateForm(settings: Settings) {
   nymTimeoutSelect.value = String(settings.nymTimeoutMs);
   if (nymTimeoutSelect.value === '') nymTimeoutSelect.value = '60000';
 
-  const precisionValue = settings.precision === 'auto' ? 'auto' : String(settings.precision);
+  const precisionValue = String(settings.precision);
   precisionRadios().forEach((radio) => {
     radio.checked = radio.value === precisionValue;
   });
@@ -212,6 +213,7 @@ function populateForm(settings: Settings) {
   allowedSitesTextarea.value = settings.allowedSites.join('\n');
   updateSiteListVisibility();
 
+  hideFiatCheckbox.checked = settings.hideFiat;
   nymEnabledCheckbox.checked = settings.nymEnabled;
 }
 
@@ -232,9 +234,10 @@ function getFormValues(): Partial<Settings> {
   const precisionRadio = document.querySelector<HTMLInputElement>(
     'input[name="precision"]:checked',
   );
-  const precision = precisionRadio?.value === 'auto'
-    ? 'auto'
-    : parseInt(precisionRadio?.value || '2', 10);
+  const raw = precisionRadio?.value;
+  const precision = raw === 'auto' || raw === 'coarse'
+    ? (raw as 'auto' | 'coarse')
+    : parseInt(raw || '2', 10);
   const displayMode = (document.querySelector<HTMLInputElement>('input[name="displayMode"]:checked')
     ?.value ?? 'replace') as Settings['displayMode'];
   const displayUnit = (document.querySelector<HTMLInputElement>('input[name="displayUnit"]:checked')
@@ -260,6 +263,7 @@ function getFormValues(): Partial<Settings> {
     allowedSites: splitLines(allowedSitesTextarea.value),
     rateSource: rateSourceSelect.value as Settings['rateSource'],
     nymTimeoutMs: parseInt(nymTimeoutSelect.value, 10) || 60000,
+    hideFiat: hideFiatCheckbox.checked,
     nymEnabled: nymEnabledCheckbox.checked,
   };
 }

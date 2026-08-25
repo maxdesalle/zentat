@@ -137,7 +137,7 @@ function displayText(original: string, formatted: string, settings: Settings): s
 // quantity: the ratio line is what a person can actually remember, because it
 // does not move when the ZEC price does.
 function tooltipFor(original: string, zecAmount: number, ctx: ConvertContext): string {
-  const lines = [`Original: ${original}`];
+  const lines = ctx.settings.hideFiat ? [] : [`Original: ${original}`];
   const comparison = formatComparisons(
     compareToAnchors(zecAmount, ctx.settings.anchors ?? [], ctx.rates),
   );
