@@ -1,0 +1,21 @@
+KrakenTest
+└── fetchFromKraken
+    ├── given a successful response
+    │   ├── it parses the real X/Z-prefixed pair keys
+    │   ├── it also accepts unprefixed pair keys
+    │   ├── it inverts the quote into ZEC-per-fiat
+    │   └── it names itself as the source
+    ├── given a key that is not a ZEC pair
+    │   └── it ignores that key
+    ├── given the same currency appears twice
+    │   └── it keeps the first
+    ├── given a pair with no usable price
+    │   └── it ignores that pair
+    ├── given the response has no result at all
+    │   └── it throws
+    ├── given an API-level error
+    │   └── it throws
+    ├── given no usable pairs are present
+    │   └── it throws
+    └── given an HTTP error
+        └── it throws
