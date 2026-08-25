@@ -13,6 +13,13 @@ let observer: MutationObserver | null = null;
 let config: ObserverConfig | null = null;
 let pendingRoots: Set<Element> = new Set();
 let rafId: number | null = null;
+let fallbackId: number | null = null;
+
+// How long to wait before converting without a rendering frame.
+const HIDDEN_FLUSH_MS = 250;
+// Bound the queue so an infinite-scroll page cannot retain unbounded detached
+// subtrees; past this we simply rescan the body once.
+const MAX_PENDING_ROOTS = 200;
 
 export function startObserver(rates: RatesData, settings: Settings): void {
   config = { rates, settings };
@@ -29,7 +36,14 @@ export function startObserver(rates: RatesData, settings: Settings): void {
   // guard. There is deliberately NO polling loop: the observer plus the
   // rAF-batched queue below covers dynamic content without a permanent
   // full-document rescan every 2 seconds.
-  setActiveObserver(observer);
+  setActiveObserver(observer, {
+    // Page mutations swept up by the drain are replayed rather than dropped.
+    replay: handleMutations,
+    isOwnWrite: (node) => {
+      const el = node instanceof Element ? node : node.parentElement;
+      return el?.closest(`.${SPAN_CLASS}, .${CONVERTED_MARKER}`) !== null;
+    },
+  });
 }
 
 function handleMutations(mutations: MutationRecord[]): void {
@@ -41,7 +55,7 @@ function handleMutations(mutations: MutationRecord[]): void {
       if (node.nodeType === Node.ELEMENT_NODE) {
         const element = node as Element;
         if (!element.closest(`.${CONVERTED_MARKER}`) && !element.closest(`.${SPAN_CLASS}`)) {
-          pendingRoots.add(element);
+          addPending(element);
         }
       }
       // Text node added inside a previously-converted element: the page
@@ -53,9 +67,9 @@ function handleMutations(mutations: MutationRecord[]): void {
         const marked = parent.closest(`.${CONVERTED_MARKER}`);
         if (marked) {
           revertElement(marked);
-          pendingRoots.add(marked);
+          addPending(marked);
         } else {
-          pendingRoots.add(parent);
+          addPending(parent);
         }
       }
     }
@@ -70,25 +84,61 @@ function handleMutations(mutations: MutationRecord[]): void {
       const marked = element.closest(`.${CONVERTED_MARKER}`);
       if (marked) {
         revertElement(marked);
-        pendingRoots.add(marked);
+        addPending(marked);
       } else {
         // Never touch attributes (like title) of elements Zentat didn't convert
-        pendingRoots.add(element);
+        addPending(element);
       }
     }
   }
 
-  if (pendingRoots.size > 0 && rafId === null) {
+  schedule();
+}
+
+// rAF never fires in a document that is not being rendered — a display:none
+// iframe or a background tab queues roots forever and drains none, so prices
+// there stay fiat indefinitely and the queue grows without bound. The timer is
+// the fallback that keeps those documents converting.
+function addPending(el: Element): void {
+  if (pendingRoots.size >= MAX_PENDING_ROOTS) {
+    pendingRoots.clear();
+    if (document.body) pendingRoots.add(document.body);
+    return;
+  }
+  pendingRoots.add(el);
+}
+
+function schedule(): void {
+  if (pendingRoots.size === 0) return;
+  if (rafId === null) {
     rafId = requestAnimationFrame(() => {
       rafId = null;
       processPendingNodes();
     });
   }
+  if (fallbackId === null) {
+    fallbackId = setTimeout(() => {
+      fallbackId = null;
+      processPendingNodes();
+    }, HIDDEN_FLUSH_MS) as unknown as number;
+  }
 }
 
 function processPendingNodes(): void {
   if (!config) return;
-  const roots = Array.from(pendingRoots);
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  if (fallbackId !== null) {
+    clearTimeout(fallbackId);
+    fallbackId = null;
+  }
+  // A root that contains another queued root subsumes it; walking both is
+  // wasted work on high-churn pages, where one batch can queue ~3x the roots
+  // it needs to.
+  const roots = Array.from(pendingRoots)
+    .filter((root, _i, all) => !all.some((other) => other !== root && other.contains(root)));
   pendingRoots.clear();
 
   for (const root of roots) {

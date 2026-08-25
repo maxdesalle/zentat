@@ -118,8 +118,14 @@ export function isConvertible(el: Element): boolean {
   return true;
 }
 
+// The per-element cap bounds one string, not the pass. 200 elements of 999
+// characters each still cost seconds of frozen main thread, because the number
+// patterns are quadratic on long digit runs. Budget the whole pass too.
+const MAX_PASS_CHARS = 200_000;
+
 export function walkPriceElements(root: Node): WalkResult[] {
   const results: WalkResult[] = [];
+  let charBudget = MAX_PASS_CHARS;
   const processedElements = new Set<Element>();
 
   if (!(root instanceof Element || root instanceof Document)) {
@@ -213,6 +219,9 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // separator between child elements and no accessible source disambiguates.
     if (accessible === null && looksConcatenated(element, trimmed)) continue;
 
+    if (charBudget <= 0) break;
+    charBudget -= trimmed.length;
+
     // If a child also contains a price, the child will be collected on its own —
     // but the parent's DIRECT text may hold a price of its own
     // ("<p>$10 – <span class='sale'>$8</span></p>"), so convert just that part.
@@ -242,6 +251,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
       const directTrimmed = directText.trim();
       if (
         directTrimmed
+        && directTrimmed.length <= MAX_PURE_PRICE_LENGTH
         && QUICK_DETECT_PATTERN.test(directTrimmed)
         && !isNonPriceText(directTrimmed)
       ) {
