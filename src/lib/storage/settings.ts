@@ -94,10 +94,18 @@ const settingsItem = storage.defineItem<Settings>('local:settings', {
 // One-time migration from the pre-1.1 'sync:settings' location. Runs at most
 // once per JS context; safe to re-run after service-worker restarts because it
 // only copies when no local value exists yet.
-let migrationDone = false;
+let migration: Promise<void> | null = null;
 async function migrateFromSyncStorage(): Promise<void> {
-  if (migrationDone) return;
-  migrationDone = true;
+  // The guard is the PROMISE, not a boolean. A boolean set before the first
+  // await is no guard at all: the popup and the background both call
+  // getSettings on startup, both see it unset, both migrate, and the second
+  // can write defaults over what the first just restored. Storing the
+  // in-flight promise makes concurrent callers await the same migration.
+  migration ??= runMigration();
+  return migration;
+}
+
+async function runMigration(): Promise<void> {
   try {
     const legacy = await storage.getItem<Settings>('sync:settings');
     if (legacy) {
