@@ -279,23 +279,18 @@ describe('parsePrice', () => {
     });
   });
 
-  describe('given two readings of the same text', () => {
-    describe('given one matches the symbol in the text', () => {
-      it('keeps the one that matches', () => {
-        // "$" is ambiguous across a dozen currencies, so several patterns can
-        // claim the same span. The one whose symbol is literally there wins.
-        const results = parsePrice('€49.99', ['EUR', 'USD', 'GBP']);
-        expect(results).toHaveLength(1);
-        expect(results[0].currency).toBe('EUR');
-      });
+  describe('given the same price appears twice in one string', () => {
+    it('returns both of them', () => {
+      // A dedup pass used to collapse matches by their original TEXT, so
+      // "Buy 2 for $19.99 or 1 for $19.99" converted only the first and left
+      // the second in dollars right beside its converted twin.
+      expect(parsePrice('Buy 2 for $19.99 or 1 for $19.99', ['USD'])).toHaveLength(2);
+      expect(parsePrice('Was $10, now $5, you save $5', ['USD'])).toHaveLength(3);
     });
 
-    describe('given neither matches the symbol', () => {
-      it('keeps the first', () => {
-        const results = parsePrice('99.99 CHF', ['CHF', 'USD']);
-        expect(results).toHaveLength(1);
-        expect(results[0].currency).toBe('CHF');
-      });
+    it('keeps them at their own positions', () => {
+      const results = parsePrice('$5 and $5', ['USD']);
+      expect(results.map((r) => r.startIndex)).toEqual([0, 7]);
     });
   });
 
@@ -313,6 +308,12 @@ describe('parsePrice', () => {
       const results = parsePrice('$10 million', enabledCurrencies);
       expect(results).toHaveLength(1);
       expect(results[0].amount).toBe(10_000_000);
+    });
+
+    it('keeps the reading whose symbol is actually in the text', () => {
+      const results = parsePrice('€49.99', ['USD', 'EUR', 'GBP']);
+      expect(results).toHaveLength(1);
+      expect(results[0].currency).toBe('EUR');
     });
   });
 

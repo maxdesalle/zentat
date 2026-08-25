@@ -64,14 +64,13 @@ ParserTest
     │   ├── it applies on that site
     │   ├── it does not apply elsewhere
     │   └── it reads a site's split euro-and-cent markup
-    ├── given two readings of the same text
-    │   ├── given one matches the symbol in the text
-    │   │   └── it keeps the one that matches
-    │   └── given neither matches the symbol
-    │       └── it keeps the first
+    ├── given the same price appears twice in one string
+    │   ├── it returns both of them
+    │   └── it keeps them at their own positions
     ├── given two readings overlap in position
     │   ├── it keeps the longer match
-    │   └── it discards the shorter one
+    │   ├── it discards the shorter one
+    │   └── it keeps the reading whose symbol is actually in the text
     ├── given a currency is not enabled
     │   └── it returns nothing for that currency
     └── given text with no price in it
