@@ -14,8 +14,38 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      # A second lockfile means the artifact we ship and the artifact CI
+      # validates can resolve different dependency trees. npm is the source of
+      # truth because AMO reviewers rebuild with `npm ci`.
+      - name: Single lockfile
+        run: |
+          test ! -f bun.lock -a ! -f yarn.lock -a ! -f pnpm-lock.yaml \
+            || { echo "::error::More than one lockfile is present"; exit 1; }
+
       - run: npm ci
       - run: npm run typecheck
-      - run: npx vitest run
+      - run: npx dprint check
+      - run: npm run test -- --run
       - run: npm run build
       - run: npm run build:firefox
+
+      # addons-linter refuses to parse any single JS file over 5MB, which is
+      # what kept Zentat off AMO. Fail here rather than at submission.
+      - name: No oversized JS bundles
+        run: |
+          big=$(find .output -name '*.js' -size +5M 2>/dev/null || true)
+          test -z "$big" || { echo "::error::JS file over 5MB: $big"; exit 1; }
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: xvfb-run -a npm run test:e2e
