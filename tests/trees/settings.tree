@@ -1,4 +1,11 @@
 SettingsTest
+├── DEFAULT_SETTINGS
+│   ├── it converts on every site until the user blocks one
+│   ├── it reads prices as US dollars and replaces them in place
+│   ├── it picks the rate provider on its own
+│   ├── it shows the held rate rather than spot
+│   ├── it starts with no anchors and no liabilities
+│   └── it leaves the fiat price visible and weaning switched off
 ├── getSettings
 │   ├── given nothing has ever been stored
 │   │   └── it returns the defaults
@@ -10,10 +17,16 @@ SettingsTest
 │   │   │   └── it restores the default list
 │   │   ├── given the site lists are not arrays
 │   │   │   └── it restores empty lists
-│   │   └── given precision is missing
+│   │   ├── given precision is missing
+│   │   │   └── it restores the default precision
+│   │   └── given precision was written as undefined
 │   │       └── it restores the default precision
-│   └── given the user deliberately enabled no currencies
-│       └── it respects the empty list
+│   ├── given the user deliberately enabled no currencies
+│   │   └── it respects the empty list
+│   ├── given the user has filled in the site lists
+│   │   └── it keeps both lists as written
+│   └── given the user chose a precision other than the default
+│       └── it keeps that precision
 ├── watchSettings
 │   ├── when the stored value changes
 │   │   └── it reports the change filled in with defaults

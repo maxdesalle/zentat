@@ -20,6 +20,8 @@ StructuredTest
 │   │   │   └── it survives without losing the good ones
 │   │   ├── given a block is larger than the parse cap
 │   │   │   └── it skips that block
+│   │   ├── given a block is exactly the size of the parse cap
+│   │   │   └── it reads that block
 │   │   ├── given a block is empty
 │   │   │   └── it skips that block
 │   │   ├── given the price is a number rather than a string
@@ -28,8 +30,20 @@ StructuredTest
 │   │   │   └── it ignores the block
 │   │   ├── given the price is not a number at all
 │   │   │   └── it ignores the block
-│   │   └── given there is no currency
-│   │       └── it ignores the block — an amount alone is not a price
+│   │   ├── given the price is zero
+│   │   │   └── it ignores the block
+│   │   ├── given there is no currency
+│   │   │   └── it ignores the block — an amount alone is not a price
+│   │   ├── given one offer states no currency
+│   │   │   └── it still reads the offers that do
+│   │   ├── given the currency is not a bare three-letter code
+│   │   │   └── it ignores the block
+│   │   ├── given a null sits in the tree
+│   │   │   └── it keeps reading past it
+│   │   ├── given the price sits at the deepest level the walker follows
+│   │   │   └── it reads it
+│   │   └── given the price sits deeper than that
+│   │       └── it leaves it unread
 │   ├── given microdata
 │   │   ├── it reads the content attribute
 │   │   ├── given there is no content attribute
@@ -63,8 +77,12 @@ StructuredTest
 │       └── it returns nothing
 ├── projectionsFor
 │   ├── it covers the renderings a price actually takes
-│   └── given a whole number
-│       └── it covers the two-decimal rendering as well
+│   ├── given a whole number
+│   │   └── it covers the two-decimal rendering as well
+│   ├── given more decimals than a currency shows
+│   │   └── it covers the amount exactly as written
+│   └── given an amount that is not a real number
+│       └── it offers nothing to match
 ├── locatePrices
 │   ├── given no structured prices
 │   │   └── it returns nothing
@@ -80,11 +98,21 @@ StructuredTest
 │   │   └── it is not a candidate
 │   ├── given an element holds digits that do not match
 │   │   └── it is not chosen
+│   ├── given two elements show the same price
+│   │   └── it takes the first
 │   └── given a Shopify cents-integer
 │       ├── given the screen shows two decimals
 │       │   └── it reads the value as cents
-│       └── given the screen shows the integer itself
-│           └── it keeps the integer
+│       ├── given the screen shows the integer itself
+│       │   └── it keeps the integer
+│       ├── given the price is rendered in pieces
+│       │   └── it reads the whole element rather than a fragment of it
+│       ├── given the integer is exactly four digits
+│       │   └── it reads it as cents
+│       ├── given the integer is shorter than four digits
+│       │   └── it keeps it as written
+│       └── given the amount is not a whole number
+│           └── it keeps it as written
 └── the oracle beats regex where regex is weakest
     ├── it fixes the currency for the whole page
     └── it reads a price regex would get 100x wrong

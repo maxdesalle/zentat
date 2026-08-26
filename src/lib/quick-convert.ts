@@ -22,6 +22,7 @@ export function quickConvert(
   settings: Settings,
 ): QuickResult | null {
   const trimmed = text.trim();
+  // Stryker disable next-line ConditionalExpression: an empty string holds no digits, so both the ZEC pattern and the page parser find nothing; this only skips the work.
   if (!trimmed) return null;
 
   const zecToFiat = parseZecInput(trimmed);
@@ -40,8 +41,8 @@ function parseZecInput(text: string): number | null {
   const match = text.match(/^([\d.,\s'’ ]+)\s*(zec|ⓩ|zats?|zatoshis?)$/i);
   if (!match) return null;
   const amount = parseNumber(match[1]);
-  if (amount === null || amount < 0) return null;
-  return /^z(ats?|atoshis?)$/i.test(match[2]) ? amount / ZATS_PER_ZEC : amount;
+  if (amount === null) return null;
+  return match[2].toLowerCase().startsWith('zat') ? amount / ZATS_PER_ZEC : amount;
 }
 
 /**

@@ -50,6 +50,7 @@ WalkerTest
 │   │   └── it is not a control
 │   └── at the size boundaries
 │       ├── it treats a control of exactly the maximum length as a control
+│       ├── it treats a control with exactly the maximum descendants as a control
 │       └── it treats one descendant past the maximum as a tile
 ├── looksConcatenated
 │   ├── given a single child
@@ -100,6 +101,10 @@ WalkerTest
     │   └── it returns nothing
     ├── given an element whose text is far too long to be a price
     │   └── it is skipped before its text is examined
+    ├── given text of exactly the greatest length a price may be
+    │   └── it is still collected
+    ├── given text one character longer
+    │   └── it is skipped
     ├── given an element that is only whitespace
     │   └── it is skipped
     ├── given a parent whose direct text spans several nodes

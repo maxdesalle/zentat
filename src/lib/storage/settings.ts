@@ -87,6 +87,11 @@ export const DEFAULT_SETTINGS: Settings = {
 // Settings are deliberately stored in the local area, not sync: the site
 // block/allow lists reveal which sites the user visits, and the privacy policy
 // promises preferences never leave the device.
+// Stryker disable next-line ObjectLiteral: dropping the fallback cannot change
+// any result. Both readers of this item spread DEFAULT_SETTINGS underneath the
+// stored value (getSettings, watchSettings), so an unset item resolves to the
+// same record whether the fallback supplies it or the spread does; nothing
+// outside this module reads the item.
 const settingsItem = storage.defineItem<Settings>('local:settings', {
   fallback: DEFAULT_SETTINGS,
 });

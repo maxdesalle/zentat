@@ -3,9 +3,11 @@ CoingeckoTest
     ├── given a successful response
     │   ├── it converts fiat-per-ZEC to ZEC-per-fiat
     │   ├── it upper-cases the currency codes
-    │   └── it names itself as the source
+    │   ├── it names itself as the source
+    │   └── it asks for every supported currency whatever the user has chosen
     ├── given a price that is not usable
-    │   └── it filters zero/negative/non-numeric prices
+    │   ├── it filters zero/negative/non-numeric prices
+    │   └── it refuses a price that arrives as a string
     ├── given ZEC data is missing
     │   └── it throws
     └── given an HTTP error

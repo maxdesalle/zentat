@@ -55,6 +55,28 @@ describe('quickConvert', () => {
       expect(quickConvert('100000000 zats', rates, settings)!.output).toBe('800.00 USD');
     });
 
+    it('reads an amount with whitespace around it', () => {
+      // A double-click selection almost always carries the spaces either side.
+      expect(quickConvert('  1 ZEC  ', rates, settings)!.output).toBe('800.00 USD');
+    });
+
+    it('reads the unit written straight after the number', () => {
+      // What people actually type into the address bar.
+      expect(quickConvert('1ZEC', rates, settings)!.output).toBe('800.00 USD');
+    });
+
+    it('reads the singular unit names', () => {
+      expect(quickConvert('100000000 zat', rates, settings)!.output).toBe('800.00 USD');
+      expect(quickConvert('100000000 zatoshi', rates, settings)!.output).toBe('800.00 USD');
+    });
+
+    it('reads an amount grouped with spaces', () => {
+      // The grouping style of most of Europe, and of anything copied out of a
+      // page that formats with a non-breaking space.
+      const grouped = quickConvert('1\u00a0000 ZEC', rates, settings);
+      expect(grouped!.output).toBe(quickConvert('1000 ZEC', rates, settings)!.output);
+    });
+
     it('always uses spot, never the held rate', () => {
       // The two directions are different questions. "What does this cost" is a
       // browsing question and takes the held rate. "What is my money worth" is
@@ -72,6 +94,21 @@ describe('quickConvert', () => {
     describe('given the amount does not parse', () => {
       it('returns nothing', () => {
         expect(quickConvert('.. ZEC', rates, settings)).toBeNull();
+        // Zats divide by a hundred million, so an unread amount would land on
+        // a confident-looking zero instead of nothing at all.
+        expect(quickConvert('.. zats', rates, settings)).toBeNull();
+      });
+    });
+
+    describe('given text that only looks like a ZEC amount', () => {
+      it('ignores a phrase holding more than one amount', () => {
+        // Answering for the first number in the selection is a wrong price.
+        expect(quickConvert('0.5 ZEC fee, 20 ZEC total', rates, settings)).toBeNull();
+      });
+
+      it('ignores a word that merely ends in the unit', () => {
+        // A slug or a tag is not an amount, and "2021 ZEC" is not an answer.
+        expect(quickConvert('2021-zec', rates, settings)).toBeNull();
       });
     });
 

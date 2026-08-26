@@ -254,6 +254,12 @@ describe('isInteractiveControl', () => {
       expect(isInteractiveControl(document.getElementById('p')!)).toBe(true);
     });
 
+    it('treats a control with exactly the maximum descendants as a control', () => {
+      const eleven = Array.from({ length: 11 }, (_, i) => `<i>${i}</i>`).join('');
+      render(`<a href="/pay">${eleven}<span id="p">$5</span></a>`);
+      expect(isInteractiveControl(document.getElementById('p')!)).toBe(true);
+    });
+
     it('treats one descendant past the maximum as a tile', () => {
       const twelve = Array.from({ length: 12 }, (_, i) => `<i>${i}</i>`).join('');
       render(`<a href="/pay">${twelve}<span id="p">$5</span></a>`);
@@ -441,6 +447,24 @@ describe('walkPriceElements', () => {
       const long = `$19.99 ${'word '.repeat(3000)}`;
       const results = walkPriceElements(render(`<p>${long}</p>`));
       expect(results.filter((r) => r.node.tagName === 'P')).toHaveLength(0);
+    });
+  });
+
+  describe('given text of exactly the greatest length a price may be', () => {
+    it('is still collected', () => {
+      // A thousand characters is the line between "a price with words round
+      // it" and "a paragraph". One character either side changes which.
+      const text = `$19.99${'x'.repeat(994)}`;
+      expect(text).toHaveLength(1000);
+      expect(textsFrom(`<span>${text}</span>`)).toEqual([text]);
+    });
+  });
+
+  describe('given text one character longer', () => {
+    it('is skipped', () => {
+      const text = `$19.99${'x'.repeat(995)}`;
+      expect(text).toHaveLength(1001);
+      expect(textsFrom(`<span>${text}</span>`)).toEqual([]);
     });
   });
 

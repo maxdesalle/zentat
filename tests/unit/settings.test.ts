@@ -50,6 +50,53 @@ beforeEach(() => {
   syncThrows = false;
 });
 
+describe('DEFAULT_SETTINGS', () => {
+  it('converts on every site until the user blocks one', async () => {
+    // Shipping the allowlist mode by default would convert nothing anywhere,
+    // and a non-empty starting block list would silently skip real sites.
+    const { DEFAULT_SETTINGS } = await freshModule();
+    expect(DEFAULT_SETTINGS.siteMode).toBe('blocklist');
+    expect(DEFAULT_SETTINGS.blockedSites).toEqual([]);
+    expect(DEFAULT_SETTINGS.allowedSites).toEqual([]);
+  });
+
+  it('reads prices as US dollars and replaces them in place', async () => {
+    // displayCurrency decides how a bare '$' is read; the wrong guess here is
+    // a wrong price, not a cosmetic one.
+    const { DEFAULT_SETTINGS } = await freshModule();
+    expect(DEFAULT_SETTINGS.displayCurrency).toBe('USD');
+    expect(DEFAULT_SETTINGS.displayMode).toBe('replace');
+    expect(DEFAULT_SETTINGS.displayUnit).toBe('auto');
+  });
+
+  it('picks the rate provider on its own', async () => {
+    // Pinning one provider by default removes the fallback chain, so a single
+    // provider outage leaves the user with no rate at all.
+    const { DEFAULT_SETTINGS } = await freshModule();
+    expect(DEFAULT_SETTINGS.rateSource).toBe('auto');
+  });
+
+  it('shows the held rate rather than spot', async () => {
+    const { DEFAULT_SETTINGS } = await freshModule();
+    expect(DEFAULT_SETTINGS.rateMode).toBe('held');
+    expect(DEFAULT_SETTINGS.heldBand).toBe(0.1);
+  });
+
+  it('starts with no anchors and no liabilities', async () => {
+    const { DEFAULT_SETTINGS } = await freshModule();
+    expect(DEFAULT_SETTINGS.anchors).toEqual([]);
+    expect(DEFAULT_SETTINGS.liabilities).toEqual([]);
+  });
+
+  it('leaves the fiat price visible and weaning switched off', async () => {
+    // Hiding fiat is a commitment the user makes, never one made for them.
+    const { DEFAULT_SETTINGS } = await freshModule();
+    expect(DEFAULT_SETTINGS.hideFiat).toBe(false);
+    expect(DEFAULT_SETTINGS.weanFromFiat).toBe(false);
+    expect(DEFAULT_SETTINGS.weanStartedAt).toBe(0);
+  });
+});
+
 describe('getSettings', () => {
   describe('given nothing has ever been stored', () => {
     it('returns the defaults', async () => {
@@ -102,6 +149,16 @@ describe('getSettings', () => {
         expect((await getSettings()).precision).toBe(DEFAULT_SETTINGS.precision);
       });
     });
+
+    describe('given precision was written as undefined', () => {
+      it('restores the default precision', async () => {
+        // A form field that never got a value writes undefined rather than
+        // null, and an undefined precision reaches the formatter as NaN digits.
+        store.set(LOCAL, { precision: undefined });
+        const { getSettings, DEFAULT_SETTINGS } = await freshModule();
+        expect((await getSettings()).precision).toBe(DEFAULT_SETTINGS.precision);
+      });
+    });
   });
 
   describe('given the user deliberately enabled no currencies', () => {
@@ -111,6 +168,26 @@ describe('getSettings', () => {
       store.set(LOCAL, { currencies: [] });
       const { getSettings } = await freshModule();
       expect((await getSettings()).currencies).toEqual([]);
+    });
+  });
+
+  describe('given the user has filled in the site lists', () => {
+    it('keeps both lists as written', async () => {
+      // Emptying these would re-enable conversion on a site the user chose to
+      // keep the extension away from.
+      store.set(LOCAL, { blockedSites: ['bank.example'], allowedSites: ['shop.example'] });
+      const { getSettings } = await freshModule();
+      const settings = await getSettings();
+      expect(settings.blockedSites).toEqual(['bank.example']);
+      expect(settings.allowedSites).toEqual(['shop.example']);
+    });
+  });
+
+  describe('given the user chose a precision other than the default', () => {
+    it('keeps that precision', async () => {
+      store.set(LOCAL, { precision: 'coarse' });
+      const { getSettings } = await freshModule();
+      expect((await getSettings()).precision).toBe('coarse');
     });
   });
 });

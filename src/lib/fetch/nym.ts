@@ -47,28 +47,14 @@ export async function getStoredNymStatus(): Promise<NymStatus> {
 // Firefox: Direct Nym client (has window in background/event page)
 // ============================================================================
 
+// Both builds carry Nym, but only via the standard @nymproject/mix-fetch
+// package: it ships its WASM as separate .wasm files (which addons-linter
+// treats as binary and never parses) and loads its worker from a real extension
+// URL rather than a blob: URL, which Firefox MV3 forbids outright. The
+// -full-fat variant failed on both counts — it base64-inlines the WASM and the
+// worker into one 22.9MB index.js, well over the 5MB addons-linter will parse,
+// which is what kept Zentat off AMO and therefore off Firefox Android.
 let firefoxClientModule: typeof import('../nym/client') | null = null;
-
-// Compile-time constant, so on Firefox this branch and the 22.9MB Nym bundle
-// behind it are dead-code-eliminated rather than shipped.
-//
-// Why the Firefox build carries no Nym at all: addons-linter refuses to parse
-// any single JavaScript file over 5MB, and @nymproject/mix-fetch-full-fat is
-// one 22.9MB index.js because the -full-fat variants base64-inline the WASM and
-// the worker into the JS. That single file is the reason Zentat has no AMO
-// listing — and no AMO listing means no Firefox Android either, which is the
-// only browser on a phone that can run this extension at all.
-//
-// The better end state is the standard @nymproject/mix-fetch package, which
-// ships the WASM as separate binaries the linter never parses (largest JS file:
-// ~100KB) and would restore Nym on Firefox. That swap needs bundler wiring and,
-// more importantly, a live mixnet round-trip to verify, so it is deliberately
-// not being made blind. This gets the extension into the store today.
-// Both builds carry Nym again: the standard package ships its WASM as separate
-// .wasm files (which addons-linter treats as binary and never parses) and loads
-// its worker from a real extension URL rather than a blob: URL, which Firefox
-// MV3 forbids outright. The -full-fat variant failed on both counts.
-export const NYM_AVAILABLE = true;
 
 async function getFirefoxClient() {
   // Firefox-only by construction. Chrome reaches the client through the

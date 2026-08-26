@@ -8,11 +8,18 @@ QuickConvertTest
     ├── given a ZEC amount
     │   ├── it converts back the other way
     │   ├── it accepts zats on the way back
+    │   ├── it reads an amount with whitespace around it
+    │   ├── it reads the unit written straight after the number
+    │   ├── it reads the singular unit names
+    │   ├── it reads an amount grouped with spaces
     │   ├── it always uses spot, never the held rate
     │   ├── given the amount is negative
     │   │   └── it returns nothing
     │   ├── given the amount does not parse
     │   │   └── it returns nothing
+    │   ├── given text that only looks like a ZEC amount
+    │   │   ├── it ignores a phrase holding more than one amount
+    │   │   └── it ignores a word that merely ends in the unit
     │   └── given the display currency has no rate
     │       └── it returns nothing
     └── given text with no price in it

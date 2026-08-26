@@ -4,17 +4,24 @@ KrakenTest
     │   ├── it parses the real X/Z-prefixed pair keys
     │   ├── it also accepts unprefixed pair keys
     │   ├── it inverts the quote into ZEC-per-fiat
-    │   └── it names itself as the source
+    │   ├── it names itself as the source
+    │   └── it asks for both ZEC pairs in one request
     ├── given a key that is not a ZEC pair
     │   └── it ignores that key
+    ├── given a ZEC pair quoted in something we do not track
+    │   └── it ignores that pair
     ├── given the same currency appears twice
     │   └── it keeps the first
     ├── given a pair with no usable price
+    │   └── it ignores that pair
+    ├── given a pair with no last trade data
     │   └── it ignores that pair
     ├── given the response has no result at all
     │   └── it throws
     ├── given an API-level error
     │   └── it throws
+    ├── given several API-level errors
+    │   └── it throws naming every one of them
     ├── given no usable pairs are present
     │   └── it throws
     └── given an HTTP error

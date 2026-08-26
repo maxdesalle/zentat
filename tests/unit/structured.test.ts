@@ -468,6 +468,18 @@ describe('locatePrices', () => {
     });
   });
 
+  describe('given two elements show the same price', () => {
+    it('takes the first', () => {
+      // Both are equally good matches; the earlier one is the one the reader
+      // meets first, and a stable choice is what keeps a re-run idempotent.
+      document.body.innerHTML = '<p id="a">$49.99</p><p id="b">$49.99</p>';
+      const [located] = locatePrices(document.body, [
+        { amount: 49.99, currency: 'USD', source: 'jsonld' },
+      ]);
+      expect(located.element.id).toBe('a');
+    });
+  });
+
   describe('given a Shopify cents-integer', () => {
     describe('given the screen shows two decimals', () => {
       it('reads the value as cents', () => {
@@ -491,6 +503,56 @@ describe('locatePrices', () => {
           { amount: 15900, currency: 'USD', source: 'jsonld' },
         ]);
         expect(located.price.amount).toBe(15900);
+      });
+    });
+
+    describe('given the price is rendered in pieces', () => {
+      it('reads the whole element rather than a fragment of it', () => {
+        // The "159" span alone reads as $159 with no cents in sight, which
+        // would hand back the raw 15900. Only the parent shows the decimal
+        // point that proves the integer was cents.
+        document.body.innerHTML =
+          '<div id="p"><span>$</span><span>159</span><span>.00</span></div>';
+        const [located] = locatePrices(document.body, [
+          { amount: 15900, currency: 'USD', source: 'jsonld' },
+        ]);
+        expect(located.element.id).toBe('p');
+        expect(located.price.amount).toBe(159);
+      });
+    });
+
+    describe('given the integer is exactly four digits', () => {
+      it('reads it as cents', () => {
+        // The shortest integer the cents reading applies to at all.
+        document.body.innerHTML = '<p id="p">$10.00</p>';
+        const [located] = locatePrices(document.body, [
+          { amount: 1000, currency: 'USD', source: 'jsonld' },
+        ]);
+        expect(located.price.amount).toBe(10);
+      });
+    });
+
+    describe('given the integer is shorter than four digits', () => {
+      it('keeps it as written', () => {
+        // "$250.00" shows its cents too, but 250 is a plain whole-dollar
+        // price. Dividing it would be the same 100x error in reverse.
+        document.body.innerHTML = '<p id="p">$250.00</p>';
+        const [located] = locatePrices(document.body, [
+          { amount: 250, currency: 'USD', source: 'jsonld' },
+        ]);
+        expect(located.price.amount).toBe(250);
+      });
+    });
+
+    describe('given the amount is not a whole number', () => {
+      it('keeps it as written', () => {
+        // A price with cents of its own was never a cents-integer, however
+        // large it is and however the page renders it.
+        document.body.innerHTML = '<p id="p">$1,234.56</p>';
+        const [located] = locatePrices(document.body, [
+          { amount: 1234.56, currency: 'USD', source: 'jsonld' },
+        ]);
+        expect(located.price.amount).toBe(1234.56);
       });
     });
   });
