@@ -8,6 +8,11 @@ WalkerTest
 │   │   └── it is not skipped
 │   └── when the tag arrives lower-cased
 │       └── it is still recognised
+├── textLengthOf
+│   ├── given a node with text
+│   │   └── it reports the untrimmed length
+│   └── given a node with no text at all
+│       └── it reports nothing
 ├── textOf
 │   ├── given an element
 │   │   └── it returns its trimmed text
@@ -124,12 +129,20 @@ WalkerTest
     │   └── it keeps them separated
     ├── given a parent whose direct text is too long
     │   └── it is left alone
+    ├── given a parent of exactly the greatest length holding a child price
+    │   └── it converts its own text and defers the child
     ├── given a page that exhausts the pass budget
     │   └── it stops rather than freezing the tab
     ├── given the budget lands exactly on zero
     │   └── it stops there
     ├── given an element whose class is reported as an object
     │   └── it is still considered
+    ├── given an element longer than the pre-filter allows
+    │   └── it is skipped without inspecting its text
+    ├── given an element exactly at the pre-filter limit
+    │   └── it is still inspected
+    ├── given an element read through its accessible copy
+    │   └── nothing beneath it is collected as well
     ├── given a site adapter declares price containers
     │   ├── it collects the container as a whole
     │   ├── it marks it as a price container

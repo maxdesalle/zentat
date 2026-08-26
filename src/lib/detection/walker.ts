@@ -1,6 +1,6 @@
 import { SPAN_CLASS } from '../../entrypoints/content/markers';
 import { adapterFor, isExcluded } from './adapters';
-import { textOf } from './dom';
+import { textLengthOf, textOf } from './dom';
 import { QUICK_DETECT_PATTERN } from './patterns';
 import { collectShadowRoots, hasShadowDom } from './shadow';
 
@@ -185,9 +185,6 @@ export function isConvertible(el: Element): boolean {
 // patterns are quadratic on long digit runs. Budget the whole pass too.
 const MAX_PASS_CHARS = 200_000;
 
-/** Shared so the no-adapter path allocates nothing and has no literal to vary. */
-const EMPTY_SELECTORS: readonly string[] = Object.freeze([]);
-
 /** A selector's matches within `root`, plus `root` itself when it matches. */
 function selfAndMatching(root: Element, selector: string): Element[] {
   const within = Array.from(root.querySelectorAll(selector));
@@ -213,7 +210,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
   const hostname = window.location.hostname;
   const adapter = adapterFor(hostname);
 
-  for (const selector of adapter?.containers ?? EMPTY_SELECTORS) {
+  for (const selector of adapter?.containers ?? []) {
     for (const container of selfAndMatching(root, selector)) {
       if (processedElements.has(container)) continue;
       if (!isConvertible(container)) continue;
@@ -269,7 +266,10 @@ export function walkPriceElements(root: Node): WalkResult[] {
 
     // The accessibility copy is read through accessiblePriceText() on its owner
     // element rather than converted in place.
-    const classStr = typeof element.className === 'string' ? element.className : '';
+    // getAttribute, not className: on an SVG element className is an
+    // SVGAnimatedString, and a regex run against that object matches nothing
+    // however the element is actually classed.
+    const classStr = element.getAttribute('class') ?? '';
     if (/a-offscreen|sr-only|visually-hidden|screen-reader-only/i.test(classStr)) continue;
 
     // Skip if an ancestor was already collected (walk up — much cheaper than
@@ -285,7 +285,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
 
     // Length is checked against the raw text first: cloning to strip our own
     // output is only worth doing for something that could still be a price.
-    if ((element.textContent || '').length > MAX_PURE_PRICE_LENGTH * 4) continue;
+    if (textLengthOf(element) > MAX_PURE_PRICE_LENGTH * 4) continue;
 
     // Prefer the accessibility text when the visible text is split or styled.
     const rawText = pageAuthoredText(element);
@@ -346,7 +346,13 @@ export function walkPriceElements(root: Node): WalkResult[] {
         .join(' ');
       const directTrimmed = directText.trim();
       if (
+        // Stryker disable next-line ConditionalExpression,LogicalOperator:
+        // equivalent — empty direct text fails the price pattern below.
         directTrimmed
+        // Stryker disable next-line ConditionalExpression,EqualityOperator:
+        // equivalent — reaching here means a child holds a price too, so the
+        // direct text is strictly shorter than the parent's, which was already
+        // checked against this limit.
         && directTrimmed.length <= MAX_PURE_PRICE_LENGTH
         && QUICK_DETECT_PATTERN.test(directTrimmed)
         && !isNonPriceText(directTrimmed)

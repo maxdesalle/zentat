@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SPAN_CLASS } from '../../src/entrypoints/content/markers';
+import { textLengthOf } from '../../src/lib/detection/dom';
 import {
   accessibleCopyCovers,
   accessiblePriceText,
@@ -87,6 +88,25 @@ describe('isSkippedTag', () => {
     it('is still recognised', () => {
       // SVG and MathML elements report a lowercase tagName in HTML documents.
       expect(isSkippedTag('svg')).toBe(true);
+    });
+  });
+});
+
+describe('textLengthOf', () => {
+  describe('given a node with text', () => {
+    it('reports the untrimmed length', () => {
+      // Untrimmed on purpose: this is the cheap check that decides whether an
+      // element is worth cloning, and trimming it would mean reading the text
+      // twice to save reading it once.
+      render('<div id="p">  $19.99  </div>');
+      expect(textLengthOf(document.getElementById('p'))).toBe(10);
+    });
+  });
+
+  describe('given a node with no text at all', () => {
+    it('reports nothing', () => {
+      expect(textLengthOf(null)).toBe(0);
+      expect(textLengthOf(document)).toBe(0);
     });
   });
 });
@@ -558,6 +578,21 @@ describe('walkPriceElements', () => {
     });
   });
 
+  describe('given a parent of exactly the greatest length holding a child price', () => {
+    it('converts its own text and defers the child', () => {
+      // A thousand characters is the most an element may be and still be read
+      // as a price with words round it. One character either side decides
+      // whether a whole product card converts or none of it does.
+      const own = `$10 ${'x'.repeat(994)}`;
+      const html = `<p>${own}<span>$8</span></p>`;
+      expect(`${own}$8`).toHaveLength(1000);
+      const results = walkPriceElements(render(html));
+      const parent = results.find((r) => r.node.tagName === 'P');
+      expect(parent?.directTextOnly).toBe(true);
+      expect(results.map((r) => r.text)).toContain('$8');
+    });
+  });
+
   describe('given a page that exhausts the pass budget', () => {
     it('stops rather than freezing the tab', () => {
       // The per-element cap bounds one string, not the pass. The number
@@ -595,6 +630,38 @@ describe('walkPriceElements', () => {
         configurable: true,
       });
       expect(walkPriceElements(root).map((r) => r.text)).toContain('$19.99');
+    });
+  });
+
+  describe('given an element longer than the pre-filter allows', () => {
+    it('is skipped without inspecting its text', () => {
+      const long = `$19.99 ${'x'.repeat(4000)}`;
+      const results = walkPriceElements(render(`<p>${long}</p>`));
+      expect(results.filter((r) => r.node.tagName === 'P')).toHaveLength(0);
+    });
+  });
+
+  describe('given an element exactly at the pre-filter limit', () => {
+    it('is still inspected', () => {
+      // Four thousand characters is the line. It is well above what a price
+      // can be, so an element on it is still rejected — but by the length
+      // rule that knows about prices, not by the one that avoids the clone.
+      const text = `$19.99 ${'x'.repeat(3993)}`;
+      expect(text).toHaveLength(4000);
+      const results = walkPriceElements(render(`<p>${text}</p>`));
+      expect(results.filter((r) => r.node.tagName === 'P')).toHaveLength(0);
+    });
+  });
+
+  describe('given an element read through its accessible copy', () => {
+    it('nothing beneath it is collected as well', () => {
+      // The copy describes the whole element, so its children are the split
+      // rendering of that one price. Collecting them too converts it twice.
+      const results = walkPriceElements(render(
+        '<div class="p" aria-label="$19.99"><span>$19.99</span></div>',
+      ));
+      expect(results).toHaveLength(1);
+      expect(results[0].node.className).toBe('p');
     });
   });
 
@@ -707,6 +774,7 @@ describe('walkPriceElements', () => {
             + "<span style=\"position: absolute\">'149' euro en '95' cent</span></div>",
         ));
         expect(results).toHaveLength(1);
+        expect(results[0].inPriceContainer).toBe(true);
         expect(results[0].text).toBe("'149' euro en '95' cent");
       });
     });
