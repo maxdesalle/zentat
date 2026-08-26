@@ -1,0 +1,3144 @@
+
+<div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<header class="flix-header flix-header--unfixed">
+    <div class="flix-header__inner">
+
+        <div class="flix-header-skip-links">
+            <a class="flix-skip-link" href="#main-content">
+                Skip to main content
+            </a>
+        </div>
+
+        <div class="flix-header-brand ">
+            <a class="flix-header-brand__link" href="/" onclick="emitMainNavigationClickEvent('Logo')" aria-label="flixbus home graphic logo link">
+            <img class="flix-header-brand__img" alt="">
+            </a>
+        </div>
+
+
+        <nav class="flix-header-nav" aria-label="Main">
+            <ul class="flix-header-nav__list">
+                
+                
+                
+                <li class="flix-header-nav__item">
+                    <button type="button" class="flix-header-nav__link" data-dropdown="Plan_Your_Journey" data-event="hover" aria-controls="Plan_Your_Journey" aria-expanded="false" aria-haspopup="menu">
+                        <span class="flix-header-nav__text">Plan Your Journey</span>
+                    </button>
+                    <ul id="Plan_Your_Journey" class="flix-header-nav-subnav" hidden="" role="menu">
+                        
+                        <li class="flix-header-nav-subnav__item" role="presentation">
+                            <a class="flix-header-nav-subnav__link" href="/bus-routes" onclick="emitMainNavigationClickEvent(&quot;Route Map&quot;)" role="menuitem">
+                                <span class="flix-header-nav-subnav__text">Route Map</span>
+                            </a>
+                        </li>
+                        
+                        <li class="flix-header-nav-subnav__item" role="presentation">
+                            <a class="flix-header-nav-subnav__link" href="/bus" onclick="emitMainNavigationClickEvent(&quot;All Bus Destinations&quot;)" role="menuitem">
+                                <span class="flix-header-nav-subnav__text">All Bus Destinations</span>
+                            </a>
+                        </li>
+                        
+                        <li class="flix-header-nav-subnav__item" role="presentation">
+                            <a class="flix-header-nav-subnav__link" href="/advisories" onclick="emitMainNavigationClickEvent(&quot;Weather and Emergency Advisories&quot;)" role="menuitem">
+                                <span class="flix-header-nav-subnav__text">Weather and Emergency Advisories</span>
+                            </a>
+                        </li>
+                        
+                    </ul>
+                </li>
+                
+                
+                
+                <li class="flix-header-nav__item">
+                    <button type="button" class="flix-header-nav__link" data-dropdown="Service" data-event="hover" aria-controls="Service" aria-expanded="false" aria-haspopup="menu">
+                        <span class="flix-header-nav__text">Service</span>
+                    </button>
+                    <ul id="Service" class="flix-header-nav-subnav" hidden="" role="menu">
+                        
+                        <li class="flix-header-nav-subnav__item" role="presentation">
+                            <a class="flix-header-nav-subnav__link" href="/service" onclick="emitMainNavigationClickEvent(&quot;All Services&quot;)" role="menuitem">
+                                <span class="flix-header-nav-subnav__text">All Services</span>
+                            </a>
+                        </li>
+                        
+                        <li class="flix-header-nav-subnav__item" role="presentation">
+                            <a class="flix-header-nav-subnav__link" href="/service/onboard-services" onclick="emitMainNavigationClickEvent(&quot;On Board&quot;)" role="menuitem">
+                                <span class="flix-header-nav-subnav__text">On Board</span>
+                            </a>
+                        </li>
+                        
+                        <li class="flix-header-nav-subnav__item" role="presentation">
+                            <a class="flix-header-nav-subnav__link" href="/service/passengers-with-reduced-mobility" onclick="emitMainNavigationClickEvent(&quot;Reduced Mobility&quot;)" role="menuitem">
+                                <span class="flix-header-nav-subnav__text">Reduced Mobility</span>
+                            </a>
+                        </li>
+                        
+                        <li class="flix-header-nav-subnav__item" role="presentation">
+                            <a class="flix-header-nav-subnav__link" href="/company/sustainability" onclick="emitMainNavigationClickEvent(&quot;Sustainability&quot;)" role="menuitem">
+                                <span class="flix-header-nav-subnav__text">Sustainability</span>
+                            </a>
+                        </li>
+                        
+                    </ul>
+                </li>
+                
+                
+                
+                <li class="flix-header-nav__item">
+                    <a class="flix-header-nav__link" href="https://shop.flixbus.com/rebooking/login" onclick="emitMainNavigationClickEvent(&quot;Manage My Booking&quot;)">
+                        <span class="flix-header-nav__text">Manage My Booking</span>
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-header-nav__item">
+                    <a class="flix-header-nav__link" href="/track" onclick="emitMainNavigationClickEvent(&quot;Trip Tracker&quot;)">
+                        <span class="flix-header-nav__text">Trip Tracker</span>
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-header-nav__item">
+                    <a class="flix-header-nav__link" href="https://support.flixbus.com/us/en" onclick="emitMainNavigationClickEvent(&quot;Help&quot;)">
+                        <span class="flix-header-nav__text">Help</span>
+                    </a>
+                </li>
+                
+                
+                
+            </ul>
+        </nav>
+
+        <div class="flix-header-burger-menu">
+            <button type="button" aria-label="Open main site navigation" onclick="togglePanel()" id="open-burger-menu-button" class="flix-header-burger-menu__toggle flix-btn flix-btn--link flix-btn--square flix-btn--md" aria-controls="menu-panel" aria-expanded="false"></button>
+            <div id="menu-panel" class="flix-header-burger-menu__panel" hidden="">
+                <button type="button" aria-label="Close main site navigation" id="close-burger-menu-button" class="flix-header-burger-menu__toggle flix-btn flix-btn--link flix-btn--square flix-btn--md" aria-controls="menu-panel" onclick="togglePanel()" aria-expanded="true"></button>
+
+                <nav class="flix-header-burger-menu__nav" aria-label="Main">
+                    <ul class="flix-header-burger-menu__list">
+
+                        
+                        
+                        
+                        <li class="flix-header-burger-menu__item">
+                            <button type="button" class="flix-header-burger-menu__link" data-dropdown="Plan_Your_Journey_Mobile" data-event="click" aria-controls="Plan_Your_Journey_Mobile" aria-expanded="false" aria-haspopup="menu">
+                                <span class="flix-header-burger-menu__text">Plan Your Journey</span>
+                            </button>
+                            <ul id="Plan_Your_Journey_Mobile" class="flix-header-burger-menu-subnav" hidden="" role="menu">
+                                
+                                <li class="flix-header-burger-menu-subnav__item" role="presentation">
+                                    <a class="flix-header-burger-menu-subnav__link" href="/bus-routes" onclick="emitMainNavigationClickEvent(&quot;Route Map&quot;)" role="menuitem">
+                                        <span class="flix-header-burger-menu__text">Route Map</span>
+                                    </a>
+                                </li>
+                                
+                                <li class="flix-header-burger-menu-subnav__item" role="presentation">
+                                    <a class="flix-header-burger-menu-subnav__link" href="/bus" onclick="emitMainNavigationClickEvent(&quot;All Bus Destinations&quot;)" role="menuitem">
+                                        <span class="flix-header-burger-menu__text">All Bus Destinations</span>
+                                    </a>
+                                </li>
+                                
+                                <li class="flix-header-burger-menu-subnav__item" role="presentation">
+                                    <a class="flix-header-burger-menu-subnav__link" href="/advisories" onclick="emitMainNavigationClickEvent(&quot;Weather and Emergency Advisories&quot;)" role="menuitem">
+                                        <span class="flix-header-burger-menu__text">Weather and Emergency Advisories</span>
+                                    </a>
+                                </li>
+                                
+                            </ul>
+                        </li>
+                        
+                        
+                        
+                        <li class="flix-header-burger-menu__item">
+                            <button type="button" class="flix-header-burger-menu__link" data-dropdown="Service_Mobile" data-event="click" aria-controls="Service_Mobile" aria-expanded="false" aria-haspopup="menu">
+                                <span class="flix-header-burger-menu__text">Service</span>
+                            </button>
+                            <ul id="Service_Mobile" class="flix-header-burger-menu-subnav" hidden="" role="menu">
+                                
+                                <li class="flix-header-burger-menu-subnav__item" role="presentation">
+                                    <a class="flix-header-burger-menu-subnav__link" href="/service" onclick="emitMainNavigationClickEvent(&quot;All Services&quot;)" role="menuitem">
+                                        <span class="flix-header-burger-menu__text">All Services</span>
+                                    </a>
+                                </li>
+                                
+                                <li class="flix-header-burger-menu-subnav__item" role="presentation">
+                                    <a class="flix-header-burger-menu-subnav__link" href="/service/onboard-services" onclick="emitMainNavigationClickEvent(&quot;On Board&quot;)" role="menuitem">
+                                        <span class="flix-header-burger-menu__text">On Board</span>
+                                    </a>
+                                </li>
+                                
+                                <li class="flix-header-burger-menu-subnav__item" role="presentation">
+                                    <a class="flix-header-burger-menu-subnav__link" href="/service/passengers-with-reduced-mobility" onclick="emitMainNavigationClickEvent(&quot;Reduced Mobility&quot;)" role="menuitem">
+                                        <span class="flix-header-burger-menu__text">Reduced Mobility</span>
+                                    </a>
+                                </li>
+                                
+                                <li class="flix-header-burger-menu-subnav__item" role="presentation">
+                                    <a class="flix-header-burger-menu-subnav__link" href="/company/sustainability" onclick="emitMainNavigationClickEvent(&quot;Sustainability&quot;)" role="menuitem">
+                                        <span class="flix-header-burger-menu__text">Sustainability</span>
+                                    </a>
+                                </li>
+                                
+                            </ul>
+                        </li>
+                        
+                        
+                        
+                        <li class="flix-header-burger-menu__item">
+                            <a class="flix-header-burger-menu__link" href="https://shop.flixbus.com/rebooking/login" onclick="emitMainNavigationClickEvent(&quot;Manage My Booking&quot;)">
+                                <span class="flix-header-burger-menu__text">Manage My Booking</span>
+                            </a>
+                        </li>
+                        
+                        
+                        
+                        <li class="flix-header-burger-menu__item">
+                            <a class="flix-header-burger-menu__link" href="/track" onclick="emitMainNavigationClickEvent(&quot;Trip Tracker&quot;)">
+                                <span class="flix-header-burger-menu__text">Trip Tracker</span>
+                            </a>
+                        </li>
+                        
+                        
+                        
+                        <li class="flix-header-burger-menu__item">
+                            <a class="flix-header-burger-menu__link" href="https://support.flixbus.com/us/en" onclick="emitMainNavigationClickEvent(&quot;Help&quot;)">
+                                <span class="flix-header-burger-menu__text">Help</span>
+                            </a>
+                        </li>
+                        
+                        
+                        
+                        <li class="flix-header-burger-menu__item" id="last-focus-mobile-nav">
+                            <button type="button" class="flix-header-burger-menu__link flix-language-switcher__toggle" data-popup="language-selection-popup" data-firstfocusable="close-button" data-lastfocusable="last-focusable-item">
+                                <img class="flix-language-switcher__flag" alt="English">
+                                English
+                                <span class="flix-sr-only">Open language selection</span>
+                            </button>
+                        </li>
+
+                    </ul>
+                </nav>
+
+            </div>
+            <div onclick="togglePanel()" class="flix-header-burger-menu__overlay flix-overlay"></div>
+        </div>
+
+
+        <div id="header-widgets-container" class="flix-header-widgets">
+            <div class="flix-language-switcher">
+                <button type="button" class="flix-language-switcher__toggle" data-popup="language-selection-popup" data-firstfocusable="close-button" data-lastfocusable="last-focusable-item">
+                    <img class="flix-language-switcher__flag" alt="English">
+                    <span class="flix-language-switcher__code">En</span>
+                    <span class="flix-sr-only">Open language selection</span>
+                </button>
+            </div>
+            <account-widget>
+        </account-widget></div>
+    </div>
+</header>
+
+
+<div id="language-selection-popup" class="flix-language-switcher-popup" aria-label="Language selection" hidden="" role="dialog" aria-modal="true">
+    <div class="flix-language-switcher-popup__body">
+        <button type="button" id="close-button" aria-label="Close language selection" class="flix-language-switcher-popup__close flix-btn flix-btn--square flix-btn--sm flix-btn--link"></button>
+
+        <section aria-labelledby="all-domains" class="flix-language-switcher-popup__region flix-language-switcher-popup__region--columns">
+            <ul class="flix-language-switcher-popup__list">
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="bg" onclick="emitLanguageSwitcherClickEvent(&quot;bg&quot;)" href="//www.flixbus.bg/marshruti/berlin-myunkhen">
+                        <img class="flix-language-switcher__flag" alt="Български">
+                        Български
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="bs" onclick="emitLanguageSwitcherClickEvent(&quot;bs&quot;)" href="//www.flixbus.ba/autobuske-linije/berllin-minhen">
+                        <img class="flix-language-switcher__flag" alt="Bosanski">
+                        Bosanski
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="ca" onclick="emitLanguageSwitcherClickEvent(&quot;ca&quot;)" href="//www.flixbus.cat/ruta-bus/berlin-munic">
+                        <img class="flix-language-switcher__flag" alt="Català">
+                        Català
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="cs" onclick="emitLanguageSwitcherClickEvent(&quot;cs&quot;)" href="//www.flixbus.cz/autobusove-spoje/autobus-berlin-mnichov">
+                        <img class="flix-language-switcher__flag" alt="Čeština">
+                        Čeština
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="da" onclick="emitLanguageSwitcherClickEvent(&quot;da&quot;)" href="//www.flixbus.dk/bus/berlin-munchen">
+                        <img class="flix-language-switcher__flag" alt="Dansk">
+                        Dansk
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="de" onclick="emitLanguageSwitcherClickEvent(&quot;de&quot;)" href="//www.flixbus.de/busverbindung/fernbus-berlin-muenchen">
+                        <img class="flix-language-switcher__flag" alt="Deutsch">
+                        Deutsch
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="de-at" onclick="emitLanguageSwitcherClickEvent(&quot;de-at&quot;)" href="//www.flixbus.at/busverbindung/fernbus-berlin-muenchen">
+                        <img class="flix-language-switcher__flag" alt="Deutsch">
+                        Deutsch
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="de-ch" onclick="emitLanguageSwitcherClickEvent(&quot;de-ch&quot;)" href="//www.flixbus.ch/busverbindung/fernbus-berlin-muenchen">
+                        <img class="flix-language-switcher__flag" alt="Deutsch">
+                        Deutsch
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="et" onclick="emitLanguageSwitcherClickEvent(&quot;et&quot;)" href="//www.flixbus.ee/bussiliinid/berliin-munchen">
+                        <img class="flix-language-switcher__flag" alt="Eesti">
+                        Eesti
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="el" onclick="emitLanguageSwitcherClickEvent(&quot;el&quot;)" href="//www.flixbus.gr">
+                        <img class="flix-language-switcher__flag" alt="Ελληνικά">
+                        Ελληνικά
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" onclick="emitLanguageSwitcherClickEvent(&quot;en-us&quot;)" href="//www.flixbus.com/bus-routes/bus-berlin-munich" aria-current="true">
+                        <img class="flix-language-switcher__flag" alt="English">
+                        English
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="en-gb" onclick="emitLanguageSwitcherClickEvent(&quot;en-gb&quot;)" href="//www.flixbus.co.uk/bus-routes/berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="English">
+                        English
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="en" onclick="emitLanguageSwitcherClickEvent(&quot;en-gl&quot;)" href="//global.flixbus.com/bus-routes/bus-berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="English">
+                        English
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="en-ca" onclick="emitLanguageSwitcherClickEvent(&quot;en-ca&quot;)" href="//www.flixbus.ca/bus-routes/berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="English">
+                        English
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="en-in" onclick="emitLanguageSwitcherClickEvent(&quot;en-in&quot;)" href="//www.flixbus.in/bus-routes/de-de/berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="English">
+                        English
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="en-ie" onclick="emitLanguageSwitcherClickEvent(&quot;en-ie&quot;)" href="//www.flixbus.ie/bus-routes/berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="English">
+                        English
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="en-au" onclick="emitLanguageSwitcherClickEvent(&quot;en-au&quot;)" href="//www.flixbus.com.au/bus-routes/bus-berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="English">
+                        English
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="es-es" onclick="emitLanguageSwitcherClickEvent(&quot;es&quot;)" href="//www.flixbus.es/rutas/berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="Español">
+                        Español
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="es-us" onclick="emitLanguageSwitcherClickEvent(&quot;es-us&quot;)" href="//es-us.flixbus.com/rutas/berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="Español">
+                        Español
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="es-cl" onclick="emitLanguageSwitcherClickEvent(&quot;es-cl&quot;)" href="//www.flixbus.cl/rutas-bus/berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="Español">
+                        Español
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="es-mx" onclick="emitLanguageSwitcherClickEvent(&quot;es-mx&quot;)" href="//www.flix.com.mx/rutas/berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="Español">
+                        Español
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="fr" onclick="emitLanguageSwitcherClickEvent(&quot;fr&quot;)" href="//www.flixbus.fr/voyages-car/berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="Français">
+                        Français
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="fr-be" onclick="emitLanguageSwitcherClickEvent(&quot;fr-be&quot;)" href="//fr.flixbus.be/voyages-car/berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="Français">
+                        Français
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="fr-ch" onclick="emitLanguageSwitcherClickEvent(&quot;fr-ch&quot;)" href="//fr.flixbus.ch/voyages-car/berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="Français">
+                        Français
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="fr-ca" onclick="emitLanguageSwitcherClickEvent(&quot;fr-ca&quot;)" href="//fr.flixbus.ca/voyages-car/berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="Français">
+                        Français
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="hr" onclick="emitLanguageSwitcherClickEvent(&quot;hr&quot;)" href="//www.flixbus.hr/autobusne-linije/berlin-munchen">
+                        <img class="flix-language-switcher__flag" alt="Hrvatski">
+                        Hrvatski
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="it" onclick="emitLanguageSwitcherClickEvent(&quot;it&quot;)" href="//www.flixbus.it/tratte-autobus/berlino-monaco-di-baviera">
+                        <img class="flix-language-switcher__flag" alt="Italiano">
+                        Italiano
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="it-ch" onclick="emitLanguageSwitcherClickEvent(&quot;it-ch&quot;)" href="//it.flixbus.ch">
+                        <img class="flix-language-switcher__flag" alt="Italiano">
+                        Italiano
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="lv" onclick="emitLanguageSwitcherClickEvent(&quot;lv&quot;)" href="//www.flixbus.lv/autobusu-marsruti/berline-minhene">
+                        <img class="flix-language-switcher__flag" alt="Latviešu">
+                        Latviešu
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="lt" onclick="emitLanguageSwitcherClickEvent(&quot;lt&quot;)" href="//www.flixbus.lt/autobusu-marsrutai/berlynas-miunchenas">
+                        <img class="flix-language-switcher__flag" alt="Lietuvių">
+                        Lietuvių
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="hu" onclick="emitLanguageSwitcherClickEvent(&quot;hu&quot;)" href="//www.flixbus.hu/buszjaratok/berlin-muenchen">
+                        <img class="flix-language-switcher__flag" alt="Magyar">
+                        Magyar
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="mk" onclick="emitLanguageSwitcherClickEvent(&quot;mk&quot;)" href="//www.flixbus.mk">
+                        <img class="flix-language-switcher__flag" alt="Македонски">
+                        Македонски
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="nl" onclick="emitLanguageSwitcherClickEvent(&quot;nl&quot;)" href="//www.flixbus.nl/bus-reisplanner/bus-berlijn-munchen">
+                        <img class="flix-language-switcher__flag" alt="Nederlands">
+                        Nederlands
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="nl-be" onclick="emitLanguageSwitcherClickEvent(&quot;nl-be&quot;)" href="//www.flixbus.be/bus-reisplanner/bus-berlijn-munchen">
+                        <img class="flix-language-switcher__flag" alt="Nederlands">
+                        Nederlands
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="nb" onclick="emitLanguageSwitcherClickEvent(&quot;nb&quot;)" href="//www.flixbus.no/bussruter/berlin-munchen">
+                        <img class="flix-language-switcher__flag" alt="Norsk (bokmål)">
+                        Norsk (bokmål)
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="pl" onclick="emitLanguageSwitcherClickEvent(&quot;pl&quot;)" href="//www.flixbus.pl/polaczenia-autobusowe/berlin-monachium">
+                        <img class="flix-language-switcher__flag" alt="Polski">
+                        Polski
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="pt-pt" onclick="emitLanguageSwitcherClickEvent(&quot;pt-pt&quot;)" href="//www.flixbus.pt/percursos-autocarros/berlim-munique">
+                        <img class="flix-language-switcher__flag" alt="Português">
+                        Português
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="pt-br" onclick="emitLanguageSwitcherClickEvent(&quot;pt-br&quot;)" href="//www.flixbus.com.br">
+                        <img class="flix-language-switcher__flag" alt="Português">
+                        Português
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="ro" onclick="emitLanguageSwitcherClickEvent(&quot;ro&quot;)" href="//www.flixbus.ro/curse/autocar-berlin-munchen">
+                        <img class="flix-language-switcher__flag" alt="Română">
+                        Română
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="sq" onclick="emitLanguageSwitcherClickEvent(&quot;sq&quot;)" href="//www.flixbus.al">
+                        <img class="flix-language-switcher__flag" alt="Shqip">
+                        Shqip
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="sk" onclick="emitLanguageSwitcherClickEvent(&quot;sk&quot;)" href="//www.flixbus.sk/autobusove-spoje/berlin-mnichov">
+                        <img class="flix-language-switcher__flag" alt="Slovenčina">
+                        Slovenčina
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="sl" onclick="emitLanguageSwitcherClickEvent(&quot;sl&quot;)" href="//www.flixbus.si/avtobusne-povezave/berlin-munchen">
+                        <img class="flix-language-switcher__flag" alt="Slovenščina">
+                        Slovenščina
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="sr" onclick="emitLanguageSwitcherClickEvent(&quot;sr&quot;)" href="//www.flixbus.rs/autobuske-linije/berlin-minhen">
+                        <img class="flix-language-switcher__flag" alt="Srpski">
+                        Srpski
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="fi" onclick="emitLanguageSwitcherClickEvent(&quot;fi&quot;)" href="//www.flixbus.fi">
+                        <img class="flix-language-switcher__flag" alt="Suomi">
+                        Suomi
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="sv" onclick="emitLanguageSwitcherClickEvent(&quot;sv&quot;)" href="//www.flixbus.se/bussresor/berlin-munchen">
+                        <img class="flix-language-switcher__flag" alt="Svenska">
+                        Svenska
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="tr" onclick="emitLanguageSwitcherClickEvent(&quot;tr&quot;)" href="//www.flixbus.com.tr/otobus-seferleri/berlin-munih">
+                        <img class="flix-language-switcher__flag" alt="Türkçe">
+                        Türkçe
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="" lang="uk" onclick="emitLanguageSwitcherClickEvent(&quot;uk&quot;)" href="//www.flixbus.ua/avtobusni-marshruty/berlin-miunkhen">
+                        <img class="flix-language-switcher__flag" alt="Українська">
+                        Українська
+                    </a>
+                </li>
+                
+                
+                
+                <li class="flix-language-switcher-popup__item">
+                    <a class="flix-language-switcher-popup__link" id="last-focusable-item" lang="zh-us" onclick="emitLanguageSwitcherClickEvent(&quot;zh-us&quot;)" href="//zh-us.flixbus.com/bus-routes/bus-berlin-munich">
+                        <img class="flix-language-switcher__flag" alt="中文">
+                        中文
+                    </a>
+                </li>
+                
+                
+            </ul>
+        </section>
+    </div>
+    <div onclick="handleLangSwitcherClose()" class="flix-overlay"></div>
+</div>
+
+
+
+
+    <main id="main-content">
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="hero-search-mask-wrapper">
+    <section class="city-connection-hero">
+        
+
+    
+        
+
+
+
+<div class="breadcrumbs flix-theme-dark">
+    <div class="flix-page-container">
+        <nav aria-label="Breadcrumb">
+            <ol class="flix-breadcrumbs">
+                
+                
+                
+                <li class="flix-breadcrumbs__item breadcrumbs--item">
+                    
+                    <a class="flix-breadcrumbs__link breadcrumbs--link" title="Home" href="/">Home</a>
+                    
+                </li>
+                
+                <li class="flix-breadcrumbs__item breadcrumbs--item">
+                    
+                    <a class="flix-breadcrumbs__link breadcrumbs--link" title="Bus" href="/bus">Bus</a>
+                    
+                </li>
+                
+                <li class="flix-breadcrumbs__item breadcrumbs--item">
+                    
+                    <a class="flix-breadcrumbs__link breadcrumbs--link" title="Germany" href="/bus/germany">Germany</a>
+                    
+                </li>
+                
+                <li class="flix-breadcrumbs__item breadcrumbs--item">
+                    
+                    <a class="flix-breadcrumbs__link breadcrumbs--link" title="Berlin" href="/bus/berlin">Berlin</a>
+                    
+                </li>
+                
+            </ol>
+        </nav>
+    </div>
+</div>
+
+    
+
+    <img sizes="100vw" class="city-connection-hero__image" alt="" loading="eager">
+    
+        <div class="city-connection-hero__image-shadow"></div>
+    
+
+
+        
+        <div class="city-connection-hero__container">
+            <h1 class="flix-h1 flix-h1--space-flush city-connection-hero__title">
+                Cheap bus tickets from Berlin to Munich
+            </h1>
+
+            
+            <span class="city-connection-hero__subtitle">
+                    from $32.48
+                </span>
+            
+        </div>
+     
+
+
+    </section>
+
+    
+
+
+<div class="search-mask-container ">
+    <div id="search-mask-placeholder" class="sm-placeholder-container  flix-grid" style="z-index: -2;">
+        <div class="flix-col-12 flix-col-6-sm sm-placeholder-padding-0">
+            <div class="flix-grid sm-placeholder-padding-0">
+                <div class="flix-col-6 sm-placeholder-padding-0">
+                    <span class="flix-skeleton flix-skeleton--h-lg"></span>
+                </div>
+                <div class="flix-col-6">
+                    <span class="flix-skeleton flix-skeleton--h-lg"></span>
+                </div>
+            </div>
+        </div>
+        <div class="flix-col-12 flix-grid sm-placeholder-padding-0">
+            <div class="flix-col-12 flix-col-5-xl sm-placeholder-padding-0">
+                <span class="flix-skeleton flix-skeleton--h-lg"></span>
+            </div>
+            <div class="flix-grid flix-col-7-xl">
+                <div class="flix-col-12 flix-col-4-sm flix-col-6-xl">
+                    <span class="flix-skeleton flix-skeleton--h-lg"></span>
+                </div>
+                <div class="flix-col-12 flix-col-4-sm flix-col-3-xl">
+                    <span class="flix-skeleton flix-skeleton--h-lg"></span>
+                </div>
+                <div class="flix-col-12 flix-col-4-sm flix-col-3-xl">
+                    <span class="flix-skeleton flix-skeleton--h-lg"></span>
+                </div>
+                <div class="flix-col-12 flix-hidden-sm flix-hidden-md flix-hidden-lg flix-hidden-xl">
+                    <span class="flix-skeleton flix-skeleton--h-lg"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="search-mask-component"><div><div class="hcr-theme-flix-16-7-0"><div aria-hidden="false" class="B7tT6"><div class="z80U6"><div class="bzB3O"><fieldset class="hcr-fieldset-16-7-0 hcr-fieldset--horizontal-16-7-0 OEcMX"><legend class="hcr-legend-16-7-0 UTDpQ">Trip type</legend><div class="hcr-fieldset__items-16-7-0"><div class="hcr-fieldset__item"><div class="hcr-radio-16-7-0 GheQW"><input id="search-mask-trip-mode-oneway-toggle" type="radio" class="hcr-radio__input-16-7-0" name="search-mask-trip-mode" data-e2e="one-way-radio-button" aria-label="One Way" value="0" checked=""><label for="search-mask-trip-mode-oneway-toggle" class="hcr-radio__label-16-7-0">One Way</label></div></div><div class="hcr-fieldset__item"><div class="hcr-radio-16-7-0 GheQW"><input id="search-mask-trip-mode-roundtrip-toggle" type="radio" class="hcr-radio__input-16-7-0" name="search-mask-trip-mode" data-e2e="round-trip-radio-button" aria-label="Round Trip" value="1"><label for="search-mask-trip-mode-roundtrip-toggle" class="hcr-radio__label-16-7-0">Round Trip</label></div></div></div></fieldset></div><div class="LuaVR"><div class="Sl4Lq"><div class="QDYP7" data-e2e="departure-city-input-field"><div><div id="hcr-autocomplete-:r1:" class="hcr-autocomplete-16-7-0" role="none" data-e2e="autocomplete-component-from"><div class="hcr-input-16-7-0 hcr-combobox-16-7-0 MgTxy"><label id="label-searchInput-from" class="hcr-label-16-7-0 hcr-combobox__label" for="searchInput-from"><div title="From" class="urfcm">From</div></label><div role="presentation" class="hcr-input__container-16-7-0 hcr-combobox__container-16-7-0" tabindex="-1"><span class="hci-icon hcr-input__icon-16-7-0 hcr-combobox__icon-16-7-0" style="display: inline-block; width: var(--hcr-spacing-4, 24px); height: var(--hcr-spacing-4, 24px); vertical-align: middle; fill: var(--hcr-icon-primary-color, var(--hcr-primary-icon-color, #8b8b8b));"></span><div class="hcr-combobox__container-inner-16-7-0"><input id="searchInput-from" type="text" class="hcr-input__field-16-7-0 hcr-combobox__field-16-7-0" autocomplete="off" role="combobox" aria-haspopup="listbox" aria-autocomplete="list" aria-expanded="false" aria-describedby="info-srOnly-searchInput-from " aria-errormessage="infoError-searchInput-from" aria-controls="list-box-hcr-autocomplete-:r1:" placeholder="Berlin" value="Berlin"></div><span class="hcr-input__feedback-icon-16-7-0 hcr-combobox__feedback-icon" aria-hidden="true"></span></div><span id="infoError-searchInput-from" class="hcr-input__info-16-7-0" aria-live="assertive" role="alert"></span><span id="info-srOnly-searchInput-from" class="hcr-input__info-16-7-0 hcr-sr-only-16-7-0" aria-live="polite"></span></div><div id="list-box-hcr-autocomplete-:r1:" class="hcr-list-box-16-7-0 hcr-list-box--boxed-16-7-0 hcr-autocomplete__list-box-16-7-0 CQgpK" hidden="" tabindex="-1" role="presentation" style="top: 63px;"><div class="hcr-list-box__scrollable-content-16-7-0" style="max-height: 480px;"><div role="listbox" aria-labelledby="label-combobox-hcr-autocomplete-:r1:"><ul role="presentation" class="hcr-list-box__group-16-7-0"></ul></div></div><div class="hcr-list-box__actions-16-7-0"><button type="button" class="hcr-btn-16-7-0 xsJp9" aria-label="Explore the map"><div class="B5VEl"><div class="gOlKP"><div class="uB8tK"><img class="WIVc8" alt="explore map"></div><div><p class="s2F4D">Not sure where to start?</p><span class="dJMLM">Explore the map</span></div></div></div></button></div></div></div></div></div><button type="button" class="hcr-btn-16-7-0 hcr-btn--square-16-7-0 hcr-btn--sm-16-7-0 cVoiG" aria-label="Swap departure and arrival location"><span class="hci-icon" style="display: inline-block; width: 1.5em; height: 1.5em; vertical-align: middle; fill: var(--hcr-icon-primary-color, var(--hcr-primary-icon-color, #8b8b8b));"></span></button><div role="status" aria-live="polite" aria-atomic="true" class="ieEbj"></div><div class="Z7ONI" data-e2e="arrival-city-input-field"><div><div id="hcr-autocomplete-:r2:" class="hcr-autocomplete-16-7-0" role="none" data-e2e="autocomplete-component-to"><div class="hcr-input-16-7-0 hcr-combobox-16-7-0 MgTxy JSlkl"><label id="label-searchInput-to" class="hcr-label-16-7-0 hcr-combobox__label" for="searchInput-to"><div title="To" class="urfcm">To</div></label><div role="presentation" class="hcr-input__container-16-7-0 hcr-combobox__container-16-7-0" tabindex="-1"><span class="hci-icon hcr-input__icon-16-7-0 hcr-combobox__icon-16-7-0" style="display: inline-block; width: var(--hcr-spacing-4, 24px); height: var(--hcr-spacing-4, 24px); vertical-align: middle; fill: var(--hcr-icon-primary-color, var(--hcr-primary-icon-color, #8b8b8b));"></span><div class="hcr-combobox__container-inner-16-7-0"><input id="searchInput-to" type="text" class="hcr-input__field-16-7-0 hcr-combobox__field-16-7-0" autocomplete="off" role="combobox" aria-haspopup="listbox" aria-autocomplete="list" aria-expanded="false" aria-describedby="info-srOnly-searchInput-to " aria-errormessage="infoError-searchInput-to" aria-controls="list-box-hcr-autocomplete-:r2:" placeholder="Munich" value="Munich"></div><span class="hcr-input__feedback-icon-16-7-0 hcr-combobox__feedback-icon" aria-hidden="true"></span></div><span id="infoError-searchInput-to" class="hcr-input__info-16-7-0" aria-live="assertive" role="alert"></span><span id="info-srOnly-searchInput-to" class="hcr-input__info-16-7-0 hcr-sr-only-16-7-0" aria-live="polite"></span></div><div id="list-box-hcr-autocomplete-:r2:" class="hcr-list-box-16-7-0 hcr-list-box--boxed-16-7-0 hcr-autocomplete__list-box-16-7-0 CQgpK" hidden="" tabindex="-1" role="presentation" style="top: 63px;"><div class="hcr-list-box__scrollable-content-16-7-0" style="max-height: 480px;"><div role="listbox" aria-labelledby="label-combobox-hcr-autocomplete-:r2:"><ul role="presentation" class="hcr-list-box__group-16-7-0"></ul></div></div><div class="hcr-list-box__actions-16-7-0"><button type="button" class="hcr-btn-16-7-0 xsJp9" aria-label="Explore the map"><div class="B5VEl"><div class="gOlKP"><div class="uB8tK"><img class="WIVc8" alt="explore map"></div><div><p class="s2F4D">Not sure where to go?</p><span class="dJMLM">Explore the map</span></div></div></div></button></div></div></div></div></div></div></div><div class="Jr_Fy"><div><div class="jNQ9k" role="presentation"><div class="WJRPD jIaB1 P3FOj"><div class="hev6s"><button type="button" class="hcr-btn-16-7-0 xwr7R" tabindex="0" aria-controls="dialog-date-from" aria-expanded="false" aria-hidden="false">Departure Today, Aug 26</button><div class="hcr-input-16-7-0 hcr-input--has-controllers-16-7-0 rJPR1"><label class="hcr-label-16-7-0 hcr-input__label" for="dateInput-from"><span aria-hidden="true"><div title="Departure" class="urfcm">Departure</div></span></label><div class="hcr-input__container-16-7-0"><span class="hci-icon hcr-input__icon-16-7-0" style="display: inline-block; width: var(--hcr-spacing-4, 24px); height: var(--hcr-spacing-4, 24px); vertical-align: middle; fill: var(--hcr-icon-primary-color, var(--hcr-primary-icon-color, #8b8b8b));"></span><input id="dateInput-from" type="text" class="hcr-input__field-16-7-0" aria-errormessage="infoError-dateInput-from" readonly="" aria-hidden="true" tabindex="-1" value="Today, Aug 26"><div class="hcr-input__controllers-16-7-0"><button type="button" class="hcr-btn-16-7-0 hcr-btn--link-16-7-0 hcr-btn--square-16-7-0 hcr-btn--sm-16-7-0 hcr-input__icon-16-7-0" disabled="" data-e2e="previous-date-button" aria-label="Select previous day, Tue, Aug 25"><span class="hci-icon b2Vir" style="display: inline-block; width: 1.5em; height: 1.5em; vertical-align: middle; fill: currentcolor;"></span></button><button type="button" class="hcr-btn-16-7-0 hcr-btn--link-16-7-0 hcr-btn--square-16-7-0 hcr-btn--sm-16-7-0 hcr-input__icon-16-7-0" data-e2e="next-date-button" aria-label="Select next day, Thu, Aug 27"><span class="hci-icon b2Vir" style="display: inline-block; width: 1.5em; height: 1.5em; vertical-align: middle; fill: currentcolor;"></span></button></div><span class="hcr-input__feedback-icon-16-7-0" aria-hidden="true"></span></div><span id="infoError-dateInput-from" class="hcr-input__info-16-7-0" aria-live="assertive" role="alert"></span></div></div></div><br><div id="dialog-date-from" aria-hidden="true" style="width: 100%;"></div></div></div></div><div class="IQuRt"><div data-e2e="products-input-field" class="s4Rx8"><div><div class="XcA2Z" role="presentation"><div class="Ry4QE"><button type="button" class="hcr-btn-16-7-0 xwr7R" tabindex="0" aria-controls="dialog-products" aria-expanded="false" aria-hidden="false">Passengers / Bikes  1 Adult</button><div class="hcr-input-16-7-0 hcr-input--has-icon-right-16-7-0 dtmbO"><label class="hcr-label-16-7-0 hcr-input__label" for="productSummary"><span aria-hidden="true" class="euMsy"><div title="Passengers / Bikes " class="urfcm">Passengers / Bikes </div><span class="hci-icon" style="display: inline-block; width: 1.5em; height: 1.5em; vertical-align: middle; fill: currentcolor;"></span></span></label><div class="hcr-input__container-16-7-0"><input id="productSummary" type="text" class="hcr-input__field-16-7-0" aria-errormessage="infoError-productSummary" readonly="" tabindex="-1" aria-hidden="true" value="1 Adult"><span class="hci-icon hcr-input__icon-16-7-0" style="display: inline-block; width: var(--hcr-spacing-4, 24px); height: var(--hcr-spacing-4, 24px); vertical-align: middle; fill: var(--hcr-icon-primary-color, var(--hcr-primary-icon-color, #8b8b8b));"></span><span class="hcr-input__feedback-icon-16-7-0" aria-hidden="true"></span></div><span id="infoError-productSummary" class="hcr-input__info-16-7-0" aria-live="assertive" role="alert"></span></div></div><div aria-label="Add passengers, 1 Adult" id="dialog-products" aria-hidden="true" hidden="" class="IT9SD" role="dialog"></div></div></div></div></div><div class="iBR9R"><div class="wFRu3"><div class="hcr-checkbox-16-7-0 hcr-checkbox--sm-16-7-0"><input id="find-my-accommodation-checkbox" type="checkbox" class="hcr-checkbox__input-16-7-0" aria-errormessage="infoError-find-my-accommodation-checkbox" value="selected" checked=""><label for="find-my-accommodation-checkbox" class="hcr-checkbox__label-16-7-0">Find my accommodation</label><span id="infoError-find-my-accommodation-checkbox" class="hcr-checkbox__info-16-7-0" aria-live="assertive" role="alert"></span></div><span class="hcr-tooltip-target-16-7-0 hcr-tooltip-target--inline-16-7-0"><button type="button" class="hcr-btn-16-7-0 hcr-btn--square-16-7-0 kJkCt" aria-labelledby="find-my-accommodation-description" aria-controls="find-my-accommodation-description" aria-expanded="false" style="--hcr-tooltip-anchor: --tooltip-find-my-accommodation-description; anchor-name: var(--hcr-tooltip-anchor);"><span class="hci-icon" style="display: inline-block; width: 1.5em; height: 1.5em; vertical-align: middle; fill: currentcolor;"></span></button><div class="hcr-tooltip-16-7-0 hcr-tooltip--fixed-16-7-0" role="tooltip" id="find-my-accommodation-description" hidden="" style="--hcr-tooltip-anchor: --tooltip-find-my-accommodation-description;"><div class="hcr-tooltip__content-16-7-0"><p class="hcr-text-16-7-0">Opens accommodation options in a separate tab</p></div><button type="button" class="hcr-btn-16-7-0 hcr-btn--link-16-7-0 hcr-btn--square-16-7-0 hcr-btn--sm-16-7-0 hcr-tooltip__close-16-7-0" aria-label="Close me"></button></div></span><div id="find-my-accommodation-redirect" role="alertdialog" aria-modal="true" class="hcr-popup-16-7-0" hidden="" aria-live="polite" aria-busy="true" aria-labelledby="find-my-accommodation-redirect-title" aria-describedby="find-my-accommodation-redirect-content"><div class="hcr-popup__body-16-7-0"><div class="hcr-popup__icon-16-7-0"><div class="hcr-spinner-16-7-0 hcr-spinner--md-16-7-0"></div></div><div class="hcr-popup__title-16-7-0"><h2 class="hcr-h2-16-7-0 hcr-h2--section-header-16-7-0 hcr-h2--space-flush-16-7-0" id="find-my-accommodation-redirect-title">Almost there!</h2></div><div class="hcr-popup__content-16-7-0" id="find-my-accommodation-redirect-content">We are redirecting you to your accommodation options.</div></div><div class="hcr-overlay-16-7-0"></div></div></div></div><div class="QNcUK"><div data-e2e="search-button" class="aDOq1"><button type="button" class="hcr-btn-16-7-0 hcr-btn--primary-16-7-0 lKKy1">Search</button></div></div></div></div></div></div></div>
+    
+    <div class="sm-checkbox-sizer sm-checkbox-sizer--base" aria-hidden="true"></div>
+    
+    <div class="sm-checkbox-sizer sm-checkbox-sizer--delta" aria-hidden="true"></div>
+    
+</div>
+
+
+
+</div>
+
+
+<div class="search-mask-padding search-mask-padding--without-checkbox" aria-hidden="true" style="background-color: rgb(247, 247, 247);"></div>
+
+<div class="search-mask-padding search-mask-padding--checkbox-delta" aria-hidden="true" style="background-color: rgb(247, 247, 247);"></div>
+
+
+
+
+
+    
+    
+
+<section class="usp-section">
+    <div class="usp-container flix-page-container">
+        <div class="flix-grid">
+            
+            <div class="flix-col-12 flix-col-6-sm flix-col-3-xl">
+                <div class="usp-item">
+                    <div class="usp-icon-container">
+                        <flix-icon name="location" size="6" color="secondary" aria-hidden="true" role="img" class="hydrated">
+                    </flix-icon></div>
+                    <div class="usp-content">
+                        <h2 class="flix-h4 usp-title">
+                            Connecting you to the world
+                        </h2>
+                        <div class="usp-text">
+                            Endless possibilities. Discover over 8,000 destinations across more than 40 countries.
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flix-col-12 flix-col-6-sm flix-col-3-xl">
+                <div class="usp-item">
+                    <div class="usp-icon-container">
+                        <flix-icon name="bus" size="6" color="secondary" aria-hidden="true" role="img" class="hydrated">
+                    </flix-icon></div>
+                    <div class="usp-content">
+                        <h2 class="flix-h4 usp-title">
+                            Comfort on the go
+                        </h2>
+                        <div class="usp-text">
+                            Kick back with free Wi-Fi, power outlets, and extra leg space. That's what modern buses are all about.
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flix-col-12 flix-col-6-sm flix-col-3-xl">
+                <div class="usp-item">
+                    <div class="usp-icon-container">
+                        <flix-icon name="desktop-phone" size="6" color="secondary" aria-hidden="true" role="img" class="hydrated">
+                    </flix-icon></div>
+                    <div class="usp-content">
+                        <h2 class="flix-h4 usp-title">
+                            Choose, book, travel
+                        </h2>
+                        <div class="usp-text">
+                            From your screen to your seat in seconds. You do the booking, we'll take care of the rest.
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flix-col-12 flix-col-6-sm flix-col-3-xl">
+                <div class="usp-item">
+                    <div class="usp-icon-container">
+                        <flix-icon name="group" size="6" color="secondary" aria-hidden="true" role="img" class="hydrated">
+                    </flix-icon></div>
+                    <div class="usp-content">
+                        <h2 class="flix-h4 usp-title">
+                            Go together
+                        </h2>
+                        <div class="usp-text">
+                            Why adding another car on the road when you can choose collective travel instead?
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+    </div>
+</section>
+
+
+    
+         
+
+
+
+
+
+
+
+<div class="social-proof">
+  <hr class="flix-divider social-proof__divider">
+  <div class="social-proof__container flix-page-container">
+    <p class="social-proof__text" data-main-string="Trusted by 500+ million passengers." data-secondary-string="90+ million people">Trusted by 500+ million passengers.</p>
+    <div class="social-proof__logos">
+      
+        
+        <img alt="" class="social-proof__logo" data-logo-id="flixbus">
+        
+      
+        
+        <img alt="" class="social-proof__logo" data-logo-id="flixtrain">
+        
+      
+        
+        <img alt="" class="social-proof__logo" data-logo-id="greyhound">
+        
+      
+        
+        <img alt="" class="social-proof__logo" data-logo-id="kamil">
+        
+      
+    </div>
+  </div>
+</div>
+
+
+
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+<section id="trip-overview" class="flix-page-container city-connection-trip-overview-container">
+    <div class="city-connection-trip-overview-header">
+        <h2 class="city-connection-trip-overview-title" section-title="section-title">What to expect of your trip</h2>
+        <div class="city-connection-trip-overview-subtitle">Fast, easy, and affordable options from Berlin to Munich</div>
+    </div>
+
+    
+    
+    <div id="trip-cards" class="city-connection-trip-overview-cards city-connection-trip-overview-cards-row">
+        
+        
+        
+        
+        <div class="city-connection-trip-overview-card city-connection-trip-overview-card--flix ">
+            <div class="city-connection-trip-overview-card-details">
+                <div class="city-connection-trip-overview-card-title-details">
+                    
+                    <h4 class="city-connection-trip-overview-card-subtitle">
+                        Min. trip duration
+                    </h4>
+                    <h1 class="city-connection-trip-overview-card-title">
+                        6 hr 35 mins
+                    </h1>
+                    
+                </div>
+                
+            </div>
+            <img class="city-connection-trip-overview-card-icon" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/illustrations/flix/illustration-traveller.avif" alt="Card icon">
+        </div>
+        
+        
+        
+        <div class="city-connection-trip-overview-card city-connection-trip-overview-card--flix ">
+            <div class="city-connection-trip-overview-card-details">
+                <div class="city-connection-trip-overview-card-title-details">
+                    
+                    <h4 class="city-connection-trip-overview-card-subtitle">
+                        Min. distance
+                    </h4>
+                    <h1 class="city-connection-trip-overview-card-title">
+                        367 miles
+                    </h1>
+                    
+                </div>
+                
+            </div>
+            <img class="city-connection-trip-overview-card-icon" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/illustrations/flix/illustration-distance.avif" alt="Card icon">
+        </div>
+        
+        
+        
+        
+        
+        
+    </div>
+
+    
+    <div class="city-connection-trip-overview-cards">
+        
+        
+        
+        
+        
+        
+        <div class="city-connection-trip-overview-card city-connection-trip-overview-card--flix  city-connection-trip-overview-card-link ">
+            <div class="city-connection-trip-overview-card-details">
+                <div class="city-connection-trip-overview-card-title-details">
+                    
+                    <h4 class="city-connection-trip-overview-card-subtitle">
+                        Cheapest trip
+                    </h4>
+                    <h1 class="city-connection-trip-overview-card-title">
+                        From $32.48
+                    </h1>
+                    
+                </div>
+                
+                <div class="city-connection-trip-overview-card-description">
+                    
+                    
+                    <button type="button" class="flix-btn flix-btn--primary city-connection-trip-overview-card-btn " onclick="emitTripOverviewClickEvent('lp_redesign_trip_overview_see_prices_btn'); location.href='https:\/\/shop.flixbus.com\/search?departureCity=40d8f682-8646-11e6-9066-549f350fcb0c\u0026arrivalCity=40d901a5-8646-11e6-9066-549f350fcb0c\u0026sortBy=order_by.price.asc'">
+                        See prices
+                    </button>
+                </div>
+                
+            </div>
+            <img class="city-connection-trip-overview-card-icon" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/illustrations/flix/illustration-tickets.avif" alt="Card icon">
+        </div>
+        
+        
+        
+        <div class="city-connection-trip-overview-card city-connection-trip-overview-card--flix  city-connection-trip-overview-card-link ">
+            <div class="city-connection-trip-overview-card-details">
+                <div class="city-connection-trip-overview-card-title-details">
+                    
+                    <h1 class="city-connection-trip-overview-card-title">
+                        17
+                    </h1>
+                    <h4 class="city-connection-trip-overview-card-subtitle">
+                        Min. trips a day
+                    </h4>
+                    
+                </div>
+                
+                <div class="city-connection-trip-overview-card-description">
+                    
+                    
+                    <button type="button" class="flix-btn flix-btn--primary city-connection-trip-overview-card-btn " onclick="emitTripOverviewClickEvent('lp_redesign_trip_overview_see_trips_button'); location.href='https:\/\/shop.flixbus.com\/search?departureCity=40d8f682-8646-11e6-9066-549f350fcb0c\u0026arrivalCity=40d901a5-8646-11e6-9066-549f350fcb0c'">
+                        See trips
+                    </button>
+                </div>
+                
+            </div>
+            <img class="city-connection-trip-overview-card-icon" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/illustrations/flix/illustration-bus.avif" alt="Card icon">
+        </div>
+        
+        
+    </div>
+    
+</section>
+
+
+
+<section id="usp-trip-overview">
+    
+
+
+
+
+<div id="carousel-slides-overview" class="carousel-overview-slides-container">
+  <div class="carousel-overview-slides" style="--slides-per-dot: 2;">
+    
+    <div class="carousel-overview-slide">
+      
+      
+
+
+
+<div class="usp-trip-overview">
+    <div class="flix-icon-frame flix-icon-frame--highlight usp-trip-overview-image">
+        <flix-icon aria-hidden="true" name="lock" size="4" role="img" class="hydrated"></flix-icon>
+    </div>
+    <div class="usp-trip-overview-title">Safe Payment </div>
+    <div class="usp-trip-overview-description"> Use Paypal, Google Pay, Visa &amp; International cards </div>
+
+</div>
+
+
+      
+    </div>
+    
+    <div class="carousel-overview-slide">
+      
+      
+
+
+
+<div class="usp-trip-overview">
+    <div class="flix-icon-frame flix-icon-frame--highlight usp-trip-overview-image">
+        <flix-icon aria-hidden="true" name="cart" size="4" role="img" class="hydrated"></flix-icon>
+    </div>
+    <div class="usp-trip-overview-title">Easy to buy </div>
+    <div class="usp-trip-overview-description"> Get your tickets online, in our App, or in a Flixshop </div>
+
+</div>
+
+
+      
+    </div>
+    
+    <div class="carousel-overview-slide">
+      
+      
+
+
+
+<div class="usp-trip-overview">
+    <div class="flix-icon-frame flix-icon-frame--highlight usp-trip-overview-image">
+        <flix-icon aria-hidden="true" name="chat" size="4" role="img" class="hydrated"></flix-icon>
+    </div>
+    <div class="usp-trip-overview-title">Customer care </div>
+    <div class="usp-trip-overview-description"> Effortless support from booking to travel </div>
+
+</div>
+
+
+      
+    </div>
+    
+  </div>
+  <div class="carousel-overview-dots"><span class="carousel-overview-dot active"></span><span class="carousel-overview-dot"></span></div>
+</div>
+
+
+
+
+</section>
+
+
+
+
+<div class="card-banner-tablet-mobile">
+    
+
+
+
+
+
+
+
+
+
+
+
+<section class="card-banner" onclick="emitCardBannerClickEvent(); window.location.href='https:\/\/flixbus.go.link\/booking?adj_adgroup=us\u0026adj_campaign=city_connection_card_banner\u0026adj_creative=_utm_medium%3Dwebsite%26utm_source%3Dwebsite%26utm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus\u0026adj_fallback=https%3A%2F%2Fwww.flixbus.com%2Fservice%2Fbus-app%3Futm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus%26utm_medium%3Dwebsite%26utm_source%3Dwebsite\u0026adj_t=1p6hdidv_1pcn5eps\u0026v=2';" style="cursor: pointer;">
+    <div class="card-banner__wrapper">
+        
+
+
+
+
+
+
+
+
+<div class="card-banner__background">
+    
+</div>
+
+
+        <div class="card-banner__inner">
+            
+
+
+
+
+
+
+
+
+<div class="card-banner__content">
+    <h2 class="card-banner__title">Digital ticket &amp; Live tracking</h2>
+    <p class="card-banner__subtitle">
+        <span>Discover the FlixBus app</span>
+    </p>
+    <div class="card-banner__features">
+        <div class="card-banner__feature" onclick="event.stopPropagation(); emitCardBannerFeatureClickEvent('book_trips')">
+            <flix-icon aria-hidden="true" name="magnifier" size="4" role="img" class="hydrated"></flix-icon>
+            <span>Book trips</span>
+        </div>
+        <div class="card-banner__feature" onclick="event.stopPropagation(); emitCardBannerFeatureClickEvent('your_tickets')">
+            <flix-icon aria-hidden="true" name="ticket-shiny" size="4" role="img" class="hydrated"></flix-icon>
+            <span>Your tickets</span>
+        </div>
+        <div class="card-banner__feature" onclick="event.stopPropagation(); emitCardBannerFeatureClickEvent('track_your_trips')">
+            <flix-icon aria-hidden="true" name="pin" size="4" role="img" class="hydrated"></flix-icon>
+            <span>Track your trip</span>
+        </div>
+        <div class="card-banner__feature" onclick="event.stopPropagation(); emitCardBannerFeatureClickEvent('always_in_the_know')">
+            <flix-icon aria-hidden="true" name="q-and-a" size="4" role="img" class="hydrated"></flix-icon>
+            <span>Always in the know</span>
+        </div>
+    </div>
+    
+    <div class="card-banner__buttons">
+        <a href="https://flixbus.go.link/booking?adj_adgroup=us&amp;adj_campaign=city_connection_card_banner&amp;adj_creative=_utm_medium%3Dwebsite%26utm_source%3Dwebsite%26utm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus&amp;adj_fallback=https%3A%2F%2Fwww.flixbus.com%2Fservice%2Fbus-app%3Futm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus%26utm_medium%3Dwebsite%26utm_source%3Dwebsite&amp;adj_t=1p6hdidv_1pcn5eps&amp;v=2" class="card-banner__store-link card-banner__store-link--android">
+            <img alt="Get it on Google Play" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/footer/googleplay.svg">
+        </a>
+        <a href="https://flixbus.go.link/booking?adj_adgroup=us&amp;adj_campaign=city_connection_card_banner&amp;adj_creative=_utm_medium%3Dwebsite%26utm_source%3Dwebsite%26utm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus&amp;adj_fallback=https%3A%2F%2Fwww.flixbus.com%2Fservice%2Fbus-app%3Futm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus%26utm_medium%3Dwebsite%26utm_source%3Dwebsite&amp;adj_t=1p6hdidv_1pcn5eps&amp;v=2" class="card-banner__store-link card-banner__store-link--ios">
+            <img alt="Download on the App Store" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/footer/appstore.svg">
+        </a>
+    </div>
+    
+</div>
+
+
+            <div class="card-banner__right-content">
+                <div class="card-banner__phone card-banner__phone--loaded">
+                    
+                    
+                    
+                    <div class="card-banner__qr-code">
+                        <img>
+                    </div>
+                    
+                    <p class="card-banner__scan-text" onclick="event.stopPropagation(); emitCardBannerScanTextClickEvent()">Scan to download the App</p>
+                </div>
+                <div class="card-banner__bubble" onclick="event.stopPropagation(); emitCardBannerBubbleClickEvent(); window.location.href='https:\/\/flixbus.go.link\/booking?adj_adgroup=us\u0026adj_campaign=city_connection_card_banner\u0026adj_creative=_utm_medium%3Dwebsite%26utm_source%3Dwebsite%26utm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus\u0026adj_fallback=https%3A%2F%2Fwww.flixbus.com%2Fservice%2Fbus-app%3Futm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus%26utm_medium%3Dwebsite%26utm_source%3Dwebsite\u0026adj_t=1p6hdidv_1pcn5eps\u0026v=2';">
+                    <span class="card-banner__bubble-text">Trusted by 500+ million passengers</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+
+</div>
+
+    
+
+
+
+
+    
+
+
+<hr class="flix-divider">
+<section class="page-content-wrapper flix-page-container">
+    
+        <h2 class="section-title">On this page</h2>
+    
+    <ul class="page-content-tags">
+        
+        
+        
+        <li>
+            <a href="#stops-location" class="flix-tag" onclick="emitConnectionTocClickEvent('Stations')">
+                <span class="flix-tag__text">Bus stops</span>
+            </a>
+        </li>
+        
+        
+        <li>
+            <a href="#faq-section-top" class="flix-tag" onclick="emitConnectionTocClickEvent('FAQ')">
+                <span class="flix-tag__text">FAQ</span>
+            </a>
+        </li>
+        
+        
+        <li>
+            <a href="#city-guide" class="flix-tag" onclick="emitConnectionTocClickEvent('City Guide')">
+                <span class="flix-tag__text">City guide</span>
+            </a>
+        </li>
+        
+    </ul>
+</section>
+
+    <hr class="flix-divider">
+
+
+
+    
+
+
+
+    
+
+
+
+
+
+
+
+    <section id="stops-location" class="flix-page-container city-connection-stops-container">
+        <nav class="flix-nav-horizontal" data-tabs="">
+            <ul class="flix-nav-horizontal__items city-connection-stops-nav">
+                <li class="flix-nav-horizontal__item">
+                    <a class="flix-nav-horizontal__link" href="#first-city-content" onclick="emitConnectionStationTabClickEvent()" aria-current="true">
+                        Berlin
+                    </a>
+                </li>
+                <li class="flix-nav-horizontal__item">
+                    <a class="flix-nav-horizontal__link" href="#second-city-content" onclick="emitConnectionStationTabClickEvent()">
+                        Munich
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <div class="city-connection-tab-content" data-tabs-content="">
+            <div id="first-city-content">
+                
+
+    
+    
+    
+
+
+    <h2 class="section-title">Bus stations and stops in Berlin</h2>
+    <div class="flix-text" style="display: flex">
+        <flix-icon name="attention" size="4" aria-hidden="true" role="img" class="hydrated"></flix-icon><span class="stops-location-info-message">Please note: your ticket will contain the most up-to-date address information.</span>
+    </div>
+    <div class="stops-location-content">
+       <div class="stops-location-content-map large" id="berlin"></div>
+        <div class="stops-location-content-stops" id="berlin-accordions">
+
+            
+                <div class="flix-accordion" data-stop-id="dcbaaee6-9603-11e6-9066-549f350fcb0c" aria-expanded="false">
+                    <h3 role="button" tabindex="0" class="flix-accordion__title stops-location-content-title" onclick="emitCityStationExpandAccordionClickEvent(&quot;connection&quot;)">
+                        <span class="circle-primary"></span>
+                        <span class="flix-space-1-right">
+                            Berlin central bus station
+                        </span>
+                        
+
+                    </h3>
+
+                    <div class="flix-accordion__content stops-location-content-accordion">
+                        
+                            Masurenallee 4-6<br>
+                        
+                        
+                        
+                           14057
+                        
+
+                        
+                            Berlin
+                        
+                        
+                        <br>
+                        Germany
+                        <p>
+                            
+                            <a class="flix-link" target="_blank" href="https://www.google.com/maps/place/52.507171,13.279399">
+                                View this address on Google Maps
+                            </a>
+                            
+                        </p>
+
+                        
+                            <div class="flix-infobox">
+                                <div class="flix-infobox__content">
+                                    Gate information available here: https://zob.berlin/en
+                                </div>
+                            </div>
+                        
+                        
+                        
+                    </div>
+                </div>
+            
+                <div class="flix-accordion" data-stop-id="dcbb994f-9603-11e6-9066-549f350fcb0c" aria-expanded="false">
+                    <h3 role="button" tabindex="0" class="flix-accordion__title stops-location-content-title" onclick="emitCityStationExpandAccordionClickEvent(&quot;connection&quot;)">
+                        <span class="circle-primary"></span>
+                        <span class="flix-space-1-right">
+                            Berlin Südkreuz train station
+                        </span>
+                        
+
+                    </h3>
+
+                    <div class="flix-accordion__content stops-location-content-accordion">
+                        
+                            Hildegard-Knef-Platz<br>
+                        
+                        
+                        
+                           10829
+                        
+
+                        
+                            Berlin
+                        
+                        
+                        <br>
+                        Germany
+                        <p>
+                            
+                            <a class="flix-link" target="_blank" href="https://www.google.com/maps/place/52.476051,13.364356">
+                                View this address on Google Maps
+                            </a>
+                            
+                        </p>
+
+                        
+                        
+                        
+                    </div>
+                </div>
+            
+                <div class="flix-accordion" data-stop-id="dcbc32c3-9603-11e6-9066-549f350fcb0c" aria-expanded="false">
+                    <h3 role="button" tabindex="0" class="flix-accordion__title stops-location-content-title" onclick="emitCityStationExpandAccordionClickEvent(&quot;connection&quot;)">
+                        <span class="circle-primary"></span>
+                        <span class="flix-space-1-right">
+                            Berlin Alexanderplatz
+                        </span>
+                        
+
+                    </h3>
+
+                    <div class="flix-accordion__content stops-location-content-accordion">
+                        
+                            Alexanderstraße 3<br>
+                        
+                        
+                        
+                           10178
+                        
+
+                        
+                            Berlin
+                        
+                        
+                        <br>
+                        Germany
+                        <p>
+                            
+                            <a class="flix-link" target="_blank" href="https://www.google.com/maps/place/52.523198,13.414529">
+                                View this address on Google Maps
+                            </a>
+                            
+                        </p>
+
+                        
+                        
+                        
+                    </div>
+                </div>
+            
+                <div class="flix-accordion" data-stop-id="88d83aa4-8f95-41f1-a3b6-d4d6152fca40" aria-expanded="false">
+                    <h3 role="button" tabindex="0" class="flix-accordion__title stops-location-content-title" onclick="emitCityStationExpandAccordionClickEvent(&quot;connection&quot;)">
+                        <span class="circle-primary"></span>
+                        <span class="flix-space-1-right">
+                            Berlin Central Station (Invalidenstraße)
+                        </span>
+                        
+
+                    </h3>
+
+                    <div class="flix-accordion__content stops-location-content-accordion">
+                        
+                            Invalidenstr./Minna-Cauer-Str.<br>
+                        
+                        
+                        
+                           10557
+                        
+
+                        
+                            Berlin
+                        
+                        
+                        <br>
+                        Germany
+                        <p>
+                            
+                            <a class="flix-link" target="_blank" href="https://www.google.com/maps/place/52.526875,13.368549">
+                                View this address on Google Maps
+                            </a>
+                            
+                        </p>
+
+                        
+                        
+                        
+                    </div>
+                </div>
+            
+                <div class="flix-accordion" data-stop-id="dcbfd6bc-9603-11e6-9066-549f350fcb0c" aria-expanded="false">
+                    <h3 role="button" tabindex="0" class="flix-accordion__title stops-location-content-title" onclick="emitCityStationExpandAccordionClickEvent(&quot;connection&quot;)">
+                        <span class="circle-primary"></span>
+                        <span class="flix-space-1-right">
+                            Berlin Alt-Tegel (metro station)
+                        </span>
+                        
+
+                    </h3>
+
+                    <div class="flix-accordion__content stops-location-content-accordion">
+                        
+                            Karolinenstraße<br>
+                        
+                        
+                        
+                           13507
+                        
+
+                        
+                            Berlin
+                        
+                        
+                        <br>
+                        Germany
+                        <p>
+                            
+                            <a class="flix-link" target="_blank" href="https://www.google.com/maps/place/52.591713,13.282017">
+                                View this address on Google Maps
+                            </a>
+                            
+                        </p>
+
+                        
+                        
+                        
+                    </div>
+                </div>
+            
+                <div class="flix-accordion" data-stop-id="d73477d0-4b42-44f5-9593-037c4b0b6e11" aria-expanded="false">
+                    <h3 role="button" tabindex="0" class="flix-accordion__title stops-location-content-title" onclick="emitCityStationExpandAccordionClickEvent(&quot;connection&quot;)">
+                        <span class="circle-primary"></span>
+                        <span class="flix-space-1-right">
+                            Berlin Wannsee (Wannsee station)
+                        </span>
+                        
+
+                    </h3>
+
+                    <div class="flix-accordion__content stops-location-content-accordion">
+                        
+                            Kronprinzessinnenweg<br>
+                        
+                        
+                        
+                           14109
+                        
+
+                        
+                            Berlin
+                        
+                        
+                        <br>
+                        Germany
+                        <p>
+                            
+                            <a class="flix-link" target="_blank" href="https://www.google.com/maps/place/52.421347,13.177278">
+                                View this address on Google Maps
+                            </a>
+                            
+                        </p>
+
+                        
+                        
+                        
+                    </div>
+                </div>
+            
+                <div class="flix-accordion" data-stop-id="5ae86c41-b203-42cd-9be6-34cf93120e3e" aria-expanded="false">
+                    <h3 role="button" tabindex="0" class="flix-accordion__title stops-location-content-title" onclick="emitCityStationExpandAccordionClickEvent(&quot;connection&quot;)">
+                        <span class="circle-primary"></span>
+                        <span class="flix-space-1-right">
+                            Berlin S-Treptower Park (Puschkinallee)
+                        </span>
+                        
+
+                    </h3>
+
+                    <div class="flix-accordion__content stops-location-content-accordion">
+                        
+                            Puschkinallee<br>
+                        
+                        
+                        
+                           12435
+                        
+
+                        
+                            Berlin
+                        
+                        
+                        <br>
+                        Germany
+                        <p>
+                            
+                            <a class="flix-link" target="_blank" href="https://www.google.com/maps/place/52.491878,13.462675">
+                                View this address on Google Maps
+                            </a>
+                            
+                        </p>
+
+                        
+                        
+                        
+                    </div>
+                </div>
+            
+                <div class="flix-accordion" data-stop-id="dcbf8654-9603-11e6-9066-549f350fcb0c" aria-expanded="false">
+                    <h3 role="button" tabindex="0" class="flix-accordion__title stops-location-content-title" onclick="emitCityStationExpandAccordionClickEvent(&quot;connection&quot;)">
+                        <span class="circle-primary"></span>
+                        <span class="flix-space-1-right">
+                            Berlin zoo train station
+                        </span>
+                        
+
+                    </h3>
+
+                    <div class="flix-accordion__content stops-location-content-accordion">
+                        
+                            Hardenbergplatz<br>
+                        
+                        
+                        
+                           10623
+                        
+
+                        
+                            Berlin
+                        
+                        
+                        <br>
+                        Germany
+                        <p>
+                            
+                            <a class="flix-link" target="_blank" href="https://www.google.com/maps/place/52.508387,13.333913">
+                                View this address on Google Maps
+                            </a>
+                            
+                        </p>
+
+                        
+                            <div class="flix-infobox">
+                                <div class="flix-infobox__content">
+                                    Due to roadworks, the bus will stop about 60 metres further on.
+                                </div>
+                            </div>
+                        
+                        
+                        
+                    </div>
+                </div>
+            
+                <div class="flix-accordion" data-stop-id="dcbcba44-9603-11e6-9066-549f350fcb0c" aria-expanded="false">
+                    <h3 role="button" tabindex="0" class="flix-accordion__title stops-location-content-title" onclick="emitCityStationExpandAccordionClickEvent(&quot;connection&quot;)">
+                        <span class="circle-primary"></span>
+                        <span class="flix-space-1-right">
+                            Berlin (Ostbahnhof)
+                        </span>
+                        
+
+                    </h3>
+
+                    <div class="flix-accordion__content stops-location-content-accordion">
+                        
+                            Am Ostbahnhof 5<br>
+                        
+                        
+                        
+                           10243
+                        
+
+                        
+                            Berlin
+                        
+                        
+                        <br>
+                        Germany
+                        <p>
+                            
+                            <a class="flix-link" target="_blank" href="https://www.google.com/maps/place/52.510085,13.433300">
+                                View this address on Google Maps
+                            </a>
+                            
+                        </p>
+
+                        
+                        
+                        
+                    </div>
+                </div>
+            
+        </div>
+    </div>
+
+            </div>
+            <div style="display: none;" id="second-city-content">
+                
+
+    
+    
+    
+
+
+    <h2 class="section-title">Bus stations and stops in Munich</h2>
+    <div class="flix-text" style="display: flex">
+        <flix-icon name="attention" size="4" aria-hidden="true" role="img" class="hydrated"></flix-icon><span class="stops-location-info-message">Please note: your ticket will contain the most up-to-date address information.</span>
+    </div>
+    <div class="stops-location-content">
+       <div class="stops-location-content-map " id="muenchen"></div>
+        <div class="stops-location-content-stops" id="muenchen-accordions">
+
+            
+                <div class="flix-accordion" data-stop-id="dcbabbfa-9603-11e6-9066-549f350fcb0c" aria-expanded="false">
+                    <h3 role="button" tabindex="0" class="flix-accordion__title stops-location-content-title" onclick="emitCityStationExpandAccordionClickEvent(&quot;connection&quot;)">
+                        <span class="circle-primary"></span>
+                        <span class="flix-space-1-right">
+                            Munich central bus station
+                        </span>
+                        
+
+                    </h3>
+
+                    <div class="flix-accordion__content stops-location-content-accordion">
+                        
+                            Arnulfstraße 21<br>
+                        
+                        
+                        
+                           80335
+                        
+
+                        
+                            Munich
+                        
+                        
+                        <br>
+                        Germany
+                        <p>
+                            
+                            <a class="flix-link" target="_blank" href="https://www.google.com/maps/place/48.142480,11.550010">
+                                View this address on Google Maps
+                            </a>
+                            
+                        </p>
+
+                        
+                            <div class="flix-infobox">
+                                <div class="flix-infobox__content">
+                                    Gate information available here: https://www.zob-busbahnhof-muenchen.de/en/
+                                </div>
+                            </div>
+                        
+                        
+                        
+                    </div>
+                </div>
+            
+                <div class="flix-accordion" data-stop-id="dcc0b7f3-9603-11e6-9066-549f350fcb0c" aria-expanded="false">
+                    <h3 role="button" tabindex="0" class="flix-accordion__title stops-location-content-title" onclick="emitCityStationExpandAccordionClickEvent(&quot;connection&quot;)">
+                        <span class="circle-primary"></span>
+                        <span class="flix-space-1-right">
+                            Munich Fröttmaning
+                        </span>
+                        
+
+                    </h3>
+
+                    <div class="flix-accordion__content stops-location-content-accordion">
+                        
+                            Werner-Heisenberg-Allee 21<br>
+                        
+                        
+                        
+                           80939
+                        
+
+                        
+                            Munich
+                        
+                        
+                        <br>
+                        Germany
+                        <p>
+                            
+                            <a class="flix-link" target="_blank" href="https://www.google.com/maps/place/48.210819,11.618642">
+                                View this address on Google Maps
+                            </a>
+                            
+                        </p>
+
+                        
+                        
+                        
+                    </div>
+                </div>
+            
+                <div class="flix-accordion" data-stop-id="209d10df-3a5a-4355-a514-3fa1827ff9ff" aria-expanded="false">
+                    <h3 role="button" tabindex="0" class="flix-accordion__title stops-location-content-title" onclick="emitCityStationExpandAccordionClickEvent(&quot;connection&quot;)">
+                        <span class="circle-primary"></span>
+                        <span class="flix-space-1-right">
+                            Munich East (Bus station Messestadt Ost)
+                        </span>
+                        
+
+                    </h3>
+
+                    <div class="flix-accordion__content stops-location-content-accordion">
+                        
+                            Willy-Brandt-Allee 11<br>
+                        
+                            Busbahnhof Messestadt Ost am P+R Parkhaus<br>
+                        
+                        
+                        
+                           81829
+                        
+
+                        
+                            Munich
+                        
+                        
+                        <br>
+                        Germany
+                        <p>
+                            
+                            <a class="flix-link" target="_blank" href="https://www.google.com/maps/place/48.135117,11.705083">
+                                View this address on Google Maps
+                            </a>
+                            
+                        </p>
+
+                        
+                        
+                        
+                    </div>
+                </div>
+            
+        </div>
+    </div>
+
+            </div>
+        </div>
+    </section>
+
+    
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+<section id="amenities">
+  <div class="amenities-container amenities-container-flixbus flix-page-container">
+    <div class="amenities-container-title">Best service on board</div>
+    <div class="amenities-container-subtitle">Available options you can find for a more comfortable trip:</div>
+
+    <div class="amenities-container-content">
+      
+      <div class="amenities-container-content-item">
+        <img class="amenities-container-content-item-icon" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/bus-amenities/flixbus/icon-wifi.avif" alt="wifi">
+        <div class="amenities-container-content-item-text">
+          <div class="amenities-container-content-item-title"> Free WiFi</div>
+          <div class="amenities-container-content-item-description">Stay connected throughout your journey</div>
+        </div>
+      </div>
+      
+      <div class="amenities-container-content-item">
+        <img class="amenities-container-content-item-icon" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/bus-amenities/flixbus/icon-socket.avif" alt="socket">
+        <div class="amenities-container-content-item-text">
+          <div class="amenities-container-content-item-title"> Power Outlets</div>
+          <div class="amenities-container-content-item-description">Keep your devices charged on the go</div>
+        </div>
+      </div>
+      
+      <div class="amenities-container-content-item">
+        <img class="amenities-container-content-item-icon" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/bus-amenities/flixbus/icon-seat.avif" alt="seat">
+        <div class="amenities-container-content-item-text">
+          <div class="amenities-container-content-item-title"> Comfortable seats</div>
+          <div class="amenities-container-content-item-description">Relax with extra legroom and reclining seats</div>
+        </div>
+      </div>
+      
+      <div class="amenities-container-content-item">
+        <img class="amenities-container-content-item-icon" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/bus-amenities/flixbus/icon-luggage.avif" alt="luggage">
+        <div class="amenities-container-content-item-text">
+          <div class="amenities-container-content-item-title"> Luggage storage</div>
+          <div class="amenities-container-content-item-description">Space to safely stow your belongings</div>
+        </div>
+      </div>
+      
+      <div class="amenities-container-content-item">
+        <img class="amenities-container-content-item-icon" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/bus-amenities/flixbus/icon-toilet.avif" alt="toilet">
+        <div class="amenities-container-content-item-text">
+          <div class="amenities-container-content-item-title"> Toilets</div>
+          <div class="amenities-container-content-item-description">Conveniently available on every FlixBus</div>
+        </div>
+      </div>
+      
+    </div>
+
+    <div class="amenities-container-cta">
+      <div class="amenities-container-cta-title">First time travelling with us?</div>
+      <a href="https://www.flixbus.com/service" class="flix-btn flix-btn--primary flix-btn--md amenities-container-cta-btn amenities-container-cta-btn-flixbus" onclick="emitAmenitiesClickEvent()">
+        <span> More on our service</span>
+      </a>
+    </div>
+
+    <img class="amenities-container-bg " data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/bus-amenities/flixbus/illustration-flixbus.avif" alt="Amenities Hero Image">
+  </div>
+</section>
+
+
+     
+
+
+
+<div class="flix-page-container disclaimer-wrapper">
+  <p class="flix-text disclaimer-text">
+    Onboard services are subject to availability
+  </p>
+</div>
+
+    
+
+
+<div role="link" tabindex="0" onclick="location.href='https:\/\/www.flixbus.com\/bus-routes'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();location.href='https:\/\/www.flixbus.com\/bus-routes'}" class="page-content-wrapper flix-page-container exploration-map-banner ">
+    
+
+
+
+
+
+<div class="exploration-map-banner-content">
+    <div class="exploration-map-banner-content-title">Where to next?</div>
+    <div class="exploration-map-banner-content-text">
+        Discover our travel map with over 8000 destinations worldwide.
+    </div>
+    <div class="flix-btn flix-btn--primary flix-btn--lg exploration-map-banner-content-cta-button" onclick="emitExplorationMapBannerClickEvent()">
+        <flix-icon name="map" solid="true" aria-hidden="true" role="img" class="hydrated"></flix-icon>
+        
+        <span>Explore the map</span>
+    </div>
+</div>
+
+
+    
+
+
+
+
+
+
+<div class="exploration-map-banner-image">
+    
+</div>
+
+
+</div>
+
+    
+    <div class="card-banner-desktop">
+        
+
+
+
+
+
+
+
+
+
+
+
+<section class="card-banner" onclick="emitCardBannerClickEvent(); window.location.href='https:\/\/flixbus.go.link\/booking?adj_adgroup=us\u0026adj_campaign=city_connection_card_banner\u0026adj_creative=_utm_medium%3Dwebsite%26utm_source%3Dwebsite%26utm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus\u0026adj_fallback=https%3A%2F%2Fwww.flixbus.com%2Fservice%2Fbus-app%3Futm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus%26utm_medium%3Dwebsite%26utm_source%3Dwebsite\u0026adj_t=1p6hdidv_1pcn5eps\u0026v=2';" style="cursor: pointer;">
+    <div class="card-banner__wrapper">
+        
+
+
+
+
+
+
+
+
+<div class="card-banner__background">
+    
+</div>
+
+
+        <div class="card-banner__inner">
+            
+
+
+
+
+
+
+
+
+<div class="card-banner__content">
+    <h2 class="card-banner__title">Digital ticket &amp; Live tracking</h2>
+    <p class="card-banner__subtitle">
+        <span>Discover the FlixBus app</span>
+    </p>
+    <div class="card-banner__features">
+        <div class="card-banner__feature" onclick="event.stopPropagation(); emitCardBannerFeatureClickEvent('book_trips')">
+            <flix-icon aria-hidden="true" name="magnifier" size="4" role="img" class="hydrated"></flix-icon>
+            <span>Book trips</span>
+        </div>
+        <div class="card-banner__feature" onclick="event.stopPropagation(); emitCardBannerFeatureClickEvent('your_tickets')">
+            <flix-icon aria-hidden="true" name="ticket-shiny" size="4" role="img" class="hydrated"></flix-icon>
+            <span>Your tickets</span>
+        </div>
+        <div class="card-banner__feature" onclick="event.stopPropagation(); emitCardBannerFeatureClickEvent('track_your_trips')">
+            <flix-icon aria-hidden="true" name="pin" size="4" role="img" class="hydrated"></flix-icon>
+            <span>Track your trip</span>
+        </div>
+        <div class="card-banner__feature" onclick="event.stopPropagation(); emitCardBannerFeatureClickEvent('always_in_the_know')">
+            <flix-icon aria-hidden="true" name="q-and-a" size="4" role="img" class="hydrated"></flix-icon>
+            <span>Always in the know</span>
+        </div>
+    </div>
+    
+    <div class="card-banner__buttons">
+        <a href="https://flixbus.go.link/booking?adj_adgroup=us&amp;adj_campaign=city_connection_card_banner&amp;adj_creative=_utm_medium%3Dwebsite%26utm_source%3Dwebsite%26utm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus&amp;adj_fallback=https%3A%2F%2Fwww.flixbus.com%2Fservice%2Fbus-app%3Futm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus%26utm_medium%3Dwebsite%26utm_source%3Dwebsite&amp;adj_t=1p6hdidv_1pcn5eps&amp;v=2" class="card-banner__store-link card-banner__store-link--android">
+            <img alt="Get it on Google Play" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/footer/googleplay.svg">
+        </a>
+        <a href="https://flixbus.go.link/booking?adj_adgroup=us&amp;adj_campaign=city_connection_card_banner&amp;adj_creative=_utm_medium%3Dwebsite%26utm_source%3Dwebsite%26utm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus&amp;adj_fallback=https%3A%2F%2Fwww.flixbus.com%2Fservice%2Fbus-app%3Futm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus%26utm_medium%3Dwebsite%26utm_source%3Dwebsite&amp;adj_t=1p6hdidv_1pcn5eps&amp;v=2" class="card-banner__store-link card-banner__store-link--ios">
+            <img alt="Download on the App Store" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/footer/appstore.svg">
+        </a>
+    </div>
+    
+</div>
+
+
+            <div class="card-banner__right-content">
+                <div class="card-banner__phone card-banner__phone--loaded">
+                    
+                    
+                    
+                    <div class="card-banner__qr-code">
+                        <img>
+                    </div>
+                    
+                    <p class="card-banner__scan-text" onclick="event.stopPropagation(); emitCardBannerScanTextClickEvent()">Scan to download the App</p>
+                </div>
+                <div class="card-banner__bubble" onclick="event.stopPropagation(); emitCardBannerBubbleClickEvent(); window.location.href='https:\/\/flixbus.go.link\/booking?adj_adgroup=us\u0026adj_campaign=city_connection_card_banner\u0026adj_creative=_utm_medium%3Dwebsite%26utm_source%3Dwebsite%26utm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus\u0026adj_fallback=https%3A%2F%2Fwww.flixbus.com%2Fservice%2Fbus-app%3Futm_campaign%3Dcity_connection_card_banner.us._%26utm_content%3Den-us.flixbus%26utm_medium%3Dwebsite%26utm_source%3Dwebsite\u0026adj_t=1p6hdidv_1pcn5eps\u0026v=2';">
+                    <span class="card-banner__bubble-text">Trusted by 500+ million passengers</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+
+    </div>
+    
+    
+
+
+
+
+
+
+<section id="faq-section-top" class="faq-section-wrapper">
+    <div class="flix-page-container">
+        <h2 class="section-title">Frequently asked questions</h2>
+        <div class="faq-section-accordions">
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                How long does it take from Berlin to Munich by bus?
+            </summary>
+            <article class="flix-accordion__content">
+                The distance between Berlin and Munich by bus is 369 miles. FlixBus can make the trip in 6 hours 35 minutes.
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                How much is the bus ticket between Berlin and Munich?
+            </summary>
+            <article class="flix-accordion__content">
+                You can travel from Berlin to Munich for as little as $32.48.
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                Is there a daily bus service from Berlin to Munich?
+            </summary>
+            <article class="flix-accordion__content">
+                Yes! There are 17 rides daily from Berlin to Munich.
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                How can I pay for the bus from Berlin to Munich?
+            </summary>
+            <article class="flix-accordion__content">
+                FlixBus offers a variety of payment methods for buying your bus ticket from Berlin to Munich, including card, Paypal, Google Pay, and more.
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                Where can I see if my bus from Berlin to Munich is on time?
+            </summary>
+            <article class="flix-accordion__content">
+                FlixBus offers a <a href="https://www.flixbus.com/track">Real-Time Bus Tracker</a> that allows you to track your bus location. Simply select the relevant bus stop and check the time of arrival. This way, you can find out where your bus is and check for delays on the route.
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                Which destinations can I reach from Munich with FlixBus?
+            </summary>
+            <article class="flix-accordion__content">
+                With FlixBus, you can conveniently reach 419 destinations from Munich, including Zurich, Prague, Innsbruck.
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                Are weekend trips available from Berlin to Munich?
+            </summary>
+            <article class="flix-accordion__content">
+                Yes, weekend trip options are available from Berlin to Munich. Check out the route's schedule and chose the best option to suit your plans!
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                Are night bus trips available from Berlin to Munich?
+            </summary>
+            <article class="flix-accordion__content">
+                Yes, night trip options are available from Berlin to Munich. Check out the route's schedule and choose the best option to suit your plans!
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                What is the distance between Berlin and Munich?
+            </summary>
+            <article class="flix-accordion__content">
+                The distance from Berlin to Munich by bus is approximately 369 miles. The fastest trip takes around 6 hours 35 minutes, though travel time can vary depending on the route and stops along the way.
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                What is the cheapest time to book a bus ticket from Berlin to Munich?
+            </summary>
+            <article class="flix-accordion__content">
+                The bus from Berlin to Munich starts from $32.48. Fares change based on demand, time of day, and how far ahead you book. For the best price, book early and look at off-peak departures like early mornings or midweek trips.
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                How much luggage can I take on the bus from Berlin to Munich?
+            </summary>
+            <article class="flix-accordion__content">
+                On the bus from Berlin to Munich, you can bring one carry-on (up to 7 kg) and one checked bag (up to 20 kg) at no extra cost. Need more? You can add extra luggage when you book for a small fee. For full details, check our <a href="https://www.flixbus.com/service/baggage">baggage policy</a>.
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                Are buses from Berlin to Munich wheelchair accessible and suitable for passengers with disabilities?
+            </summary>
+            <article class="flix-accordion__content">
+                Buses from Berlin to Munich are wheelchair accessible and equipped with boarding assistance. If you need extra support, let us know when you book so we can make sure everything is ready. For full details, check our <a href="https://www.flixbus.com/service/passengers-with-reduced-mobility">accessibility services</a> page.
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                What onboard services are available on buses from Berlin to Munich?
+            </summary>
+            <article class="flix-accordion__content">
+                Buses from Berlin to Munich come with free Wi-Fi, power outlets, and extra legroom. For the full list, check our <a href="https://www.flixbus.com/service/onboard-services">onboard services</a> page.
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                What is the first and last bus from Berlin to Munich?
+            </summary>
+            <article class="flix-accordion__content">
+                The first FlixBus from Berlin to Munich departs at 12:15 am, and the last departure is at 11:59 pm. With 17 daily connections, you can pick the time that works best for your schedule.
+            </article>
+        </details>
+        
+        <details class="flix-accordion">
+            <summary class="flix-accordion__title" role="button" tabindex="0" aria-expanded="false">
+                Do I need to print my bus ticket from Berlin to Munich?
+            </summary>
+            <article class="flix-accordion__content">
+                No, to take the bus from Berlin to Munich you don't need to print your ticket. Just show your booking confirmation on your phone, either in the FlixBus app or as a mobile ticket , when you board the bus.
+            </article>
+        </details>
+        
+        </div>
+    </div>
+</section>
+
+
+
+
+    
+
+
+<section id="city-guide" class="city-guide-wrapper">
+    <div class="flix-page-container">
+        <div id="city-guide-text" class="city-guide-text">
+            <div class="flix-text">
+                
+
+                
+                <div id="city-guide-additional">
+                    <h2>Buses from Berlin to Munich</h2>
+<h3>Find the cheapest buses from Berlin to Munich</h3>
+<p>It couldn't be easier to book your travel from Berlin to Munich with FlixBus - and when you book in advance, you can save money too! Make your journey even easier with the <a href="https://www.flixbus.com/service/bus-app"><strong>FlixBus app</strong></a>. All your information will be saved for the next time you travel.</p>
+
+No matter whether you want to travel first thing in the morning or late at night, you'll find a journey to suit your plans. The <strong>first bus is at 12:15 am</strong> with the <strong>last bus leaving at 11:59 pm</strong>. 
+<br>You can pick up a bus ticket from Berlin to Munich for <strong>just $32.48</strong> - that's way cheaper than traveling by any other method. <br>Buses are also a great choice for <a href="https://www.flixbus.com/company/sustainability">environmentally-conscious travelers</a>. We're working towards being <strong>100% carbon neutral</strong> and offer all travelers the opportunity to offset their carbon emissions when booking their tickets. Simply select the "CO2 compensation" box when paying online and we'll use all of the money to make a direct impact on the future of sustainable mobility.<p></p>
+
+<h3>What to expect onboard the FlixBus bus from Berlin to Munich</h3>
+<p>Traveling from Berlin to Munich is stess-free, clean and comfortable - and it couldn't be easier to book a ticket. You can book online via the website, on our app, in person at a FlixShops or at resellers. <br>We accept card payment as well as Paypal, Google Pay and Apple Pay, but there are many <strong>more payment options</strong> that you can choose from. 
+The easiest way to book your ticket is using our <a href="https://www.flixbus.com/service/bus-app">app</a>. You'll be able to make your reservation within seconds and there's <strong>no need to print</strong> and carry the ticket with you, as your phone will be your ticket. <br><br>Want to sit beside family or friends or keep the space beside you free? Need easy access to the toilet or a table to get on with some work whilst traveling? <strong>You can <a href="https://www.flixbus.com/service/seat-reservations">reserve a seat</a></strong> when you book on the app or website, and you can choose from a variety of seat options.
+Once you're settled in your seat, you can sit back and relax with plenty of <a href="https://www.flixbus.com/service/onboard-services">onboard services</a> to help you make the most of your trip. <strong>Most of our buses have onboard Wifi</strong> so you can catch up on your favorite shows, chat with your friends or listen to music and podcasts. We've also got toilets onboard, as well as power outlets.<br>What's more, you get a <strong>generous <a href="https://www.flixbus.com/service/luggage">luggage</a> allowance</strong> when you travel with FlixBus with one carry-on bag and one checked bag, so you can bring everything you need for your trip.</p>
+                </div>
+                
+            </div>
+            <div id="city-guide-fadeout" class="city-guide-fadeout"></div>
+        </div>
+        <div class="flix-form-row">
+            <button type="button" class="flix-btn flix-btn--link" onclick="handleCityGuideExpand('Continue reading', 'Collapse',  null )">
+                <span id="button-text" class="flix-btn__text">Continue reading</span>
+                <span id="arrow-icons" class="arrow-down">
+                    <flix-icon id="arrow-down-icon" name="arrow-down" aria-hidden="true" role="img" class="hydrated"></flix-icon>
+                    <flix-icon id="arrow-up-icon" style="display: none;" name="arrow-up" aria-hidden="true" role="img" class="hydrated"></flix-icon>
+                </span>
+            </button>
+        </div>
+    </div>
+</section>
+
+
+
+    
+
+
+
+<section id="popular-routes" class="city-popular-routes-wrapper">
+    <div class="flix-page-container">
+        <h2 class="section-title">Discover more popular bus connections</h2>
+        
+        <nav class="flix-nav-horizontal city-popular-routes-nav" aria-label="Popular Routes">
+            <ul class="flix-nav-horizontal__items city-popular-routes-nav-items">
+                <li class="flix-nav-horizontal__item">
+                    <button type="button" data-target="cities" class="flix-nav-horizontal__link flix-nav-horizontal__link--active js-popular-routes-tab-item" tabindex="0" aria-current="true">
+                        <span class="flix-nav-horizontal__text flix-h3">Berlin</span>
+                    </button>
+                </li>
+                <li class="flix-nav-horizontal__item">
+                    <button type="button" data-target="connections" class="flix-nav-horizontal__link js-popular-routes-tab-item" tabindex="0">
+                        <span class="flix-nav-horizontal__text flix-h3">Munich</span>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+        <hr class="flix-divider city-popular-routes-divider">
+        
+        
+        <ul class="city-popular-routes-content city-popular-routes-content--active js-popular-routes-city">
+            
+            <li>
+                <a href="/bus-routes/bus-hamburg-berlin" class="city-popular-routes-item">Hamburg - Berlin</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-berlin-hamburg" class="city-popular-routes-item">Berlin - Hamburg</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-berlin-leipzig" class="city-popular-routes-item">Berlin - Leipzig</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-leipzig-berlin" class="city-popular-routes-item">Leipzig - Berlin</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-hanover-berlin" class="city-popular-routes-item">Hanover - Berlin</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-berlin-cologne" class="city-popular-routes-item">Berlin - Cologne</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-berlin-hanover" class="city-popular-routes-item">Berlin - Hanover</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-cologne-berlin" class="city-popular-routes-item">Cologne - Berlin</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-berlin-frankfurt" class="city-popular-routes-item">Berlin - Frankfurt</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-frankfurt-berlin" class="city-popular-routes-item">Frankfurt - Berlin</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-berlin-dresden" class="city-popular-routes-item">Berlin - Dresden</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-dresden-berlin" class="city-popular-routes-item">Dresden - Berlin</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-berlin-prague" class="city-popular-routes-item">Berlin - Prague</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-prague-berlin" class="city-popular-routes-item">Prague - Berlin</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-berlin-dusseldorf" class="city-popular-routes-item">Berlin - Düsseldorf</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-stuttgart-berlin" class="city-popular-routes-item">Stuttgart - Berlin</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-dusseldorf-berlin" class="city-popular-routes-item">Düsseldorf - Berlin</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-berlin-stuttgart" class="city-popular-routes-item">Berlin - Stuttgart</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-berlin-dortmund" class="city-popular-routes-item">Berlin - Dortmund</a>
+            </li>
+            
+            <li>
+                <a href="/bus-routes/bus-dortmund-berlin" class="city-popular-routes-item">Dortmund - Berlin</a>
+            </li>
+            
+        </ul>
+        
+        
+        
+        <ul class="city-popular-routes-content js-popular-routes-connections">
+            
+                
+                <li>
+                    <a href="/bus-routes/bus-munich-zurich" class="city-popular-routes-item">Munich - Zurich</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-zurich-munich" class="city-popular-routes-item">Zurich - Munich</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-berlin-munich" class="city-popular-routes-item">Berlin - Munich</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-munich-prague" class="city-popular-routes-item">Munich - Prague</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-munich-berlin" class="city-popular-routes-item">Munich - Berlin</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-prague-munich" class="city-popular-routes-item">Prague - Munich</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-munich-vienna" class="city-popular-routes-item">Munich - Vienna</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-vienna-munich" class="city-popular-routes-item">Vienna - Munich</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-munich-milan" class="city-popular-routes-item">Munich - Milan</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-munich-innsbruck" class="city-popular-routes-item">Munich - Innsbruck</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-milan-munich" class="city-popular-routes-item">Milan - Munich</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-stuttgart-munich" class="city-popular-routes-item">Stuttgart - Munich</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-munich-stuttgart" class="city-popular-routes-item">Munich - Stuttgart</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-innsbruck-munich" class="city-popular-routes-item">Innsbruck - Munich</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-munich-paris" class="city-popular-routes-item">Munich - Paris</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-munich-budapest" class="city-popular-routes-item">Munich - Budapest</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-munich-freiburg" class="city-popular-routes-item">Munich - Freiburg (i.Br.)</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-freiburg-munich" class="city-popular-routes-item">Freiburg (i.Br.) - Munich</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-frankfurt-munich" class="city-popular-routes-item">Frankfurt - Munich</a>
+                </li>
+                
+                <li>
+                    <a href="/bus-routes/bus-zagreb-munich" class="city-popular-routes-item">Zagreb - Munich</a>
+                </li>
+                
+            </ul>
+            
+    </div>
+    
+</section>
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+      
+      
+      
+    
+
+    </main>
+    
+  
+  
+      <footer class="footer-container">
+          
+
+
+
+
+
+<div class="flix-page-container">
+    <div class="footer-sizer footer-sizer--first">
+        <div class="flix-grid">
+            
+            
+            
+            <div class="flix-col-12 flix-col-6-sm flix-col-3-xl">
+                <div class="flix-footer-nav">
+                    <h4 class="flix-h4 flix-footer-nav__title">Bus Travel</h4>
+                    <ul class="flix-footer-nav__items">
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/bus" onclick="emitFooterNavigationClickEvent(&quot;All Bus Destinations&quot;, 'Regular')">
+                                All Bus Destinations
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/bus-routes" onclick="emitFooterNavigationClickEvent(&quot;Route Map&quot;, 'Regular')">
+                                Route Map
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/bus/united-states" onclick="emitFooterNavigationClickEvent(&quot;Bus Travel in the US&quot;, 'Regular')">
+                                Bus Travel in the US
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/overnight-bus" onclick="emitFooterNavigationClickEvent(&quot;Overnight Buses&quot;, 'Regular')">
+                                Overnight Buses
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/service/bus-app" onclick="emitFooterNavigationClickEvent(&quot;Get the App&quot;, 'Regular')">
+                                Get the App
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/service/european-services" onclick="emitFooterNavigationClickEvent(&quot;European Services&quot;, 'Regular')">
+                                European Services
+                                
+                            </a>
+
+                        </li>
+
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="flix-col-12 flix-col-6-sm flix-col-3-xl">
+                <div class="flix-footer-nav">
+                    <h4 class="flix-h4 flix-footer-nav__title">Discover</h4>
+                    <ul class="flix-footer-nav__items">
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/bus/canada" onclick="emitFooterNavigationClickEvent(&quot;Canada&quot;, 'Regular')">
+                                Canada
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/bus/germany" onclick="emitFooterNavigationClickEvent(&quot;Germany&quot;, 'Regular')">
+                                Germany
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/bus/portugal" onclick="emitFooterNavigationClickEvent(&quot;Portugal&quot;, 'Regular')">
+                                Portugal
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/bus/poland" onclick="emitFooterNavigationClickEvent(&quot;Poland&quot;, 'Regular')">
+                                Poland
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/bus/denmark" onclick="emitFooterNavigationClickEvent(&quot;Denmark&quot;, 'Regular')">
+                                Denmark
+                                
+                            </a>
+
+                        </li>
+
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="flix-col-12 flix-col-6-sm flix-col-3-xl">
+                <div class="flix-footer-nav">
+                    <h4 class="flix-h4 flix-footer-nav__title">FlixBus</h4>
+                    <ul class="flix-footer-nav__items">
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/company/about-us" onclick="emitFooterNavigationClickEvent(&quot;About Flix&quot;, 'Regular')">
+                                About Flix
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/greyhound" onclick="emitFooterNavigationClickEvent(&quot;Greyhound&quot;, 'Regular')">
+                                Greyhound
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="https://flix.careers" onclick="emitFooterNavigationClickEvent(&quot;Jobs&quot;, 'Regular')">
+                                Jobs
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/company/press-room" onclick="emitFooterNavigationClickEvent(&quot;Press Room&quot;, 'Regular')">
+                                Press Room
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/general-terms-business-and-booking-conditions" onclick="emitFooterNavigationClickEvent(&quot;Terms \u0026 Conditions of Purchase&quot;, 'Regular')">
+                                Terms &amp; Conditions of Purchase
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/terms-and-conditions-of-service" onclick="emitFooterNavigationClickEvent(&quot;Terms \u0026 Conditions of Travel&quot;, 'Regular')">
+                                Terms &amp; Conditions of Travel
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/company/sustainability" onclick="emitFooterNavigationClickEvent(&quot;Sustainability&quot;, 'Regular')">
+                                Sustainability
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/company/partners/business-travel" onclick="emitFooterNavigationClickEvent(&quot;Open a Business Account&quot;, 'Regular')">
+                                Open a Business Account
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="https://shop.flixbus.com/user/agency-login?_locale=en_US" onclick="emitFooterNavigationClickEvent(&quot;Reseller login&quot;, 'Regular')">
+                                Reseller login
+                                
+                            </a>
+
+                        </li>
+
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="flix-col-12 flix-col-6-sm flix-col-3-xl">
+                <div class="flix-footer-nav">
+                    <h4 class="flix-h4 flix-footer-nav__title">Customer Service</h4>
+                    <ul class="flix-footer-nav__items">
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="https://support.flixbus.com/us/en" onclick="emitFooterNavigationClickEvent(&quot;Help&quot;, 'Regular')">
+                                Help
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/service" onclick="emitFooterNavigationClickEvent(&quot;Services&quot;, 'Regular')">
+                                Services
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="https://shop.flixbus.com/rebooking/login?_locale=en" onclick="emitFooterNavigationClickEvent(&quot;Manage My Booking&quot;, 'Regular')">
+                                Manage My Booking
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/service/book-bus-ticket" onclick="emitFooterNavigationClickEvent(&quot;How to Book&quot;, 'Regular')">
+                                How to Book
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/service/passengers-with-reduced-mobility" onclick="emitFooterNavigationClickEvent(&quot;Reduced Mobility&quot;, 'Regular')">
+                                Reduced Mobility
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/service/seat-reservations" onclick="emitFooterNavigationClickEvent(&quot;Seat Reservations&quot;, 'Regular')">
+                                Seat Reservations
+                                
+                            </a>
+
+                        </li>
+
+                        
+                        <li class="flix-footer-nav__item">
+                            <a class="flix-footer-nav__link " href="/service/luggage" onclick="emitFooterNavigationClickEvent(&quot;Baggage&quot;, 'Regular')">
+                                Baggage
+                                
+                            </a>
+
+                        </li>
+
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            
+        </div>
+    </div>
+</div>
+
+
+
+
+          
+
+
+
+
+
+
+<div class="flix-page-container">
+    <div class="footer-sizer">
+        <div class="flix-grid footer-social">
+            <div>
+                <h4 class="flix-h4 footer-social-title">
+                    
+                    Flix App
+                    
+                </h4>
+                <div class="footer-social-apps">
+                    
+                        <a href="https://flixbus.go.link/booking?adj_adgroup=us&amp;adj_campaign=city_connection_footer&amp;adj_creative=_utm_medium%3Dwebsite%26utm_source%3Dwebsite%26utm_campaign%3Dcity_connection_footer.us._%26utm_content%3Den-us.flixbus&amp;adj_fallback=https%3A%2F%2Fwww.flixbus.com%2Fservice%2Fbus-app%3Futm_campaign%3Dcity_connection_footer.us._%26utm_content%3Den-us.flixbus%26utm_medium%3Dwebsite%26utm_source%3Dwebsite&amp;adj_t=1p6hdidv_1pcn5eps&amp;v=2" aria-label="Get it on Google Play" onclick="emitFooterNavigationClickEvent('app', 'Social')">
+                            <img width="120" height="33" alt="android store img" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/footer/googleplay.svg">
+                        </a>
+                        <a href="https://flixbus.go.link/booking?adj_adgroup=us&amp;adj_campaign=city_connection_footer&amp;adj_creative=_utm_medium%3Dwebsite%26utm_source%3Dwebsite%26utm_campaign%3Dcity_connection_footer.us._%26utm_content%3Den-us.flixbus&amp;adj_fallback=https%3A%2F%2Fwww.flixbus.com%2Fservice%2Fbus-app%3Futm_campaign%3Dcity_connection_footer.us._%26utm_content%3Den-us.flixbus%26utm_medium%3Dwebsite%26utm_source%3Dwebsite&amp;adj_t=1p6hdidv_1pcn5eps&amp;v=2" aria-label="Download on the App Store" onclick="emitFooterNavigationClickEvent('app', 'Social')">
+                            <img width="120" height="33" alt="app store img" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/footer/appstore.svg">
+                        </a>
+                    
+                </div>
+            </div>
+            <div class="footer-social-right-container">
+                <h4 class="flix-h4 footer-social-title">Flix on:</h4>
+                <ul class="footer-social-icons">
+                    
+                        <li>
+                            <a target="_blank" rel="noopener noreferrer" href="https://www.facebook.com/FlixBus" aria-label="Facebook" onclick="emitFooterNavigationClickEvent('facebook', 'Social')">
+                            <flix-icon name="facebook" color="primary-content" size="5" class="footer-social-image hydrated" role="img"></flix-icon>
+                            </a>
+                        </li>
+                    
+
+                    
+                        <li>
+                            <a target="_blank" rel="noopener noreferrer" href="https://www.instagram.com/flixbus" aria-label="Instagram" onclick="emitFooterNavigationClickEvent('instagram', 'Social')">
+                            <flix-icon name="insta" color="primary-content" size="5" class="footer-social-image hydrated" role="img"></flix-icon>
+                            </a>
+                        </li>
+                    
+
+                    
+                        <li>
+                            <a target="_blank" rel="noopener noreferrer" href="http://www.youtube.com/user/EinfachBusfahren?feature=watch" aria-label="YouTube" onclick="emitFooterNavigationClickEvent('youtube', 'Social')">
+                            <flix-icon name="youtube" color="primary-content" size="5" class="footer-social-image hydrated" role="img"></flix-icon>
+                            </a>
+                        </li>
+                    
+
+                    
+                        <li>
+                            <a target="_blank" rel="noopener noreferrer" href="https://de.linkedin.com/company/flixbus" aria-label="LinkedIn" onclick="emitFooterNavigationClickEvent('linkedin', 'Social')">
+                            <flix-icon name="linkedin" color="primary-content" size="5" class="footer-social-image hydrated" role="img"></flix-icon>
+                            </a>
+                        </li>
+                    
+
+                    
+                        <li>
+                            <a target="_blank" rel="noopener noreferrer" href="https://twitter.com/FlixBus" aria-label="X (Twitter)" onclick="emitFooterNavigationClickEvent('twitter', 'Social')">
+                            <flix-icon name="x" color="primary-content" size="5" class="footer-social-image hydrated" role="img"></flix-icon>
+                            </a>
+                        </li>
+                    
+
+                    
+                        <li>
+                            <a target="_blank" rel="noopener noreferrer" href="https://www.tiktok.com/@flixbus" aria-label="TikTok" onclick="emitFooterNavigationClickEvent('tiktok', 'Social')">
+                            <flix-icon name="tik-tok" color="primary-content" size="5" class="footer-social-image hydrated" role="img"></flix-icon>
+                            </a>
+                        </li>
+                    
+
+                    
+
+                    
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+          
+
+
+
+
+
+<div class="flix-page-container">
+    <hr class="flix-divider">
+    <div class=" footer-sizer">
+        <div class="flix-grid">
+            <div class="flix-col-12">
+                <div class="footer-legal-links">
+                    <div class="footer-legal-privacy">
+                        
+                        
+                        
+                        <a rel="noopener noreferrer" href="https://shop.flixbus.com/user/agency-login?_locale=en_US" class="footer-legal-link" onclick="emitFooterNavigationClickEvent(&quot;Reseller login&quot;, 'Legal')">
+                            Reseller login
+                        </a>
+                        
+                        
+                        
+                        <a rel="noopener noreferrer" href="/legal" class="footer-legal-link" onclick="emitFooterNavigationClickEvent(&quot;Legal&quot;, 'Legal')">
+                            Legal
+                        </a>
+                        
+                        
+                        
+                        <a rel="noopener noreferrer" href="/privacy-policy" class="footer-legal-link" onclick="emitFooterNavigationClickEvent(&quot;Privacy Policy&quot;, 'Legal')">
+                            Privacy Policy
+                        </a>
+                        
+                        
+                        
+                        <a rel="noopener noreferrer" href="https://global.flixbus.com/photo-credits" class="footer-legal-link" onclick="emitFooterNavigationClickEvent(&quot;Photo Credits&quot;, 'Legal')">
+                            Photo Credits
+                        </a>
+                        
+                        
+                        
+                        <a rel="noopener noreferrer" href="/digital-accessibility-statement" class="footer-legal-link" onclick="emitFooterNavigationClickEvent(&quot;Accessibility Statement&quot;, 'Legal')">
+                            Accessibility Statement
+                        </a>
+                        
+                        
+                        
+                        <a tabindex="0" onclick="handleConsentSettingsClick(&quot;Your Privacy Choices&quot;)" class="footer-legal-link footer-ccpa-consent-container">
+                           <img width="29" height="14" alt="footer-ccpa-icon" style="margin-right: 2px" data-lazyload-src="https://cdn-cf.cms.flixbus.com/drupal-assets/footer/ccpa.png">
+                            Your Privacy Choices
+                        </a>
+                        
+                        
+                        
+                    </div>
+                    <div class="footer-legal-copyright">
+                        © 2026 FlixBus Inc
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+      </footer>
+  
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div id="usercentrics-root" data-created-at="1787772980630" style=""></div>
