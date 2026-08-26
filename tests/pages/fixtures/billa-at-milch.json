@@ -1,0 +1,15 @@
+{
+  "name": "billa-at-milch",
+  "url": "https://shop.billa.at/produkte/ja-natuerlich-vollmilch-3-5-00-336709",
+  "hostname": "shop.billa.at",
+  "lang": "de",
+  "title": "Artikel nicht gefunden | BILLA Online Shop",
+  "capturedAt": "2026-08-26",
+  "bytes": 83480,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "NOT a limitation, a live defect recorded so the suite stays green. BILLA renders the shelf price as a superscript split: <span class=\"d-sr-only\">1,80 \u20ac</span><span aria-hidden>1</span><span class=\"...__superscript\" aria-hidden>80 \u20ac</span>. The canonical price carries class d-sr-only, which walker.ts:291's substring regex treats as accessibility text and skips, but A11Y_TEXT_SELECTOR only matches the exact class .sr-only, so accessiblePriceText never offers it. The superscript fragment '80 \u20ac' is then converted as 80 euros: 0.1118 ZEC for a 1,80 \u20ac carton, 44x too high. The differing shapes are that bogus figure sitting beside the correct per-litre ones. Delete this entry when the two sr-only rules are reconciled."
+    }
+  ]
+}
