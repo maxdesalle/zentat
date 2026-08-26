@@ -502,8 +502,25 @@ export function parseNumber(str: string, preferUsDecimal: boolean = false): numb
     const afterSep = cleaned.slice(sepIndex + 1);
     // Anchored at both ends: "1.2345" is four decimals, not a grouped 12,345.
     if (/^\d{3}$/.test(afterSep)) {
-      const isUsDecimalRead = preferUsDecimal && cleaned[sepIndex] === '.'
-        && sepIndex <= 1 && !afterSep.endsWith('0');
+      // A multiplier already carries the magnitude, so what precedes it is a
+      // mantissa — nothing writes a thousands group inside one. "$29.121B"
+      // read as grouping was 29,121 billion, a thousandfold over.
+      //
+      // Only a multiplier beats the integer-length shape test. A DECLARED
+      // language does not, though it looks like it should: fotocasa.es says
+      // lang="en" and writes "23.199 €" for 23,199 euros, while cnbc-markets
+      // also says "en" and writes "912.524" as a genuine three-decimal quote.
+      // Same declaration, opposite conventions. Telling those apart needs the
+      // document's own grouping evidence — xe.com writes "1,000 USD" in the
+      // same breath as "429.109 EUR" — and that is a real feature, not a
+      // condition to bolt on here.
+      //
+      // The trailing zero rules both readings out: pump prices never end in a
+      // redundant one, so "$1.500" is 1500 however the rest reads, and that is
+      // what keeps a German "1.500 Millionen" out of here.
+      const isUsDecimalRead = cleaned[sepIndex] === '.'
+        && !afterSep.endsWith('0')
+        && (multiplier !== 1 || (preferUsDecimal && sepIndex <= 1));
       if (!isUsDecimalRead) {
         // Single separator with 3 digits = thousand separator
         cleaned = cleaned.replace(/[,.]/, '');

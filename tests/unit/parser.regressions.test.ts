@@ -165,3 +165,24 @@ describe('a dollar sign that is not a US dollar is refused, not guessed', () => 
     expect(parsePrice('$100', ALL, 'shop.de', 'de').map((p) => p.currency)).toEqual(['USD']);
   });
 });
+
+describe('a multiplier means the digits before it are a mantissa', () => {
+  // "$29.121B" on CoinGecko read the dot as a thousands group: 29,121 billion
+  // rather than 29.121 billion, a thousandfold over, and it rendered as
+  // 37,334,615,385 ZEC. Nothing writes a thousands group inside a mantissa
+  // that already carries an explicit B or "billion".
+  it.each([
+    ['$29.121B', 29_121_000_000],
+    ['$108.959 billion', 108_959_000_000],
+    ['$1.575T', 1_575_000_000_000],
+    ['$4.60T', 4_600_000_000_000],
+  ])('reads %j as its own magnitude', (text, expected) => {
+    expect(amounts(text)).toEqual([expected]);
+  });
+
+  it('still lets a redundant trailing zero mean thousands', () => {
+    // "1.500 million" is 1500 million wherever the page writes dots for
+    // grouping, and the trailing zero is the only signal that says so.
+    expect(parseNumber('1.500', false)).toBe(1500);
+  });
+});
