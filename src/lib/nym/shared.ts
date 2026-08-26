@@ -38,6 +38,11 @@ export function isAllowedNymUrl(url: string): boolean {
 // Clear Nym's persisted registration/WASM data (IndexedDB is per-origin and
 // shared between the extension's contexts, so this works from either side).
 export async function clearNymDatabases(): Promise<void> {
+  // Stryker disable next-line ConditionalExpression,StringLiteral: equivalent —
+  // without this guard, reaching for an absent global throws into the catch
+  // below, so either way the call resolves having deleted nothing. It stays
+  // because a context with no indexedDB is an expected condition, and expected
+  // conditions deserve a branch rather than an exception.
   if (typeof indexedDB === 'undefined') return;
   try {
     const databases = await indexedDB.databases();

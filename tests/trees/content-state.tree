@@ -7,6 +7,8 @@ ContentStateTest
 └── flushObserverRecords
     ├── given no observer is active
     │   └── it does nothing
+    ├── given the handlers outlived the observer
+    │   └── it does nothing
     ├── given the queue is empty
     │   └── it replays nothing
     ├── given only our own writes are queued

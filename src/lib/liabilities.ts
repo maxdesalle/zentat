@@ -51,7 +51,12 @@ export function liabilityZec(
   const rate = held
     ? heldRateFor(held, rates, liability.currency)
     : rates.rates[liability.currency.toUpperCase()];
-  if (!rate || !(rate > 0) || !(liability.amount > 0)) return null;
+  // A held rate answers null for a currency it cannot carry, and a spot lookup
+  // answers undefined for one nobody quoted.
+  // Stryker disable next-line ConditionalExpression: the positivity check below
+  // rejects null and undefined too, so dropping this line changes nothing.
+  if (rate == null) return null;
+  if (!(rate > 0) || !(liability.amount > 0)) return null;
   const value = liability.amount * rate;
   return Number.isFinite(value) ? value : null;
 }
@@ -105,7 +110,9 @@ export function createLiability(
   held?: HeldRate | null,
 ): Liability | null {
   const trimmed = label.trim();
-  if (!trimmed || !(amount > 0)) return null;
+  if (!trimmed) return null;
+  // The amount is not checked here: liabilityZec below refuses anything that is
+  // not positive, and one place to change that rule is better than two.
 
   const draft = {
     id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,

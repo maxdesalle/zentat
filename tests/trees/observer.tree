@@ -29,9 +29,12 @@ ObserverTest
 │       └── it is not in the page
 ├── reacting to mutations
 │   ├── given an element is added
-│   │   └── it converts prices inside it
+│   │   ├── it converts prices inside it
+│   │   └── it walks that element and nothing wider
 │   ├── given the added element is our own output
 │   │   └── it is ignored
+│   ├── given a converted element is put back into the page
+│   │   └── it is not walked again
 │   ├── given text is added inside a converted element
 │   │   ├── it reverts the stale conversion
 │   │   └── it converts the new text
@@ -39,15 +42,27 @@ ObserverTest
 │   │   └── it converts the parent
 │   ├── given text is added inside our own span
 │   │   └── it is ignored
+│   ├── given text is added and taken away in the same batch
+│   │   └── it converts the rest of the batch
 │   ├── given text changes in a converted element
 │   │   ├── it reverts the stale conversion
 │   │   └── it converts the new text
 │   ├── given text changes beside a converted price
 │   │   └── it reverts and re-converts the whole element
+│   ├── given a second price appears beside a converted one
+│   │   ├── it clears the stale conversion
+│   │   └── it converts both prices
+│   ├── given the page took our span but left the element marked
+│   │   └── it converts the price the page wrote
 │   ├── given text changes outside any conversion
 │   │   └── it converts the element
 │   ├── given text changes inside our own span
-│   │   └── it is ignored
+│   │   ├── it is ignored
+│   │   └── it does not ask for a frame
+│   ├── given text changes on a node the page then detaches
+│   │   └── it converts the rest of the batch
+│   ├── given the converter drains the queue in the same task
+│   │   └── it still converts what the page changed
 │   └── given a shadow root appears with new content
 │       ├── it is observed too
 │       └── given the same root is probed again
@@ -57,36 +72,65 @@ ObserverTest
 ├── batching
 │   ├── given several roots in one batch
 │   │   └── it converts once per frame
+│   ├── given a second batch arrives before the frame runs
+│   │   ├── it reuses the frame it already asked for
+│   │   └── it reuses the timer it already set
 │   ├── given one queued root contains another
-│   │   └── it skips the one already covered
+│   │   ├── it skips the one already covered
+│   │   └── it walks the outer root only
+│   ├── given a second batch after the first flush
+│   │   └── it walks only what changed
 │   ├── given a root left the page before the flush
 │   │   └── it is not converted
 │   ├── given a root inside a shadow tree
 │   │   └── it is still considered part of the page
 │   ├── given the document is never rendered
 │   │   └── it flushes on a timer instead
-│   └── given an infinite-scroll page queues past the cap
-│       └── it falls back to rescanning the body once
+│   ├── given an infinite-scroll page queues past the cap
+│   │   ├── it falls back to rescanning the body once
+│   │   └── it still converts everything that was queued
+│   └── given the page has no body when the queue overflows
+│       └── it drops the batch
+├── flushing the queue
+│   ├── given the frame runs first
+│   │   ├── it drops the timer it no longer needs
+│   │   ├── it can set a timer again
+│   │   └── it does not cancel a frame that already ran
+│   └── given the timer runs first
+│       ├── it drops the frame it no longer needs
+│       ├── it can ask for a frame again
+│       └── it does not clear a timer that already fired
 ├── SPA route changes
 │   ├── given the page pushes a new route
-│   │   ├── it drops stale markers
-│   │   └── it converts the new content
+│   │   ├── it clears what the last route left behind
+│   │   └── it converts what the new route brought in
 │   ├── given the page replaces the route
 │   │   └── it does the same
-│   └── given the user goes back
-│       └── it does the same
+│   ├── given the user goes back
+│   │   └── it does the same
+│   └── given a component upgraded since the last pass
+│       └── it watches the new shadow tree
 ├── after stopping
 │   ├── given records are replayed anyway
 │   │   └── it does nothing
-│   └── given a route change fires anyway
+│   ├── given a route change fires anyway
+│   │   └── it does nothing
+│   └── given a route change was already queued
 │       └── it does nothing
 ├── stopObserver
 │   ├── it disconnects the observer
 │   ├── it restores the history methods it patched
-│   └── it drops any queued work
+│   ├── it stops listening for the back button
+│   ├── it unregisters itself from the converter
+│   ├── it cancels the frame it had queued
+│   ├── given nothing was queued
+│   │   └── it cancels nothing
+│   ├── it drops any queued work
+│   └── it does not carry queued work into the next session
 └── updateObserverConfig
     ├── given the observer is running
     │   ├── it swaps the rates without tearing the observer down
-    │   └── it converts at the new rate
+    │   ├── it converts at the new rate
+    │   └── it keeps the held rate
     └── given the observer is not running
         └── it starts one

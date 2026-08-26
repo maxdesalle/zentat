@@ -74,8 +74,13 @@ function handleMutations(mutations: MutationRecord[]): void {
   // A MutationObserver callback already scheduled when disconnect() is called
   // still runs in some browsers, so this can fire after teardown. happy-dom
   // does not model that, which is why it is not reachable from a test.
+  // Stryker disable ConditionalExpression: no input reaches this line with a
+  // null config. disconnect() empties the observer's record queue, and the only
+  // other caller — the drain replay — is unregistered by stopObserver before
+  // config is cleared.
   /* v8 ignore next */
   if (!config) return;
+  // Stryker restore ConditionalExpression
 
   for (const mutation of mutations) {
     // Handle added nodes
@@ -164,6 +169,10 @@ export function isStillInPage(node: Node): boolean {
     current = root.host;
     root = current.getRootNode();
   }
+  // Stryker disable next-line ConditionalExpression,LogicalOperator: after the
+  // climb, document.contains(current) is true for exactly the nodes whose root
+  // is the document, so the two operands are the same predicate — no node can
+  // tell && from ||, or from either operand on its own.
   return root === document && document.contains(current);
 }
 
@@ -193,6 +202,10 @@ function schedule(): void {
 }
 
 function processPendingNodes(): void {
+  // Stryker disable next-line ConditionalExpression: pendingRoots only grows
+  // below handleMutations' own config guard, and stopObserver empties it in the
+  // same call that clears config — so with no config there is never a root to
+  // walk and the loop below is a no-op either way.
   if (!config) return;
   if (rafId !== null) {
     cancelAnimationFrame(rafId);
@@ -211,6 +224,10 @@ function processPendingNodes(): void {
 
   for (const root of roots) {
     // A newly-added component brings its own shadow root with it.
+    // Stryker disable next-line ConditionalExpression: a queued root can only
+    // have come from a record a live observer delivered, and stopObserver drops
+    // the observer and empties the queue in one synchronous call, so nothing
+    // can see observer null with work still queued.
     if (observer) observeShadowRoots(observer, root);
     if (isStillInPage(root)) {
       convertPricesInNode(root, config.rates, config.settings, config.held);
@@ -240,6 +257,10 @@ function installRouteHooks(): () => void {
     // Drop stale markers, then re-run over the new content.
     revertConversions();
     convertPricesInDocument(config.rates, config.settings, config.held);
+    // Stryker disable next-line ConditionalExpression: stopObserver drops the
+    // observer and clears config in one synchronous call, and the config guard
+    // above has already returned by the time that has happened, so observer is
+    // never null here.
     if (observer) observeShadowRoots(observer, document.body);
   };
 

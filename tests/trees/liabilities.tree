@@ -8,6 +8,8 @@ LiabilitiesTest
 │   │       └── it cannot price it
 │   ├── given a currency with no rate
 │   │   └── it cannot price it
+│   ├── given a rate that is not positive
+│   │   └── it cannot price it
 │   ├── given a non-positive amount
 │   │   └── it cannot price it
 │   └── given the arithmetic does not produce a usable number
@@ -21,6 +23,7 @@ LiabilitiesTest
 │       └── it is empty, not broken
 └── createLiability
     ├── it records what it cost when entered, so drift is visible later
+    ├── it gives each entry an id nothing downstream has to escape
     ├── it upper-cases the currency
     ├── it truncates an over-long label
     └── given input it cannot price

@@ -58,6 +58,17 @@ describe('liabilityZec', () => {
     });
   });
 
+  describe('given a rate that is not positive', () => {
+    it('cannot price it', () => {
+      // A negative rate would report the rent as money coming in, and a zero
+      // rate as costing nothing at all. Both read as good news.
+      const rent = make('rent', 1800, 'monthly', 'out');
+      for (const bad of [0, -0.00125]) {
+        expect(liabilityZec(rent, { ...rates, rates: { USD: bad } })).toBeNull();
+      }
+    });
+  });
+
   describe('given a non-positive amount', () => {
     it('cannot price it', () => {
       expect(liabilityZec({ ...make('rent', 1800, 'monthly', 'out'), amount: 0 }, rates))
@@ -127,6 +138,14 @@ describe('monthlyPosition', () => {
 describe('createLiability', () => {
   it('records what it cost when entered, so drift is visible later', () => {
     expect(make('rent', 1800, 'monthly', 'out').zecWhenSet).toBeCloseTo(2.25, 10);
+  });
+
+  it('gives each entry an id nothing downstream has to escape', () => {
+    // The id is how a row is found again to edit or delete it. Two rows sharing
+    // one would delete the wrong obligation.
+    const ids = Array.from({ length: 20 }, () => make('rent', 1800, 'monthly', 'out').id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const id of ids) expect(id).toMatch(/^[0-9a-z]+-[0-9a-z]*$/);
   });
 
   it('upper-cases the currency', () => {

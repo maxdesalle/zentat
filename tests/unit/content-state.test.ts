@@ -56,6 +56,18 @@ describe('flushObserverRecords', () => {
     });
   });
 
+  describe('given the handlers outlived the observer', () => {
+    it('does nothing', () => {
+      const replay = vi.fn();
+      setActiveObserver(null, { replay, isOwnWrite: () => false });
+
+      // A throw here lands in the middle of a conversion pass, which would
+      // leave the page half in ZEC and half in fiat with nothing to revert.
+      expect(() => flushObserverRecords()).not.toThrow();
+      expect(replay).not.toHaveBeenCalled();
+    });
+  });
+
   describe('given the queue is empty', () => {
     it('replays nothing', () => {
       const replay = vi.fn();
