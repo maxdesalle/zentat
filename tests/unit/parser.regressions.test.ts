@@ -135,3 +135,33 @@ describe('a currency code written after a price beats the symbol', () => {
     expect(parsePrice('$1,257 CAD', ['USD'], 'www.example.com', 'en-US')).toEqual([]);
   });
 });
+
+describe('a dollar sign that is not a US dollar is refused, not guessed', () => {
+  const cl = (text: string) => parsePrice(text, ALL, 'www.pcfactory.cl', 'es');
+
+  it('drops a Chilean peso price rather than reading it as USD', () => {
+    // "$319.990" is 319,990 CLP, about US$337. Read as USD it is roughly 950
+    // times too much, and it was, on all 214 prices of that page.
+    expect(cl('$319.990')).toEqual([]);
+    expect(cl('$8.990')).toEqual([]);
+  });
+
+  it('reads the number correctly even though it refuses the currency', () => {
+    // The separator convention was never the bug here. The currency was.
+    expect(parseNumber('319.990', false)).toBe(319990);
+  });
+
+  it('still prices the dollars it holds a rate for', () => {
+    const code = (host: string, lang: string) =>
+      parsePrice('$100', ALL, host, lang).map((p) => p.currency);
+    expect(code('tienda.com.mx', 'es')).toEqual(['MXN']);
+    expect(code('www.amazon.ca', 'en')).toEqual(['CAD']);
+    expect(code('shop.com.au', 'en')).toEqual(['AUD']);
+    expect(code('example.com', 'en')).toEqual(['USD']);
+  });
+
+  it('lets a TLD that names some other currency stay out of it', () => {
+    // ".de" is EUR, which says nothing about what a "$" on the page means.
+    expect(parsePrice('$100', ALL, 'shop.de', 'de').map((p) => p.currency)).toEqual(['USD']);
+  });
+});

@@ -1,3 +1,4 @@
+import { CURRENCY_CODES } from '../currencies';
 import { AMBIGUOUS_SYMBOLS, resolveAmbiguousSymbol } from './locale';
 import { CURRENCY_PATTERNS, type CurrencyPattern } from './patterns';
 
@@ -165,6 +166,12 @@ export function parsePrice(
           if (!enabledSet.has(stated.code)) continue;
           currency = stated.code;
         } else {
+          // A currency we do not SUPPORT is not one the user merely switched
+          // off. There is no rate behind it and no sibling that means the same
+          // thing, so substituting another dollar is how a Chilean peso price
+          // became a US dollar price — 950x too high, on all 214 prices of the
+          // page. Refusing shows the user a gap they can see.
+          if (!CURRENCY_CODES.includes(currency)) continue;
           // If the locale-resolved currency for an ambiguous symbol is
           // disabled, fall back to another enabled candidate for that symbol
           // instead of silently dropping the price (e.g. "$" resolved to MXN

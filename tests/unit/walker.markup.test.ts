@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
+import { rememberSpan, SPAN_CLASS } from '../../src/entrypoints/content/markers';
 import {
   accessiblePriceText,
   isConvertible,
@@ -85,5 +86,45 @@ describe('eligibility applies however a candidate was collected', () => {
     document.body.innerHTML =
       '<button><span class="a-price"><span class="a-offscreen">$19.99</span></span></button>';
     expect(isConvertible(document.querySelector('.a-price')!)).toBe(false);
+  });
+});
+
+describe('a prefixed accessibility class is still an accessibility class', () => {
+  it('reads a d-sr-only copy beside an aria-hidden split rendering', () => {
+    // shop.billa.at writes the canonical price in a .d-sr-only span and paints
+    // the visible one as "1" plus a superscript "80 €". The selector that
+    // RECOGNISES accessibility text matched .sr-only exactly while the rule
+    // that SKIPS it matched by substring, so this node was skipped as
+    // accessibility text and never offered as accessibility text. The
+    // superscript converted alone: eighty euros for a €1,80 carton, 44x.
+    document.body.innerHTML = '<div id="p"><span class="d-sr-only">1,80 €</span>'
+      + '<span aria-hidden="true">1</span>'
+      + '<span class="sup" aria-hidden="true">80 €</span></div>';
+    expect(accessiblePriceText(document.getElementById('p')!)).toBe('1,80 €');
+    // Exactly one candidate, and it is the whole price. The superscript is
+    // never offered on its own, which is the reading that was 44x high.
+    expect(texts()).toEqual(['1,80 €']);
+  });
+
+  it('still reads the copy once our own conversion is inside it', () => {
+    // Read raw, a converted copy says "ZEC", isNonPriceText rejects it as our
+    // own output, and the element stops being collected — which frees the
+    // aria-hidden fragments beside it to convert as prices of their own on the
+    // next pass. The observer runs a pass per mutation batch, so that
+    // compounds on a live page.
+    document.body.innerHTML = `<div id="p"><span class="d-sr-only">`
+      + `<span class="${SPAN_CLASS}">0.0025 ZEC</span></span></div>`;
+    const own = document.querySelector(`.${SPAN_CLASS}`)!;
+    rememberSpan(own, '1,80 €');
+    expect(accessiblePriceText(document.getElementById('p')!)).toBe('1,80 €');
+  });
+
+  it('contributes nothing for a marked span whose original was forgotten', () => {
+    // A span can outlive its remembered original — reverting one element
+    // clears its entry. Restoring "undefined" into the text would invent a
+    // price out of a bookkeeping gap.
+    document.body.innerHTML = `<div id="p"><span class="d-sr-only">£9.99 `
+      + `<span class="${SPAN_CLASS}">0.0128 ZEC</span></span></div>`;
+    expect(accessiblePriceText(document.getElementById('p')!)).toBe('£9.99');
   });
 });

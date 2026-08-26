@@ -5,11 +5,5 @@
   "lang": "es",
   "title": "Samsung Tablet Samsung Galaxy Tab S10 Lite 10.9\" 6GB 128GB WiFi Octa Core Android Gris + Lapiz + Funda | pc Factory",
   "capturedAt": "2026-08-26",
-  "bytes": 473147,
-  "knownGaps": [
-    {
-      "invariant": "one shape per page",
-      "why": "NOT a display limitation - this is a symptom of a currency DEFECT, recorded only so the suite stays green while it is triaged. Chilean pesos on a .cl site are read as USD (CLP is in no pattern, no TLD map entry and no rate table), so 319.990 CLP renders 410.2 ZEC instead of 0.428 ZEC, ~960x too large. The inflated amounts straddle 1 ZEC and so trip the sig-fig cap; with CLP priced correctly every price on this page shares one shape. Delete this entry with the fix."
-    }
-  ]
+  "bytes": 473147
 }

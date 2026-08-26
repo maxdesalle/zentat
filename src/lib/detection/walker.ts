@@ -1,4 +1,4 @@
-import { SPAN_CLASS } from '../../entrypoints/content/markers';
+import { SPAN_CLASS, spanOriginalText } from '../../entrypoints/content/markers';
 import { adapterFor, isExcluded } from './adapters';
 import { textLengthOf, textOf } from './dom';
 import { QUICK_DETECT_PATTERN } from './patterns';
@@ -83,8 +83,24 @@ export function isInteractiveControl(el: Element): boolean {
     && control.getElementsByTagName('*').length <= MAX_CONTROL_DESCENDANTS;
 }
 
-const A11Y_TEXT_SELECTOR = '.a-offscreen, .aok-offscreen, .sr-only, .visually-hidden, '
-  + '.screen-reader-only, [class*="visuallyhidden"], [class*="screenReader"]';
+// One list, two uses: the selector that RECOGNISES an accessibility copy and
+// the test that SKIPS one must name the same classes, and they had drifted.
+// The selector matched `.sr-only` exactly while the skip test matched by
+// substring, so BILLA's `d-sr-only` canonical price was skipped as
+// accessibility text AND never offered as accessibility text — it fell into
+// the hole between the two rules, and the visible superscript "80 €" converted
+// as eighty euros for a €1,80 carton. Forty-four times the real price.
+const A11Y_CLASS_PARTS = [
+  'a-offscreen',
+  'aok-offscreen',
+  'sr-only',
+  'visually-hidden',
+  'visuallyhidden',
+  'screen-reader',
+  'screenreader',
+];
+const A11Y_TEXT_SELECTOR = A11Y_CLASS_PARTS.map((part) => `[class*="${part}" i]`).join(', ');
+const A11Y_CLASS_PATTERN = new RegExp(A11Y_CLASS_PARTS.join('|'), 'i');
 
 /**
  * Concatenating child text drops the separator between them, so
@@ -109,6 +125,29 @@ export function looksConcatenated(el: Element, text: string): boolean {
  * plain `sr-only` span for exactly the same purpose. Reading it turns the
  * hardest markup into the easiest, so prefer it wherever it parses.
  */
+/**
+ * An accessibility node's text as the PAGE wrote it, with our own conversions
+ * put back to the prices they replaced.
+ *
+ * Reading it raw makes the copy stop covering its element the moment we
+ * convert it: the node then reads "0.00252 ZEC", isNonPriceText rejects it as
+ * our own output, the owning element is no longer collected — so it no longer
+ * marks its children processed — and the aria-hidden fragments beside it
+ * ("1", "80 €") are re-detected as prices of their own on the next pass. The
+ * observer runs a pass per mutation batch, so that is a live regression, not a
+ * test artefact.
+ */
+function authoredA11yText(node: Element): string {
+  const ours = Array.from(node.querySelectorAll(`.${SPAN_CLASS}`));
+  if (ours.length === 0) return textOf(node);
+  const clone = node.cloneNode(true) as Element;
+  // querySelectorAll returns document order on both, so the indexes line up.
+  Array.from(clone.querySelectorAll(`.${SPAN_CLASS}`)).forEach((copy, index) => {
+    copy.replaceWith(node.ownerDocument.createTextNode(spanOriginalText(ours[index]) ?? ''));
+  });
+  return textOf(clone);
+}
+
 export function accessiblePriceText(el: Element): string | null {
   // The label is ON this element, so it describes this element whatever its
   // size. A hidden descendant is a different claim and is bounded below.
@@ -117,7 +156,7 @@ export function accessiblePriceText(el: Element): string | null {
     return label.trim();
   }
   for (const node of el.querySelectorAll(A11Y_TEXT_SELECTOR)) {
-    const text = textOf(node);
+    const text = authoredA11yText(node);
     if (text && QUICK_DETECT_PATTERN.test(text) && !isNonPriceText(text)) return text;
   }
   return null;
@@ -288,7 +327,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // stands in for an element with no class at all, and no replacement string
     // matches the accessibility class names tested on the next line.
     const classStr = element.getAttribute('class') ?? '';
-    if (/a-offscreen|sr-only|visually-hidden|screen-reader-only/i.test(classStr)) continue;
+    if (A11Y_CLASS_PATTERN.test(classStr)) continue;
 
     // Skip if an ancestor was already collected (walk up — much cheaper than
     // scanning the whole processed set per element)
