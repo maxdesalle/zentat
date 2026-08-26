@@ -1,0 +1,22 @@
+AdaptersTest
+├── host matching is suffix-safe
+│   ├── it matches the host and its subdomains
+│   ├── it does not match a host that merely ends in the same letters
+│   └── it is case-insensitive
+├── the registry
+│   ├── it finds an adapter for each site it claims
+│   ├── it returns null for everything else, so the generic path runs
+│   ├── it claims no host twice
+│   └── it declares a currency wherever it reads bare numbers
+├── whole-element replacement
+│   ├── it recognises an element the adapter treats as a whole price
+│   └── it leaves ordinary elements alone
+├── exclusions
+│   ├── it keeps checkout controls fiat
+│   └── it does not exclude a price outside those controls
+└── extraction
+    ├── it reads Amazon's canonical price rather than the split rendering
+    ├── it reads bol.com's accessible copy
+    └── given the accessible copy is absent
+        ├── it returns null so the caller falls back to the visible text
+        └── it returns null for a bol container with no positioned span

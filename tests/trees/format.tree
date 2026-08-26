@@ -1,0 +1,45 @@
+FormatTest
+├── the initial locale
+│   ├── given the browser states a language
+│   │   └── it renders in that language
+│   └── given the browser states none
+│       └── it falls back to US English
+├── setDisplayLocale
+│   ├── given a locale
+│   │   └── it renders in that locale
+│   └── given no locale
+│       └── it keeps the one already in use
+├── formatZec
+│   ├── with auto precision
+│   │   ├── it formats whole numbers with 2 decimals minimum
+│   │   ├── it formats numbers >= 1 with enough decimals for 4 sig figs
+│   │   ├── it formats small numbers with enough decimals for 4 sig figs
+│   │   ├── it handles very small numbers
+│   │   └── it caps the decimals it will show
+│   ├── with fixed precision
+│   │   ├── it uses exact decimal places
+│   │   └── it falls back to significant figures when fixed precision would show zero
+│   └── with coarse precision
+│       └── it shows two significant figures
+└── formatZecWithSymbol
+    ├── in ZEC
+    │   ├── it appends ZEC suffix for small amounts
+    │   ├── it groups large amounts instead of compacting them
+    │   ├── it shows the digits that matter at each magnitude
+    │   ├── it honors fixed precision instead of the magnitude default
+    │   └── it never renders a nonzero amount as zero
+    ├── in zats
+    │   ├── it switches to zats before decimals stop being scannable
+    │   ├── it respects an explicit zats unit
+    │   ├── it respects an explicit ZEC-only unit
+    │   └── given an amount below one zatoshi
+    │       └── it keeps two decimals rather than rounding to nothing
+    ├── in coarse mode
+    │   └── it is honest about what the rate can support
+    ├── given a zero amount
+    │   └── it stays in ZEC
+    └── one unit per page
+        ├── it keeps every price on the same scale
+        ├── it lets the smallest amount decide, because it goes unreadable first
+        ├── it stays in ZEC when nothing on the page is tiny
+        └── it falls back to per-amount choice outside a page

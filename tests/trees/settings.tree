@@ -1,0 +1,38 @@
+SettingsTest
+├── getSettings
+│   ├── given nothing has ever been stored
+│   │   └── it returns the defaults
+│   ├── given a partial record from an older version
+│   │   ├── it fills in missing fields from the defaults
+│   │   └── it keeps the stored values
+│   ├── given a corrupted record
+│   │   ├── given currencies is not an array
+│   │   │   └── it restores the default list
+│   │   ├── given the site lists are not arrays
+│   │   │   └── it restores empty lists
+│   │   └── given precision is missing
+│   │       └── it restores the default precision
+│   └── given the user deliberately enabled no currencies
+│       └── it respects the empty list
+├── watchSettings
+│   ├── when the stored value changes
+│   │   └── it reports the change filled in with defaults
+│   └── when the caller unsubscribes
+│       └── it stops reporting
+├── setSettings
+│   ├── it merges over what is already stored
+│   └── it leaves untouched fields alone
+└── migration from sync storage
+    ├── given there is nothing in sync storage
+    │   └── it does nothing
+    ├── given sync storage holds settings
+    │   ├── given local storage is empty
+    │   │   ├── it copies them to local
+    │   │   └── it removes the sync copy
+    │   └── given local storage already holds settings
+    │       ├── it keeps the local values
+    │       └── it removes the sync copy
+    ├── given sync storage is unavailable
+    │   └── it falls through to local without failing
+    └── given two callers migrate at once
+        └── it migrates exactly once

@@ -1,0 +1,56 @@
+RatesTest
+├── isRatesStale
+│   ├── given the cache has never been written
+│   │   └── it is stale
+│   ├── given the cache was written inside the window
+│   │   └── it is fresh
+│   ├── given the cache was written outside the window
+│   │   └── it is stale
+│   └── when a custom window is given
+│       └── it uses that window instead of the default
+├── rateAge
+│   ├── given the currency has its own timestamp
+│   │   └── it measures from that timestamp
+│   ├── given the currency has no timestamp of its own
+│   │   └── it falls back to the map-wide timestamp
+│   ├── given neither timestamp exists
+│   │   └── it reports an infinite age
+│   └── when the currency is given in lower case
+│       └── it matches the stored upper-case code
+├── isCurrencyUsable
+│   ├── given the currency is not in the map
+│   │   └── it is not usable
+│   ├── given the currency is younger than the hard cap
+│   │   └── it is usable
+│   └── given the currency is older than the hard cap
+│       └── it is not usable
+├── isRatesUsable
+│   ├── given every currency is past the hard cap
+│   │   └── it is not usable
+│   ├── given one currency is still inside the cap
+│   │   └── it is usable
+│   └── given the map is empty
+│       └── it is not usable
+├── mergeRates
+│   ├── given the incoming fetch covers only some currencies
+│   │   ├── it keeps the currencies the fetch did not return
+│   │   ├── it overwrites the currencies the fetch did return
+│   │   └── it leaves the untouched currencies at their real age
+│   ├── given an existing currency has no per-currency timestamp
+│   │   └── it backfills from the map-wide timestamp
+│   └── it takes the source and map-wide timestamp from the incoming fetch
+└── stored values
+    ├── given nothing has been stored
+    │   ├── it reports empty rates
+    │   ├── it reports no held rate
+    │   └── it reports an idle fetch status
+    ├── when rates are written
+    │   ├── it reads them back
+    │   └── it notifies watchers
+    ├── when a held rate is written
+    │   ├── it reads it back
+    │   └── it notifies watchers
+    └── when a fetch status is written
+        ├── it records the state
+        ├── it records the error
+        └── it notifies watchers

@@ -48,8 +48,17 @@ function buildPattern(symbols: string[], code: string): RegExp {
   // 3. CODE + number: USD 19.99, EUR 1299 (but NOT "EUR €300" where symbol follows)
   // 4. number + CODE: 19.99 USD, 1299 EUR
   // Note: Pattern 3 uses negative lookahead to avoid matching "EUR €300,000" where the symbol-based pattern should take precedence
+  // The lookbehind is load-bearing: without it the bare "$" pattern matches
+  // inside "NZ$50", "HK$50" and "S$50" and reports them as US dollars. Those
+  // are currencies this extension does not support, and a NZ$ price shown as
+  // USD is off by about 65% — stated confidently. Refusing to read a dollar
+  // sign that some other letter is claiming is the only safe answer; showing
+  // nothing is a gap the user can see, showing USD is one they cannot.
+  //
+  // It guards the START of the alternative rather than the symbol itself, so
+  // "EUR€300" still matches through the code prefix.
   const pattern = String
-    .raw`(?:(?:\b${code}\b\s*)?(${escapedSymbols})\s*${NUM}|${NUM}\s*(${escapedSymbols})|(?:^|\s)\b(${code})\b\s*(?!${ALL_SYMBOLS})${NUM}|${NUM}\s*\b(${code})\b)`;
+    .raw`(?:(?:(?<![A-Za-z])\b${code}\b\s*|(?<![A-Za-z]))(${escapedSymbols})\s*${NUM}|${NUM}\s*(${escapedSymbols})|(?:^|\s)\b(${code})\b\s*(?!${ALL_SYMBOLS})${NUM}|${NUM}\s*\b(${code})\b)`;
   return new RegExp(pattern, 'gi');
 }
 

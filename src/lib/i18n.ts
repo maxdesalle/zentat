@@ -44,7 +44,9 @@ export function localizeDocument(root: ParentNode = document): void {
 
   // data-i18n-attr="placeholder:someKey,title:otherKey"
   for (const el of root.querySelectorAll<HTMLElement>('[data-i18n-attr]')) {
-    for (const pair of (el.dataset.i18nAttr ?? '').split(',')) {
+    const spec = el.dataset.i18nAttr;
+    if (!spec) continue;
+    for (const pair of spec.split(',')) {
       const [attr, key] = pair.split(':').map((part) => part.trim());
       if (attr && key) el.setAttribute(attr, t(key));
     }

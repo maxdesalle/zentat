@@ -123,8 +123,9 @@ export function formatZec(amount: number, precision: Precision = 'auto'): string
   } else {
     // For numbers >= 1, check if we need more than 2 decimals
     // Count digits before decimal
-    const intPart = Math.floor(absAmount);
-    const intDigits = intPart === 0 ? 0 : Math.floor(Math.log10(intPart)) + 1;
+    // absAmount >= 1 in this branch, so intPart is at least 1 and log10 of it
+    // is defined. The zero guard that used to sit here could never fire.
+    const intDigits = Math.floor(Math.log10(Math.floor(absAmount))) + 1;
     const sigFigsNeeded = Math.max(0, targetSigFigs - intDigits);
     decimalsNeeded = Math.max(minDecimals, sigFigsNeeded);
   }

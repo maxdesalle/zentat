@@ -1,0 +1,13 @@
+QrTest
+└── qrSvg
+    ├── given a payment URI
+    │   ├── it encodes a real ZIP-321 URI
+    │   ├── it leaves the quiet zone scanners need
+    │   └── it carries an accessible label
+    ├── when a size is given
+    │   └── it scales without blurring, because it is vector
+    ├── given more data
+    │   └── it grows with the amount of data, as a QR must
+    └── given input it cannot encode
+        ├── it returns null on empty input
+        └── it returns null on input too large for any version

@@ -2,8 +2,9 @@ import { compareToAnchors, formatComparisons } from '../../lib/anchors';
 import { convertPrice } from '../../lib/conversion/convert';
 import { setPageUnit } from '../../lib/conversion/format';
 import { adapterFor, isWholeReplacement } from '../../lib/detection/adapters';
+import { textOf } from '../../lib/detection/dom';
 import type { ParsedPrice } from '../../lib/detection/parser';
-import { bolPriceContainerSet, isSkippedTag } from '../../lib/detection/walker';
+import { isSkippedTag } from '../../lib/detection/walker';
 import { divergence, type HeldRate } from '../../lib/rates/held';
 import { isRatesUsable, type RatesData } from '../../lib/storage/rates';
 import type { Settings } from '../../lib/storage/settings';
@@ -83,9 +84,8 @@ export function convertPricesInNode(
       // One lookup instead of a chain of per-site booleans, each of which had
       // its own hostname test and its own idea of what counted.
       const adapter = adapterFor(window.location.hostname);
-      const isBolPrice = adapter?.id === 'bol' && bolPriceContainerSet.has(node);
 
-      if (isWholeReplacement(adapter, node) || isBolPrice) {
+      if (isWholeReplacement(adapter, node)) {
         // For structured price containers, replace entire content
         const convertedPrices: string[] = [];
         for (const parsed of prices) {
@@ -105,29 +105,20 @@ export function convertPricesInNode(
           const newText = convertedPrices.join(' ');
           rememberContainer(node, node.innerHTML, node.getAttribute('title'));
 
-          if (isBolPrice) {
-            // Bol.com special handling: hide visual spans and update accessibility text
-            const visualSpans = node.querySelectorAll('[aria-hidden="true"]');
-            for (const span of visualSpans) {
-              (span as HTMLElement).style.display = 'none';
-            }
-            const accessibilitySpan = node.querySelector('span[style*="position: absolute"]');
-            if (accessibilitySpan) {
-              accessibilitySpan.textContent = newText;
-              (accessibilitySpan as HTMLElement).style.cssText = '';
-              (accessibilitySpan as HTMLElement).style.fontWeight = 'bold';
-            }
-          } else {
-            // Wrap rather than assigning textContent, for three reasons: the
-            // structured path gets the same underline, tooltip and precise
-            // revert as everywhere else; and assigning textContent deleted
-            // Amazon's .a-offscreen span, which is the only price a screen
-            // reader ever saw — sighted users got ZEC and screen-reader users
-            // got nothing. The accessible copy is rewritten, not removed.
-            node.textContent = '';
-            node.appendChild(makeSpan(originalText.trim(), newText));
-            node.appendChild(makeAccessibleCopy(newText));
-          }
+          // Wrap rather than assigning textContent, for three reasons: the
+          // structured path gets the same underline, tooltip and precise
+          // revert as everywhere else; and assigning textContent deleted
+          // Amazon's .a-offscreen span, which is the only price a screen
+          // reader ever saw — sighted users got ZEC and screen-reader users
+          // got nothing. The accessible copy is rewritten, not removed.
+          //
+          // bol.com used to branch off here to hide its aria-hidden fragments
+          // and rewrite the absolutely-positioned span in place. Clearing the
+          // container does the same job and leaves one path to maintain, with
+          // the accessible copy written by the same code as everywhere else.
+          node.textContent = '';
+          node.appendChild(makeSpan(originalText.trim(), newText));
+          node.appendChild(makeAccessibleCopy(newText));
 
           // Tooltip carries the pre-conversion price (the old code read
           // textContent AFTER replacing it, labeling the ZEC value "Original")
@@ -295,7 +286,7 @@ function replacePricesInTextNodes(
   // but lives in no single text node. When the element's whole text IS the
   // price, replace at the element level.
   if (!anyReplaced && !directTextOnly) {
-    const trimmed = element.textContent?.trim() ?? '';
+    const trimmed = textOf(element);
     const match = uniqueReplacements.find((r) => r.original === trimmed);
     if (match) {
       rememberContainer(element, element.innerHTML, element.getAttribute('title'));
@@ -320,11 +311,17 @@ function collectTextNodes(element: Element): Text[] {
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement;
+      // The walker is rooted at an Element, so every text node it reaches has
+      // an element parent. Kept because the alternative is a non-null
+      // assertion on a value the DOM types say can be null.
+      /* v8 ignore next */
       if (!parent) return NodeFilter.FILTER_REJECT;
       if (isSkippedTag(parent.tagName)) return NodeFilter.FILTER_REJECT;
       if (parent.isContentEditable) return NodeFilter.FILTER_REJECT;
       if (parent.closest(`.${SPAN_CLASS}`)) return NodeFilter.FILTER_REJECT;
-      if (parent.closest('button, [role="button"]')) return NodeFilter.FILTER_REJECT;
+      // BUTTON is already a skipped tag; this catches the role attribute,
+      // which storefronts use far more than the element.
+      if (parent.closest('[role="button"]')) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
   });
@@ -342,7 +339,9 @@ function replaceInTextNode(
   replacements: Replacement[],
   ctx: ConvertContext,
 ): boolean {
-  const content = tNode.nodeValue || '';
+  // .data rather than textContent: a Text node's data is always a string,
+  // where textContent is typed as nullable for nodes that are not.
+  const content = tNode.data;
   const fragment = document.createDocumentFragment();
   let cursor = 0;
   let replacedAny = false;
@@ -353,11 +352,10 @@ function replaceInTextNode(
     for (const r of replacements) {
       const idx = content.indexOf(r.original, cursor);
       if (idx === -1) continue;
-      if (
-        bestIdx === -1
-        || idx < bestIdx
-        || (idx === bestIdx && best !== null && r.original.length > best.original.length)
-      ) {
+      // Earliest match wins. A tie needs no length rule: `replacements` is
+      // sorted longest-first, so the longer of two matches at the same offset
+      // has already been considered.
+      if (bestIdx === -1 || idx < bestIdx) {
         bestIdx = idx;
         best = r;
       }
@@ -406,6 +404,12 @@ export function installCopyHandler(): () => void {
     // counts disagree, leave the clipboard alone rather than guess.
     const live = Array.from(document.querySelectorAll(`.${SPAN_CLASS}`))
       .filter((el) => range.intersectsNode(el));
+    // Not reachable from happy-dom, whose cloneContents and intersectsNode
+    // agree on every selection this suite can build. Kept because the two are
+    // allowed to disagree at a range boundary in a real browser, and pairing
+    // mismatched lists positionally puts the WRONG price on the clipboard —
+    // which is the one failure here that costs the user money.
+    /* v8 ignore next */
     if (live.length !== clones.length) return;
 
     let replaced = false;
@@ -417,7 +421,7 @@ export function installCopyHandler(): () => void {
     });
     if (!replaced) return;
 
-    event.clipboardData?.setData('text/plain', fragment.textContent ?? '');
+    event.clipboardData?.setData('text/plain', textOf(fragment));
     event.preventDefault();
   };
 

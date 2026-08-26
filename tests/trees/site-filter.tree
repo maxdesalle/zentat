@@ -1,0 +1,43 @@
+SiteFilterTest
+├── isSiteAllowed
+│   ├── blocklist mode
+│   │   ├── it allows sites not in blocklist
+│   │   ├── it blocks sites in blocklist
+│   │   ├── it blocks subdomains of a plain-domain pattern
+│   │   ├── it matches case-insensitively
+│   │   └── it supports wildcard patterns
+│   └── allowlist mode
+│       ├── it blocks sites not in allowlist
+│       ├── it allows sites in allowlist
+│       ├── it blocks everything when the allowlist is empty
+│       └── it supports wildcard patterns
+├── matchesPattern
+│   ├── given a wildcard pattern
+│   │   ├── it matches the bare domain
+│   │   ├── it matches a subdomain
+│   │   └── it does not match a domain that merely ends in the same letters
+│   └── given a plain pattern
+│       ├── it does not match an unrelated host
+│       └── it does not match a host the pattern is a suffix of without a dot
+├── siteToggleKey
+│   ├── given a two-part hostname
+│   │   └── it returns it unchanged
+│   ├── given a www prefix
+│   │   └── it strips the prefix
+│   ├── given a deep subdomain
+│   │   └── it keeps the registrable domain
+│   ├── given a compound public suffix
+│   │   └── it keeps three parts
+│   ├── given a subdomain of a compound public suffix
+│   │   └── it still keeps only the registrable domain
+│   └── given mixed case
+│       └── it lowercases the result
+├── patternsMatching
+│   ├── given several stored patterns
+│   │   └── it returns only the ones that apply
+│   └── given no pattern applies
+│       └── it returns nothing
+└── per-site toggle writes what the filter actually matches
+    ├── it normalises to the registrable domain so subdomains follow
+    ├── it re-enabling clears every pattern that was blocking the site
+    └── it the label predicate agrees with the conversion predicate

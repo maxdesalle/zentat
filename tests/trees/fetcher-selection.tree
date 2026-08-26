@@ -1,0 +1,7 @@
+FetcherSelectionTest
+├── given nym is disabled
+│   ├── it returns the direct fetcher
+│   └── it never routes through the mixnet
+└── given nym is enabled
+    ├── it returns the nym fetcher
+    └── it never falls back to a direct request

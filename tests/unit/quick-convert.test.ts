@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+// Spec: tests/trees/quick-convert.tree
+
 vi.mock('wxt/utils/storage', () => ({
   storage: {
     defineItem: () => ({
@@ -21,28 +23,77 @@ const rates: RatesData = {
 };
 const settings = { ...DEFAULT_SETTINGS, displayCurrency: 'USD' };
 
-describe('converting text that is not attached to a page', () => {
-  it('handles a plain selection', () => {
-    expect(quickConvert('$19.99', rates, settings)!.output).toBe('0.0250 ZEC');
+describe('quickConvert', () => {
+  describe('given fiat text', () => {
+    it('handles a plain selection', () => {
+      expect(quickConvert('$19.99', rates, settings)!.output).toBe('0.0250 ZEC');
+    });
+
+    it('understands every format the page parser does', () => {
+      // Same parser as the page, so a selection converts exactly as the page
+      // would have.
+      expect(quickConvert('1.234,56 €', rates, settings)).not.toBeNull();
+      expect(quickConvert('USD 1,234.56', rates, settings)).not.toBeNull();
+      expect(quickConvert("CHF 1'299.00", rates, settings)).not.toBeNull();
+    });
+
+    describe('given the currency has no rate', () => {
+      it('returns nothing', () => {
+        const partial: RatesData = { ...rates, rates: { USD: 0.00125 } };
+        expect(quickConvert('€49.99', partial, settings)).toBeNull();
+      });
+    });
   });
 
-  it('understands every format the page parser does', () => {
-    expect(quickConvert('1.234,56 €', rates, settings)).not.toBeNull();
-    expect(quickConvert('USD 1,234.56', rates, settings)).not.toBeNull();
-    expect(quickConvert("CHF 1'299.00", rates, settings)).not.toBeNull();
+  describe('given a ZEC amount', () => {
+    it('converts back the other way', () => {
+      expect(quickConvert('1 ZEC', rates, settings)!.output).toBe('800.00 USD');
+      expect(quickConvert('0.5 zec', rates, settings)!.output).toBe('400.00 USD');
+    });
+
+    it('accepts zats on the way back', () => {
+      expect(quickConvert('100000000 zats', rates, settings)!.output).toBe('800.00 USD');
+    });
+
+    it('always uses spot, never the held rate', () => {
+      // The two directions are different questions. "What does this cost" is a
+      // browsing question and takes the held rate. "What is my money worth" is
+      // about a balance the user actually holds — the one case outside
+      // checkout where a held rate could cost them.
+      expect(quickConvert('1 ZEC', rates, settings)!.output).toBe('800.00 USD');
+    });
+
+    describe('given the amount is negative', () => {
+      it('returns nothing', () => {
+        expect(quickConvert('-1 ZEC', rates, settings)).toBeNull();
+      });
+    });
+
+    describe('given the amount does not parse', () => {
+      it('returns nothing', () => {
+        expect(quickConvert('.. ZEC', rates, settings)).toBeNull();
+      });
+    });
+
+    describe('given the display currency has no rate', () => {
+      it('returns nothing', () => {
+        const missing = { ...settings, displayCurrency: 'JPY' };
+        expect(quickConvert('1 ZEC', rates, missing)).toBeNull();
+        const zero: RatesData = { ...rates, rates: { USD: 0 } };
+        expect(quickConvert('1 ZEC', zero, settings)).toBeNull();
+      });
+    });
   });
 
-  it('converts back the other way', () => {
-    expect(quickConvert('1 ZEC', rates, settings)!.output).toBe('800.00 USD');
-    expect(quickConvert('0.5 zec', rates, settings)!.output).toBe('400.00 USD');
-  });
+  describe('given text with no price in it', () => {
+    it('returns nothing', () => {
+      expect(quickConvert('hello world', rates, settings)).toBeNull();
+    });
 
-  it('accepts zats on the way back', () => {
-    expect(quickConvert('100000000 zats', rates, settings)!.output).toBe('800.00 USD');
-  });
-
-  it('returns null on text with no price in it', () => {
-    expect(quickConvert('hello world', rates, settings)).toBeNull();
-    expect(quickConvert('', rates, settings)).toBeNull();
+    describe('given the text is empty', () => {
+      it('returns nothing', () => {
+        expect(quickConvert('   ', rates, settings)).toBeNull();
+      });
+    });
   });
 });

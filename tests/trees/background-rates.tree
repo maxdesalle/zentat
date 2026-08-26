@@ -1,0 +1,52 @@
+BackgroundRatesTest
+└── refreshRates
+    ├── given a cycle is already running
+    │   └── it joins that cycle rather than starting a second
+    ├── given the cached rates are still fresh
+    │   ├── it does not fetch
+    │   └── when the caller forces a refresh
+    │       └── it fetches anyway
+    ├── given the cached rates are stale
+    │   ├── it waits a random moment before fetching
+    │   └── it reports that it is fetching
+    ├── given Nym is disabled
+    │   ├── it fetches directly
+    │   ├── given the fetch succeeds
+    │   │   └── it stores the rates
+    │   └── given the fetch fails
+    │       └── it reports the provider errors
+    ├── given Nym is enabled
+    │   ├── it never falls back to a direct fetch
+    │   ├── given the first attempt succeeds
+    │   │   ├── it stores the rates
+    │   │   └── it clears any backoff
+    │   ├── given the first attempt fails
+    │   │   ├── it tears the connection down for a fresh gateway
+    │   │   └── it tries again
+    │   ├── given every attempt fails
+    │   │   ├── it backs off before the next cycle
+    │   │   └── it reports the failure
+    │   └── given the backoff window is still open
+    │       ├── it skips the cycle entirely
+    │       └── when the caller forces a refresh
+    │           └── it fetches anyway
+    ├── given a fetch outlives the worker's idle timer
+    │   └── it keeps the worker alive
+    ├── given the fetch fails with no error to report
+    │   └── it says so generically
+    ├── given the fetch throws
+    │   ├── it reports the error rather than rejecting
+    │   └── given what was thrown is not an Error
+    │       └── it still reports something readable
+    └── storing rates
+        ├── it merges over the existing cache
+        ├── given some currencies fail the plausibility check
+        │   └── it keeps the ones that passed
+        ├── given every currency fails the plausibility check
+        │   ├── it stores nothing
+        │   └── it reports the failure
+        ├── given the held rate is unchanged
+        │   └── it is not rewritten
+        ├── given spot has left the band
+        │   └── it re-pegs
+        └── it reports success

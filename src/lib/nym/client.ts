@@ -23,6 +23,15 @@ const BROWSER_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Appl
 // job, so generosity here is free while a false timeout costs a registration.
 const DEFAULT_TIMEOUT_MS = 120_000;
 
+/**
+ * WASM and worker boundaries reject with strings as readily as with Errors, so
+ * every failure path has to handle both. One helper rather than the same
+ * ternary in each place.
+ */
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 class DeadlineError extends Error {
   constructor(label: string) {
     super(`Nym fetch timeout (${label})`);
@@ -34,7 +43,8 @@ class DeadlineError extends Error {
 // shares ONE deadline, so a reconnect-and-retry path can never hang past the
 // caller's timeout (the old code cleared its timer before retrying, which let
 // the overall call hang forever when the mixnet was unreachable).
-function withDeadline<T>(promise: Promise<T>, deadline: number, label: string): Promise<T> {
+/** Exported for tests: this is load-bearing timing logic worth pinning directly. */
+export function withDeadline<T>(promise: Promise<T>, deadline: number, label: string): Promise<T> {
   const remaining = deadline - Date.now();
   if (remaining <= 0) return Promise.reject(new DeadlineError(label));
   return new Promise<T>((resolve, reject) => {
@@ -74,18 +84,50 @@ async function ensureInitialized(): Promise<IMixFetch> {
       mixFetchOverride: { requestTimeoutMs: 45_000 },
       // Pins the IndexedDB name so reset logic cannot drift with an SDK default.
       clientId: NYM_CLIENT_ID,
+      clientOverride: {
+        traffic: {
+          // A live client sends ~55 packets/sec whether or not it has anything
+          // to say — roughly 1 Mbps, ~10 GB/day, to carry six 400-byte fetches
+          // an hour. This is Nym's own keepalive shape: Poisson stream off,
+          // loop cover slowed right down. Roughly 4 kbps, and the gateway
+          // connection still stays warm so the next fetch skips the handshake.
+          //
+          // The cost is real: the entry gateway now sees WHEN we send. Route
+          // unlinkability and per-hop mixing are unaffected. For a
+          // fixed-cadence poll of a public price API whose destination the exit
+          // already sees, that is a small loss for a very large saving.
+          disableMainPoissonPacketDistribution: true,
+        },
+        coverTraffic: {
+          loopCoverTrafficAverageDelayMs: 5_000,
+        },
+        topology: {
+          // Nearly every gateway rates "high performance"; the default of 50
+          // accepts almost anything. Free reliability.
+          minimumGatewayPerformance: 80,
+          // The library will otherwise wait SEVENTY MINUTES for topology.
+          maxStartupGatewayWaitingPeriodMs: 60_000,
+          // The default refetches ~1.5MB of topology every 5 minutes, over
+          // clearnet, from the user's real IP.
+          topologyRefreshRateMs: 30 * 60_000,
+        },
+      },
     } as Parameters<typeof createMixFetch>[0],
   );
 
   try {
     mixFetchInstance = await initializingPromise;
+    initializingPromise = null;
     debug('Nym connected');
     return mixFetchInstance;
   } catch (error) {
-    console.error('Zentat: Nym init failed:', error);
-    throw error;
-  } finally {
+    // Cleared on both paths explicitly rather than in a `finally`: a rejected
+    // promise left in this slot wedges every later fetch against a failure
+    // that already happened, and the explicit form makes that impossible to
+    // lose in a refactor.
     initializingPromise = null;
+    debug(`Nym init failed: ${describeError(error)}`);
+    throw error;
   }
 }
 
@@ -180,22 +222,25 @@ export async function nymFetch(url: string, timeoutMs: number): Promise<NymFetch
   const timeout = typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs > 0
     ? timeoutMs
     : DEFAULT_TIMEOUT_MS;
-  const result = await nymFetchInner(url, Date.now() + timeout);
-
-  if (result.success || result.transportOk) {
-    // Reaching the destination at all proves the tunnel; an HTTP error is the
-    // server's answer, not a transport fault.
-  } else if (!result.fatal) {
-  }
-  return result;
+  // Reaching the destination at all proves the tunnel, so an HTTP error is the
+  // origin's answer rather than a transport fault. The distinction is carried
+  // on the result (`transportOk`) and acted on by the caller; there is
+  // deliberately no failure counter here — the cross-cycle backoff in the rate
+  // refresh is the real circuit breaker, and a counter living in a document
+  // that gets destroyed on teardown was never one.
+  return nymFetchInner(url, Date.now() + timeout);
 }
 
 async function nymFetchInner(url: string, deadline: number): Promise<NymFetchResult> {
   try {
     return await attemptFetch(url, deadline);
   } catch (error) {
-    if (error instanceof DeadlineError) throw error;
-    const message = error instanceof Error ? error.message : String(error);
+    // A deadline used to be rethrown while every other failure was returned,
+    // so this function's declared Promise<NymFetchResult> was only sometimes
+    // true. Two callers had to both check `.success` AND catch, and a missed
+    // catch in a service worker is an unhandled rejection. One contract now:
+    // every failure comes back as a result.
+    const message = describeError(error);
 
     // Fatal means "this client is unusable — tear the document down and start
     // over", which is the only reconnect the SDK actually supports.

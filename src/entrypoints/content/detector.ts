@@ -1,3 +1,4 @@
+import { textOf } from '../../lib/detection/dom';
 import { type ParsedPrice, parsePrice } from '../../lib/detection/parser';
 import {
   documentCurrency,
@@ -19,9 +20,9 @@ export function detectPrices(
   hostname: string = window.location.hostname,
 ): DetectionResult[] {
   const results: DetectionResult[] = [];
-  const documentLang = typeof document !== 'undefined'
-    ? document.documentElement.lang || undefined
-    : undefined;
+  // detectPrices only ever runs against a live DOM: walkPriceElements below
+  // requires an Element or Document root, so there is always a document here.
+  const documentLang = document.documentElement.lang || undefined;
 
   // Structured data first. It states the amount and the currency outright,
   // where regex has to reverse-engineer both from glyphs — so it is exactly
@@ -34,7 +35,7 @@ export function detectPrices(
 
   for (const { element, price } of locatePrices(root as ParentNode, structured)) {
     if (!enabledSet(enabledCurrencies).has(price.currency)) continue;
-    const text = (element.textContent ?? '').trim();
+    const text = textOf(element);
     claimed.add(element);
     results.push({
       node: element,
@@ -60,8 +61,7 @@ export function detectPrices(
       documentLang,
       pageCurrency,
       inPriceContainer,
-    )
-      .filter((price) => !claimed.has(node));
+    );
     if (prices.length > 0) {
       results.push({ node, text, prices, directTextOnly });
     }

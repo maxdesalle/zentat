@@ -1,118 +1,287 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// The rates module defines storage items at import time; stub the storage
-// layer so the pure helpers can be tested in Node.
+// Spec: tests/trees/rates.tree
+
+const store = new Map<string, unknown>();
+const watchers = new Map<string, ((value: unknown) => void)[]>();
+
 vi.mock('wxt/utils/storage', () => ({
   storage: {
-    defineItem: () => ({
-      getValue: async () => null,
-      setValue: async () => {},
-      watch: () => () => {},
+    defineItem: (key: string, opts: { fallback: unknown }) => ({
+      getValue: async () => (store.has(key) ? store.get(key) : opts.fallback),
+      setValue: async (value: unknown) => {
+        store.set(key, value);
+        for (const fn of watchers.get(key) ?? []) fn(value);
+      },
+      watch: (fn: (value: unknown) => void) => {
+        const list = watchers.get(key) ?? [];
+        list.push(fn);
+        watchers.set(key, list);
+        return () => void list.splice(list.indexOf(fn), 1);
+      },
     }),
-    getItem: async () => null,
-    setItem: async () => {},
-    removeItem: async () => {},
-    watch: () => () => {},
   },
 }));
 
-import {
+const {
+  MAX_RATE_AGE_MS,
+  REFRESH_TTL_MS,
+  getFetchStatus,
+  getHeldRate,
+  getRates,
   isCurrencyUsable,
   isRatesStale,
   isRatesUsable,
-  MAX_RATE_AGE_MS,
   mergeRates,
-  type RatesData,
-} from '../../src/lib/storage/rates';
+  rateAge,
+  setFetchStatus,
+  setHeldRate,
+  setRates,
+  watchFetchStatus,
+  watchHeldRate,
+  watchRates,
+} = await import('../../src/lib/storage/rates');
 
-function rates(overrides: Partial<RatesData> = {}): RatesData {
-  return { rates: { USD: 0.00125 }, updatedAt: Date.now(), source: 'test', ...overrides };
+const NOW = 1_700_000_000_000;
+
+beforeEach(() => {
+  store.clear();
+  watchers.clear();
+  vi.useFakeTimers();
+  vi.setSystemTime(NOW);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+function data(over: Partial<Parameters<typeof mergeRates>[0]> = {}) {
+  return { rates: {}, updatedAt: NOW, source: 'coingecko', ...over };
 }
 
 describe('isRatesStale', () => {
-  it('treats never-fetched rates as stale', () => {
-    expect(isRatesStale(rates({ updatedAt: 0 }))).toBe(true);
+  describe('given the cache has never been written', () => {
+    it('is stale', () => {
+      expect(isRatesStale(data({ updatedAt: 0 }))).toBe(true);
+    });
   });
 
-  it('respects the TTL', () => {
-    expect(isRatesStale(rates())).toBe(false);
-    expect(isRatesStale(rates({ updatedAt: Date.now() - 11 * 60 * 1000 }))).toBe(true);
+  describe('given the cache was written inside the window', () => {
+    it('is fresh', () => {
+      expect(isRatesStale(data({ updatedAt: NOW - 1000 }))).toBe(false);
+    });
+  });
+
+  describe('given the cache was written outside the window', () => {
+    it('is stale', () => {
+      expect(isRatesStale(data({ updatedAt: NOW - REFRESH_TTL_MS - 1 }))).toBe(true);
+    });
+  });
+
+  describe('when a custom window is given', () => {
+    it('uses that window instead of the default', () => {
+      const older = data({ updatedAt: NOW - REFRESH_TTL_MS - 1 });
+      expect(isRatesStale(older, REFRESH_TTL_MS * 10)).toBe(false);
+    });
+  });
+});
+
+describe('rateAge', () => {
+  describe('given the currency has its own timestamp', () => {
+    it('measures from that timestamp', () => {
+      const d = data({ updatedAt: NOW, rateUpdatedAt: { USD: NOW - 5000 } });
+      expect(rateAge(d, 'USD')).toBe(5000);
+    });
+  });
+
+  describe('given the currency has no timestamp of its own', () => {
+    it('falls back to the map-wide timestamp', () => {
+      const d = data({ updatedAt: NOW - 3000, rateUpdatedAt: { EUR: NOW } });
+      expect(rateAge(d, 'USD')).toBe(3000);
+    });
+  });
+
+  describe('given neither timestamp exists', () => {
+    it('reports an infinite age', () => {
+      expect(rateAge(data({ updatedAt: 0 }), 'USD')).toBe(Infinity);
+    });
+  });
+
+  describe('when the currency is given in lower case', () => {
+    it('matches the stored upper-case code', () => {
+      const d = data({ rateUpdatedAt: { USD: NOW - 7000 } });
+      expect(rateAge(d, 'usd')).toBe(7000);
+    });
+  });
+});
+
+describe('isCurrencyUsable', () => {
+  describe('given the currency is not in the map', () => {
+    it('is not usable', () => {
+      expect(isCurrencyUsable(data({ rates: { EUR: 0.03 } }), 'USD')).toBe(false);
+    });
+  });
+
+  describe('given the currency is younger than the hard cap', () => {
+    it('is usable', () => {
+      const d = data({ rates: { USD: 0.025 }, rateUpdatedAt: { USD: NOW - 1000 } });
+      expect(isCurrencyUsable(d, 'USD')).toBe(true);
+    });
+  });
+
+  describe('given the currency is older than the hard cap', () => {
+    it('is not usable', () => {
+      // A day-old rate is not a slightly worse rate, it is a wrong price on a
+      // checkout page. The cap is the whole point of the per-currency stamp.
+      const d = data({ rates: { USD: 0.025 }, rateUpdatedAt: { USD: NOW - MAX_RATE_AGE_MS - 1 } });
+      expect(isCurrencyUsable(d, 'USD')).toBe(false);
+    });
   });
 });
 
 describe('isRatesUsable', () => {
-  it('rejects empty rates', () => {
-    expect(isRatesUsable(rates({ rates: {} }))).toBe(false);
+  describe('given every currency is past the hard cap', () => {
+    it('is not usable', () => {
+      const stale = NOW - MAX_RATE_AGE_MS - 1;
+      const d = data({
+        rates: { USD: 0.025, EUR: 0.03 },
+        rateUpdatedAt: { USD: stale, EUR: stale },
+      });
+      expect(isRatesUsable(d)).toBe(false);
+    });
   });
 
-  it('accepts fresh rates', () => {
-    expect(isRatesUsable(rates())).toBe(true);
+  describe('given one currency is still inside the cap', () => {
+    it('is usable', () => {
+      const d = data({
+        rates: { USD: 0.025, EUR: 0.03 },
+        rateUpdatedAt: { USD: NOW - MAX_RATE_AGE_MS - 1, EUR: NOW },
+      });
+      expect(isRatesUsable(d)).toBe(true);
+    });
   });
 
-  it('rejects rates older than the max display age', () => {
-    expect(isRatesUsable(rates({ updatedAt: Date.now() - MAX_RATE_AGE_MS - 1000 }))).toBe(false);
+  describe('given the map is empty', () => {
+    it('is not usable', () => {
+      expect(isRatesUsable(data())).toBe(false);
+    });
   });
 });
 
 describe('mergeRates', () => {
-  it('merges partial results over the existing cache', () => {
-    const current = rates({
-      rates: { USD: 1, EUR: 2, GBP: 3 },
-      updatedAt: 1000,
-      source: 'coingecko',
+  describe('given the incoming fetch covers only some currencies', () => {
+    // Kraken's fallback returns USD/EUR only. Replacing the map would drop the
+    // other eleven; stamping them all fresh would let them silently outlive the
+    // 24h cap. Both were shipped bugs.
+    const current = data({
+      rates: { USD: 0.025, EUR: 0.03, JPY: 3.5 },
+      rateUpdatedAt: { USD: NOW - 60_000, EUR: NOW - 60_000, JPY: NOW - 60_000 },
+      updatedAt: NOW - 60_000,
     });
-    // Kraken fallback only serves USD/EUR — GBP must survive the merge
-    const incoming = rates({ rates: { USD: 10, EUR: 20 }, updatedAt: 2000, source: 'kraken' });
-    const merged = mergeRates(current, incoming);
-    expect(merged.rates).toEqual({ USD: 10, EUR: 20, GBP: 3 });
-    expect(merged.updatedAt).toBe(2000);
+    const incoming = data({ rates: { USD: 0.026 }, updatedAt: NOW, source: 'kraken' });
+
+    it('keeps the currencies the fetch did not return', () => {
+      expect(mergeRates(current, incoming).rates.JPY).toBe(3.5);
+    });
+
+    it('overwrites the currencies the fetch did return', () => {
+      expect(mergeRates(current, incoming).rates.USD).toBe(0.026);
+    });
+
+    it('leaves the untouched currencies at their real age', () => {
+      const merged = mergeRates(current, incoming);
+      expect(merged.rateUpdatedAt?.JPY).toBe(NOW - 60_000);
+      expect(merged.rateUpdatedAt?.USD).toBe(NOW);
+    });
+  });
+
+  describe('given an existing currency has no per-currency timestamp', () => {
+    it('backfills from the map-wide timestamp', () => {
+      // Caches written by versions before rateUpdatedAt existed.
+      const current = data({ rates: { JPY: 3.5 }, updatedAt: NOW - 90_000 });
+      const merged = mergeRates(current, data({ rates: { USD: 0.026 } }));
+      expect(merged.rateUpdatedAt?.JPY).toBe(NOW - 90_000);
+    });
+  });
+
+  it('takes the source and map-wide timestamp from the incoming fetch', () => {
+    const merged = mergeRates(
+      data({ rates: { USD: 0.025 }, updatedAt: NOW - 60_000 }),
+      data({ rates: { EUR: 0.03 }, updatedAt: NOW, source: 'kraken' }),
+    );
     expect(merged.source).toBe('kraken');
+    expect(merged.updatedAt).toBe(NOW);
   });
 });
 
-describe('per-currency staleness', () => {
-  const DAY = 24 * 60 * 60 * 1000;
+describe('stored values', () => {
+  describe('given nothing has been stored', () => {
+    it('reports empty rates', async () => {
+      expect((await getRates()).rates).toEqual({});
+    });
 
-  it('keeps each currency at its own real age when merging', () => {
-    const now = Date.now();
-    const current: RatesData = {
-      rates: { USD: 0.00125, JPY: 0.0000085 },
-      updatedAt: now - 3 * DAY,
-      source: 'coingecko',
-    };
-    // Kraken only quotes USD and EUR.
-    const incoming: RatesData = {
-      rates: { USD: 0.00126, EUR: 0.0013 },
-      updatedAt: now,
-      source: 'kraken',
-    };
+    it('reports no held rate', async () => {
+      expect(await getHeldRate()).toBeNull();
+    });
 
-    const merged = mergeRates(current, incoming);
-
-    expect(merged.rates.JPY).toBe(0.0000085);
-    expect(merged.rateUpdatedAt!.USD).toBe(now);
-    expect(merged.rateUpdatedAt!.EUR).toBe(now);
-    // The JPY rate is three days old and must still say so.
-    expect(merged.rateUpdatedAt!.JPY).toBe(now - 3 * DAY);
+    it('reports an idle fetch status', async () => {
+      expect((await getFetchStatus()).state).toBe('idle');
+    });
   });
 
-  it('refuses a currency past the 24h cap while the fresh ones keep working', () => {
-    const now = Date.now();
-    const data: RatesData = {
-      rates: { USD: 0.00125, JPY: 0.0000085 },
-      rateUpdatedAt: { USD: now, JPY: now - 3 * DAY },
-      updatedAt: now,
-      source: 'kraken',
-    };
+  describe('when rates are written', () => {
+    it('reads them back', async () => {
+      await setRates(data({ rates: { USD: 0.025 } }));
+      expect((await getRates()).rates.USD).toBe(0.025);
+    });
 
-    expect(isCurrencyUsable(data, 'USD')).toBe(true);
-    expect(isCurrencyUsable(data, 'JPY')).toBe(false);
-    expect(isRatesUsable(data)).toBe(true);
+    it('notifies watchers', async () => {
+      const seen = vi.fn();
+      const stop = watchRates(seen);
+      await setRates(data({ rates: { USD: 0.025 } }));
+      expect(seen).toHaveBeenCalledOnce();
+      stop();
+      await setRates(data({ rates: { EUR: 0.03 } }));
+      expect(seen).toHaveBeenCalledOnce();
+    });
   });
 
-  it('falls back to the map-wide timestamp for caches written before the split', () => {
-    const now = Date.now();
-    const legacy: RatesData = { rates: { USD: 0.00125 }, updatedAt: now, source: 'coingecko' };
-    expect(isCurrencyUsable(legacy, 'USD')).toBe(true);
+  describe('when a held rate is written', () => {
+    const held = { peg: 0.025, pegged: NOW };
+
+    it('reads it back', async () => {
+      await setHeldRate(held);
+      expect(await getHeldRate()).toEqual(held);
+    });
+
+    it('notifies watchers', async () => {
+      const seen = vi.fn();
+      const stop = watchHeldRate(seen);
+      await setHeldRate(held);
+      expect(seen).toHaveBeenCalledWith(held);
+      stop();
+    });
+  });
+
+  describe('when a fetch status is written', () => {
+    it('records the state', async () => {
+      await setFetchStatus('fetching');
+      const status = await getFetchStatus();
+      expect(status.state).toBe('fetching');
+      expect(status.changedAt).toBe(NOW);
+    });
+
+    it('records the error', async () => {
+      await setFetchStatus('error', 'gateway down');
+      expect((await getFetchStatus()).error).toBe('gateway down');
+    });
+
+    it('notifies watchers', async () => {
+      const seen = vi.fn();
+      const stop = watchFetchStatus(seen);
+      await setFetchStatus('ok');
+      expect(seen).toHaveBeenCalledOnce();
+      stop();
+    });
   });
 });

@@ -1,0 +1,90 @@
+StructuredTest
+├── toAmount
+│   ├── given a finite number
+│   │   └── it is taken as is
+│   ├── given a number that is not finite
+│   │   └── it is rejected
+│   ├── given a machine-normalised string
+│   │   ├── it parses it
+│   │   └── it strips grouping separators
+│   ├── given a string that is not a number
+│   │   └── it is rejected
+│   └── given anything else
+│       └── it is rejected
+├── readStructuredPrices
+│   ├── given JSON-LD
+│   │   ├── it reads a Product/Offer block
+│   │   ├── it walks @graph and arrays
+│   │   ├── it reads both ends of an AggregateOffer
+│   │   ├── given a block is malformed
+│   │   │   └── it survives without losing the good ones
+│   │   ├── given a block is larger than the parse cap
+│   │   │   └── it skips that block
+│   │   ├── given a block is empty
+│   │   │   └── it skips that block
+│   │   ├── given the price is a number rather than a string
+│   │   │   └── it reads it
+│   │   ├── given the price is not finite
+│   │   │   └── it ignores the block
+│   │   ├── given the price is not a number at all
+│   │   │   └── it ignores the block
+│   │   └── given there is no currency
+│   │       └── it ignores the block — an amount alone is not a price
+│   ├── given microdata
+│   │   ├── it reads the content attribute
+│   │   ├── given there is no content attribute
+│   │   │   └── it reads the visible text
+│   │   ├── given the amount is not readable
+│   │   │   └── it skips the element
+│   │   ├── given the amount is zero or negative
+│   │   │   └── it skips the element
+│   │   ├── given the currency is stated as text rather than an attribute
+│   │   │   └── it reads the text
+│   │   ├── given there is no currency in scope
+│   │   │   └── it skips the element
+│   │   └── given the price sits outside any itemscope
+│   │       └── it looks for the currency across the whole root
+│   └── given OpenGraph tags
+│       ├── it reads the price
+│       ├── given the amount tag is missing
+│       │   └── it reads nothing
+│       └── given the currency tag is missing
+│           └── it reads nothing
+├── documentCurrency
+│   ├── given the page agrees on one currency
+│   │   └── it reports that currency
+│   ├── given the page is multi-currency
+│   │   └── it reports nothing
+│   └── given the page states no price at all
+│       └── it reports nothing
+├── digitProjection
+│   ├── it keeps only the digits
+│   └── given text with no digits
+│       └── it returns nothing
+├── projectionsFor
+│   ├── it covers the renderings a price actually takes
+│   └── given a whole number
+│       └── it covers the two-decimal rendering as well
+├── locatePrices
+│   ├── given no structured prices
+│   │   └── it returns nothing
+│   ├── given a price split across spans
+│   │   └── it finds the element regex reads as 4999
+│   ├── given several matching elements
+│   │   └── it prefers the smallest
+│   ├── given the amount is nowhere on screen
+│   │   └── it returns nothing
+│   ├── given two prices with the same digits
+│   │   └── it does not give them the same element
+│   ├── given an element holds no digits
+│   │   └── it is not a candidate
+│   ├── given an element holds digits that do not match
+│   │   └── it is not chosen
+│   └── given a Shopify cents-integer
+│       ├── given the screen shows two decimals
+│       │   └── it reads the value as cents
+│       └── given the screen shows the integer itself
+│           └── it keeps the integer
+└── the oracle beats regex where regex is weakest
+    ├── it fixes the currency for the whole page
+    └── it reads a price regex would get 100x wrong

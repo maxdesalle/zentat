@@ -1,55 +1,147 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from 'vitest';
-import { collectShadowRoots, hasShadowDom } from '../../src/lib/detection/shadow';
-import { walkPriceElements } from '../../src/lib/detection/walker';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { collectShadowRoots, hasShadowDom, shadowRootOf } from '../../src/lib/detection/shadow';
+
+// Spec: tests/trees/shadow.tree
+
+function host(id: string, mode: ShadowRootMode = 'open'): { el: Element; shadow: ShadowRoot } {
+  const el = document.createElement('div');
+  el.id = id;
+  document.body.appendChild(el);
+  return { el, shadow: el.attachShadow({ mode }) };
+}
 
 beforeEach(() => {
   document.body.innerHTML = '';
 });
 
-function component(id: string, html: string): HTMLElement {
-  const host = document.createElement('div');
-  host.id = id;
-  document.body.appendChild(host);
-  host.attachShadow({ mode: 'open' }).innerHTML = html;
-  return host;
-}
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
-describe('prices inside web components', () => {
-  it('used to be invisible: querySelectorAll does not cross a shadow boundary', () => {
-    component('a', '<p>$19.99</p>');
-    // Establishes the premise this module exists for.
-    expect(document.querySelectorAll('p')).toHaveLength(0);
+describe('shadowRootOf', () => {
+  describe('given the element has an open root', () => {
+    it('returns that root', () => {
+      const { el, shadow } = host('a');
+      expect(shadowRootOf(el)).toBe(shadow);
+    });
   });
 
-  it('finds a price inside an open shadow root', () => {
-    component('a', '<p>$19.99</p>');
-    expect(walkPriceElements(document.body).map((r) => r.text).join(' ')).toContain('$19.99');
+  describe('given the element has a closed root', () => {
+    describe('given the extension API is available', () => {
+      it('reaches the root through the API', () => {
+        // chrome.dom.openOrClosedShadowRoot is the only way in, and closed
+        // roots are common in exactly the checkout widgets that matter most.
+        const { el, shadow } = host('b', 'closed');
+        vi.stubGlobal('chrome', { dom: { openOrClosedShadowRoot: () => shadow } });
+        expect(shadowRootOf(el)).toBe(shadow);
+      });
+    });
+
+    describe('given the API is not available', () => {
+      it('reports no root', () => {
+        // Firefox has no equivalent. Closed roots are simply out of reach
+        // there, and the walk has to carry on regardless.
+        const { el } = host('c', 'closed');
+        vi.stubGlobal('chrome', {});
+        expect(shadowRootOf(el)).toBeNull();
+      });
+    });
   });
 
-  it('finds prices nested several components deep', () => {
-    const outer = component('outer', '<div id="mid"></div>');
-    const mid = outer.shadowRoot!.getElementById('mid')!;
-    mid.attachShadow({ mode: 'open' }).innerHTML = '<span>$42.00</span>';
-    expect(walkPriceElements(document.body).map((r) => r.text).join(' ')).toContain('$42.00');
+  describe('given the API throws', () => {
+    it('reports no root rather than failing the walk', () => {
+      const { el } = host('d', 'closed');
+      vi.stubGlobal('chrome', {
+        get dom(): never {
+          throw new Error('extension context invalidated');
+        },
+      });
+      expect(shadowRootOf(el)).toBeNull();
+    });
   });
 
-  it('still finds light-DOM prices alongside shadow ones', () => {
-    document.body.innerHTML = '<p>$5.00</p>';
-    component('a', '<p>$7.00</p>');
-    const text = walkPriceElements(document.body).map((r) => r.text).join(' ');
-    expect(text).toContain('$5.00');
-    expect(text).toContain('$7.00');
+  describe('given the element hosts nothing', () => {
+    it('reports no root', () => {
+      document.body.innerHTML = '<div id="plain"></div>';
+      vi.stubGlobal('chrome', { dom: { openOrClosedShadowRoot: () => null } });
+      expect(shadowRootOf(document.getElementById('plain')!)).toBeNull();
+    });
+  });
+});
+
+describe('collectShadowRoots', () => {
+  describe('given no shadow roots', () => {
+    it('finds nothing', () => {
+      document.body.innerHTML = '<div><span>$19.99</span></div>';
+      expect(collectShadowRoots(document.body)).toEqual([]);
+    });
   });
 
-  it('probes cheaply and reports nothing on an ordinary page', () => {
-    document.body.innerHTML = '<p>$5.00</p><div><span>hello</span></div>';
-    expect(hasShadowDom(document.body)).toBe(false);
-    expect(collectShadowRoots(document.body)).toEqual([]);
+  describe('given one shadow root', () => {
+    it('finds it', () => {
+      const { shadow } = host('a');
+      expect(collectShadowRoots(document.body)).toEqual([shadow]);
+    });
   });
 
-  it('bounds how many roots it will walk', () => {
-    for (let i = 0; i < 60; i++) component(`c${i}`, '<p>$1.00</p>');
-    expect(collectShadowRoots(document.body, 10)).toHaveLength(10);
+  describe('given the root element is itself a host', () => {
+    it('finds its shadow root', () => {
+      // The observer probes each newly added element. When the added node IS
+      // the component host, looking only downwards misses its whole tree —
+      // the component then converts once and never again.
+      const { el, shadow } = host('self');
+      expect(collectShadowRoots(el)).toEqual([shadow]);
+    });
+  });
+
+  describe('given a shadow root nested in another', () => {
+    it('finds both', () => {
+      // Component trees nest: a checkout widget inside a payment section
+      // inside a page shell is three boundaries deep.
+      const { shadow } = host('outer');
+      const inner = document.createElement('div');
+      shadow.appendChild(inner);
+      const innerShadow = inner.attachShadow({ mode: 'open' });
+      expect(collectShadowRoots(document.body)).toEqual([shadow, innerShadow]);
+    });
+  });
+
+  describe('given more roots than the limit', () => {
+    it('stops at the limit', () => {
+      // This runs on every mutation batch, so the cost has to stay
+      // proportional to what the user can actually see.
+      for (let i = 0; i < 10; i++) host(`h${i}`);
+      expect(collectShadowRoots(document.body, 4)).toHaveLength(4);
+    });
+  });
+});
+
+describe('hasShadowDom', () => {
+  describe('given a page with no shadow root', () => {
+    it('reports none', () => {
+      document.body.innerHTML = '<div><span>$19.99</span></div>';
+      expect(hasShadowDom(document.body)).toBe(false);
+    });
+  });
+
+  describe('given a page with one', () => {
+    it('reports one', () => {
+      host('a');
+      expect(hasShadowDom(document.body)).toBe(true);
+    });
+  });
+
+  describe('given the root element is itself a host', () => {
+    it('reports one', () => {
+      const { el } = host('self');
+      expect(hasShadowDom(el)).toBe(true);
+    });
+  });
+
+  describe('given the root has no children', () => {
+    it('reports none', () => {
+      expect(hasShadowDom(document.body)).toBe(false);
+    });
   });
 });

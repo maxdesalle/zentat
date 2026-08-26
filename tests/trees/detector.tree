@@ -1,0 +1,20 @@
+DetectorTest
+└── detectPrices
+    ├── given the page states a price in structured data
+    │   ├── it reports the structured amount
+    │   ├── it does not let regex second-guess that element
+    │   └── it does not let regex second-guess anything inside it
+    ├── given the structured currency is not enabled
+    │   └── it ignores that structured price
+    ├── given no structured data
+    │   └── it falls back to reading the rendered text
+    ├── given the page declares a currency
+    │   └── it uses that rather than guessing from the hostname
+    ├── given the page declares a language
+    │   └── it reads numbers under that language's rules
+    ├── given a site adapter identified the element as a price container
+    │   └── it lets bare-number patterns run there
+    ├── given a parent whose direct text holds its own price
+    │   └── it carries that through
+    └── given a page with no prices
+        └── it reports nothing

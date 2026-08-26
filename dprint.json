@@ -8,6 +8,7 @@
   "excludes": [
     "**/node_modules",
     "**/dist",
+    "**/coverage",
     "**/.wxt",
     "bun.lock",
     "package-lock.json"

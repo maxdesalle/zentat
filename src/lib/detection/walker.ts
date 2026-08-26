@@ -1,6 +1,9 @@
 import { adapterFor, isExcluded } from './adapters';
+import { textOf } from './dom';
 import { QUICK_DETECT_PATTERN } from './patterns';
 import { collectShadowRoots, hasShadowDom } from './shadow';
+
+export { textOf } from './dom';
 
 // Elements to skip entirely. Tag names are compared upper-cased because SVG
 // and MathML elements report lowercase tagName in HTML documents.
@@ -44,9 +47,6 @@ export interface WalkResult {
   directTextOnly?: boolean;
 }
 
-// Track bol.com price containers that need special handling
-export const bolPriceContainerSet = new WeakSet<Element>();
-
 // Text that looks numeric but is not a price. Never treat the extension's own
 // output ("… ZEC", "… zats") as a price — that is what allowed converted text
 // to be re-parsed and compounded on sites with bare-number patterns.
@@ -73,7 +73,7 @@ const MAX_CONTROL_TEXT = 40;
 export function isInteractiveControl(el: Element): boolean {
   const control = el.closest(CONTROL_SELECTOR);
   if (!control) return false;
-  const text = control.textContent?.trim() ?? '';
+  const text = textOf(control);
   return text.length <= MAX_CONTROL_TEXT
     && control.getElementsByTagName('*').length <= MAX_CONTROL_DESCENDANTS;
 }
@@ -127,33 +127,40 @@ export function isConvertible(el: Element): boolean {
 // patterns are quadratic on long digit runs. Budget the whole pass too.
 const MAX_PASS_CHARS = 200_000;
 
+/** A selector's matches within `root`, plus `root` itself when it matches. */
+function selfAndMatching(root: Element, selector: string): Element[] {
+  const within = Array.from(root.querySelectorAll(selector));
+  return root.matches(selector) ? [root, ...within] : within;
+}
+
 export function walkPriceElements(root: Node): WalkResult[] {
   const results: WalkResult[] = [];
   let charBudget = MAX_PASS_CHARS;
   const processedElements = new Set<Element>();
 
-  if (!(root instanceof Element || root instanceof Document)) {
-    return results;
-  }
+  // Element only. Every caller passes one — document.body on the first pass,
+  // a mutation's added node after that — and accepting a Document as well
+  // meant carrying a branch no code path could take.
+  if (!(root instanceof Element)) return results;
 
   // One pass over whatever this site's adapter declares as a whole price.
   // Previously this was a hand-written block per site, each with its own
   // querySelectorAll, its own eligibility checks, and in bol.com's case a
   // module-level WeakSet smuggling a boolean into the converter.
-  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  // A DOM root implies a window: the instanceof check above already proved
+  // this is running in a document.
+  const hostname = window.location.hostname;
   const adapter = adapterFor(hostname);
 
   for (const selector of adapter?.containers ?? []) {
-    for (const container of (root as Element).querySelectorAll?.(selector) ?? []) {
+    for (const container of selfAndMatching(root, selector)) {
       if (processedElements.has(container)) continue;
       if (!isConvertible(container)) continue;
       if (isExcluded(adapter, container)) continue;
 
       // An adapter's extract() exists for markup no selector can express —
       // an accessible copy of a price that the visible DOM has split up.
-      const text = (adapter?.extract?.(container, { hostname })
-        ?? container.textContent?.trim()
-        ?? '').trim();
+      const text = (adapter?.extract?.(container, { hostname }) ?? textOf(container)).trim();
 
       if (!text || text.length > MAX_PURE_PRICE_LENGTH) continue;
       if (!QUICK_DETECT_PATTERN.test(text) || isNonPriceText(text)) continue;
@@ -169,12 +176,17 @@ export function walkPriceElements(root: Node): WalkResult[] {
     ? collectShadowRoots(root as ParentNode)
     : [];
   const allElements = [
-    ...Array.from((root as Element).getElementsByTagName?.('*') || []),
+    // The root ITSELF, not only its descendants. The observer queues each
+    // added element as a root, so an infinite-scroll page that appends
+    // `<span class="price">$19.99</span>` — the price in the added element's
+    // own text — had that price skipped entirely: getElementsByTagName and
+    // querySelectorAll both look only downwards.
+    root,
+    ...Array.from(root.getElementsByTagName('*')),
     ...shadowRoots.flatMap((shadow) => Array.from(shadow.querySelectorAll('*'))),
   ];
 
   for (const element of allElements) {
-    if (!(element instanceof Element)) continue;
     if (processedElements.has(element)) continue;
     if (!isConvertible(element)) continue;
 
@@ -224,7 +236,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // split rendering of the same price, not separate prices to defer to.
     let hasMatchingChild = false;
     for (const child of accessible !== null ? [] : element.children) {
-      const childText = child.textContent?.trim() || '';
+      const childText = textOf(child);
       if (
         childText && QUICK_DETECT_PATTERN.test(childText)
         && childText.length <= MAX_PURE_PRICE_LENGTH
@@ -241,7 +253,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
     } else {
       const directText = Array.from(element.childNodes)
         .filter((n) => n.nodeType === Node.TEXT_NODE)
-        .map((n) => n.nodeValue || '')
+        .map((n) => textOf(n))
         .join(' ');
       const directTrimmed = directText.trim();
       if (

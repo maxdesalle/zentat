@@ -1,0 +1,57 @@
+AnchorsTest
+├── anchorZecValue
+│   ├── given the anchor's currency has a rate
+│   │   └── it prices the anchor in ZEC
+│   ├── given the currency has no rate
+│   │   └── it cannot price it
+│   ├── given the amount is not positive
+│   │   └── it cannot price it
+│   └── given the arithmetic does not produce a usable number
+│       └── it cannot price it
+├── compareToAnchors
+│   ├── it expresses a price in things the user knows
+│   ├── it is invariant to the ZEC price — the whole point
+│   ├── it prefers the anchor closest to a countable multiple
+│   ├── it works across currencies, because both legs go through ZEC
+│   ├── given a comparison nobody can picture
+│   │   ├── it drops one that is too small
+│   │   └── it drops one that is too large
+│   ├── given an anchor in a currency with no rate
+│   │   └── it ignores that anchor
+│   ├── given the amount is not positive
+│   │   └── it returns nothing
+│   └── when a limit is given
+│       └── it returns no more than that many
+├── formatCount
+│   ├── given a count in the hundreds
+│   │   └── it rounds to a whole number
+│   ├── given a count in the tens
+│   │   └── it rounds to a whole number
+│   ├── given a count around one
+│   │   └── it keeps one decimal
+│   ├── given a count below one
+│   │   └── it keeps two decimals
+│   └── when a locale is given
+│       └── it formats in that locale
+├── formatComparisons
+│   ├── it reads as a sentence
+│   └── given there is nothing to compare
+│       └── it says nothing
+├── driftedAnchors
+│   ├── it flags an anchor once it moves past the threshold
+│   ├── it stays quiet inside the threshold
+│   ├── it reports the biggest mover first
+│   ├── given the anchor can no longer be priced
+│   │   └── it is skipped
+│   └── given the anchor was never priced
+│       └── it is skipped
+└── createAnchor
+    ├── it records the ZEC cost at the moment it was set
+    ├── it gives each anchor its own id
+    ├── it upper-cases the currency
+    ├── given a label longer than the field allows
+    │   └── it truncates the label
+    └── given input it cannot price
+        ├── it refuses an empty label
+        ├── it refuses a non-positive amount
+        └── it refuses a currency with no rate

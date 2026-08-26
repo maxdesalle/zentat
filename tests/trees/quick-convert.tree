@@ -1,0 +1,21 @@
+QuickConvertTest
+└── quickConvert
+    ├── given fiat text
+    │   ├── it handles a plain selection
+    │   ├── it understands every format the page parser does
+    │   └── given the currency has no rate
+    │       └── it returns nothing
+    ├── given a ZEC amount
+    │   ├── it converts back the other way
+    │   ├── it accepts zats on the way back
+    │   ├── it always uses spot, never the held rate
+    │   ├── given the amount is negative
+    │   │   └── it returns nothing
+    │   ├── given the amount does not parse
+    │   │   └── it returns nothing
+    │   └── given the display currency has no rate
+    │       └── it returns nothing
+    └── given text with no price in it
+        ├── it returns nothing
+        └── given the text is empty
+            └── it returns nothing

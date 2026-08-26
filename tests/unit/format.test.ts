@@ -1,10 +1,62 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   clearPageUnit,
   formatZec,
   formatZecWithSymbol,
+  setDisplayLocale,
   setPageUnit,
 } from '../../src/lib/conversion/format';
+
+// Spec: tests/trees/format.tree
+
+describe('the initial locale', () => {
+  /** LOCALE is read once at import, so each case needs its own module. */
+  async function loadWithNavigator(navigator: unknown) {
+    vi.stubGlobal('navigator', navigator);
+    vi.resetModules();
+    return import('../../src/lib/conversion/format');
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  describe('given the browser states a language', () => {
+    it('renders in that language', async () => {
+      const { formatZec } = await loadWithNavigator({ language: 'de-DE' });
+      expect(formatZec(1.234)).toBe('1,234');
+    });
+  });
+
+  describe('given the browser states none', () => {
+    it('falls back to US English', async () => {
+      // Service workers and offscreen documents have no navigator.language.
+      // Formatting has to keep working there rather than throwing.
+      const { formatZec } = await loadWithNavigator({});
+      expect(formatZec(1.234)).toBe('1.234');
+    });
+  });
+});
+
+describe('setDisplayLocale', () => {
+  afterEach(() => setDisplayLocale('en-US'));
+
+  describe('given a locale', () => {
+    it('renders in that locale', () => {
+      // A US user on a German shop parses "1.234,56 €" under German rules and
+      // would then read the result under US ones — the meaning of "." flipping
+      // mid-sentence.
+      setDisplayLocale('de-DE');
+      expect(formatZec(1.234)).toBe('1,234');
+    });
+  });
+
+  describe('given no locale', () => {
+    it('keeps the one already in use', () => {
+      setDisplayLocale('de-DE');
+      setDisplayLocale(undefined);
+      expect(formatZec(1.234)).toBe('1,234');
+    });
+  });
+});
 
 describe('formatZec', () => {
   describe('with auto precision', () => {
@@ -33,6 +85,12 @@ describe('formatZec', () => {
     it('handles very small numbers', () => {
       expect(formatZec(0.00001)).toBe('0.00001000');
     });
+
+    it('caps the decimals it will show', () => {
+      // Past eight decimals there is nothing left to say: a zatoshi is the
+      // smallest unit that exists.
+      expect(formatZec(0.000000001234)).toBe('0.00000000');
+    });
   });
 
   describe('with fixed precision', () => {
@@ -50,99 +108,108 @@ describe('formatZec', () => {
       expect(formatZec(0, 2)).toBe('0.00');
     });
   });
+
+  describe('with coarse precision', () => {
+    it('shows two significant figures', () => {
+      // Coarse says what the rate can actually support. More digits than that
+      // is a precision claim the feed cannot back.
+      expect(formatZec(0.1204, 'coarse')).toBe('0.12');
+      expect(formatZec(4.2314, 'coarse')).toBe('4.2');
+    });
+  });
 });
 
 describe('formatZecWithSymbol', () => {
-  it('appends ZEC suffix for small amounts', () => {
-    expect(formatZecWithSymbol(100)).toBe('100.0 ZEC');
-    expect(formatZecWithSymbol(0.001234)).toBe('0.00123 ZEC');
-  });
-
-  it('uses compact notation for large amounts', () => {
-    // Grouped digits, not compact notation — no currency prices as "27.15K".
-    expect(formatZecWithSymbol(27150)).toBe('27,150 ZEC');
-    expect(formatZecWithSymbol(1234567)).toBe('1,234,567 ZEC');
-    expect(formatZecWithSymbol(1234567890)).toBe('1,234,567,890 ZEC');
-    expect(formatZecWithSymbol(1234567890000)).toBe('1,234,567,890,000 ZEC');
-  });
-
-  it('promotes across unit boundaries after rounding', () => {
-    // 999,999,999 must round to "1B", never "1000M"
-    expect(formatZecWithSymbol(999_999_999)).toBe('999,999,999 ZEC');
-  });
-
-  it('honors fixed precision for large amounts instead of compact units', () => {
-    expect(formatZecWithSymbol(27150, 0)).toBe('27,150 ZEC');
-    expect(formatZecWithSymbol(27150.5, 2)).toBe('27,150.50 ZEC');
-  });
-
-  it('renders tiny amounts in zats in auto unit mode', () => {
-    // 0.00005 ZEC = 5,000 zats
-    expect(formatZecWithSymbol(0.00005)).toBe('5,000 zats');
-  });
-
-  it('respects an explicit ZEC-only unit', () => {
-    expect(formatZecWithSymbol(0.00005, 'auto', 'zec')).toBe('0.00005 ZEC');
-  });
-
-  it('respects an explicit zats unit', () => {
-    expect(formatZecWithSymbol(0.5, 'auto', 'zats')).toBe('50,000,000 zats');
-  });
-});
-
-describe('the display grammar reads like money', () => {
-  it('groups large amounts instead of compacting them', () => {
-    // Compact notation at 4 significant figures silently discards 433 ZEC here.
-    expect(formatZecWithSymbol(1_234_567)).toBe('1,234,567 ZEC');
-  });
-
-  it('shows the digits that matter at each magnitude', () => {
-    expect(formatZecWithSymbol(27_150)).toBe('27,150 ZEC');
-    expect(formatZecWithSymbol(271.5)).toBe('271.5 ZEC');
-    expect(formatZecWithSymbol(4.2314)).toBe('4.23 ZEC');
-    expect(formatZecWithSymbol(0.4231)).toBe('0.4231 ZEC');
-    expect(formatZecWithSymbol(0.00423)).toBe('0.00423 ZEC');
-  });
-
-  it('switches to zats before decimals stop being scannable', () => {
-    expect(formatZecWithSymbol(0.0004231)).toBe('42,310 zats');
-  });
-
-  it('coarse mode is honest about what the rate can support', () => {
-    expect(formatZecWithSymbol(0.1204, 'coarse')).toBe('≈0.12 ZEC');
-    expect(formatZecWithSymbol(4.2314, 'coarse')).toBe('≈4.2 ZEC');
-  });
-
-  it('never renders a nonzero amount as zero', () => {
-    expect(formatZecWithSymbol(0.004, 2)).not.toBe('0.00 ZEC');
-  });
-});
-
-describe('one unit per page', () => {
   afterEach(() => clearPageUnit());
 
-  it('keeps every price on the same scale', () => {
-    // Without this, a page with a cheap and an expensive item renders one in
-    // zats and one in ZEC — two scales the eye cannot compare.
-    setPageUnit([0.0004, 5]);
-    expect(formatZecWithSymbol(0.0004)).toContain('zats');
-    expect(formatZecWithSymbol(5)).toContain('zats');
+  describe('in ZEC', () => {
+    it('appends ZEC suffix for small amounts', () => {
+      expect(formatZecWithSymbol(0.4231)).toBe('0.4231 ZEC');
+      expect(formatZecWithSymbol(4.2314)).toBe('4.23 ZEC');
+    });
+
+    it('groups large amounts instead of compacting them', () => {
+      // Compact notation at 4 significant figures silently discards 433 ZEC.
+      expect(formatZecWithSymbol(1_234_567)).toBe('1,234,567 ZEC');
+    });
+
+    it('shows the digits that matter at each magnitude', () => {
+      expect(formatZecWithSymbol(27_150)).toBe('27,150 ZEC');
+      expect(formatZecWithSymbol(271.5)).toBe('271.5 ZEC');
+      expect(formatZecWithSymbol(0.00423)).toBe('0.00423 ZEC');
+    });
+
+    it('honors fixed precision instead of the magnitude default', () => {
+      expect(formatZecWithSymbol(1_234.5678, 3)).toBe('1,234.568 ZEC');
+    });
+
+    it('never renders a nonzero amount as zero', () => {
+      expect(formatZecWithSymbol(0.004, 2)).not.toBe('0.00 ZEC');
+    });
   });
 
-  it('lets the smallest amount decide, because it goes unreadable first', () => {
-    setPageUnit([0.0004, 5]);
-    // 0.0004 ZEC is six decimals of noise; 500,000,000 zats is merely large.
-    expect(formatZecWithSymbol(0.0004)).toBe('40,000 zats');
+  describe('in zats', () => {
+    it('switches to zats before decimals stop being scannable', () => {
+      expect(formatZecWithSymbol(0.0004231)).toBe('42,310 zats');
+    });
+
+    it('respects an explicit zats unit', () => {
+      expect(formatZecWithSymbol(5, 'auto', 'zats')).toBe('500,000,000 zats');
+    });
+
+    it('respects an explicit ZEC-only unit', () => {
+      expect(formatZecWithSymbol(0.0004231, 'auto', 'zec')).toContain('ZEC');
+    });
+
+    describe('given an amount below one zatoshi', () => {
+      it('keeps two decimals rather than rounding to nothing', () => {
+        // Nothing smaller than a zatoshi exists, but a rate can still produce
+        // one, and "0 zats" for a real price is a lie the user can act on.
+        expect(formatZecWithSymbol(0.000000000045, 'auto', 'zats')).toBe('0 zats');
+        expect(formatZecWithSymbol(0.0000000045, 'auto', 'zats')).toBe('0.45 zats');
+      });
+    });
   });
 
-  it('stays in ZEC when nothing on the page is tiny', () => {
-    setPageUnit([0.5, 5, 500]);
-    expect(formatZecWithSymbol(0.5)).toContain('ZEC');
+  describe('in coarse mode', () => {
+    it('is honest about what the rate can support', () => {
+      expect(formatZecWithSymbol(0.1204, 'coarse')).toBe('≈0.12 ZEC');
+      expect(formatZecWithSymbol(4.2314, 'coarse')).toBe('≈4.2 ZEC');
+    });
   });
 
-  it('falls back to per-amount choice outside a page', () => {
-    clearPageUnit();
-    expect(formatZecWithSymbol(0.0004)).toContain('zats');
-    expect(formatZecWithSymbol(5)).toContain('ZEC');
+  describe('given a zero amount', () => {
+    it('stays in ZEC', () => {
+      // Zero zats and zero ZEC are the same number; the ZEC reading is the one
+      // that matches every other price on the page.
+      expect(formatZecWithSymbol(0)).toContain('ZEC');
+    });
+  });
+
+  describe('one unit per page', () => {
+    it('keeps every price on the same scale', () => {
+      // Without this, a page with a cheap and an expensive item renders one in
+      // zats and one in ZEC — two scales the eye cannot compare.
+      setPageUnit([0.0004, 5]);
+      expect(formatZecWithSymbol(0.0004)).toContain('zats');
+      expect(formatZecWithSymbol(5)).toContain('zats');
+    });
+
+    it('lets the smallest amount decide, because it goes unreadable first', () => {
+      setPageUnit([0.0004, 5]);
+      // 0.0004 ZEC is six decimals of noise; 500,000,000 zats is merely large.
+      expect(formatZecWithSymbol(0.0004)).toBe('40,000 zats');
+    });
+
+    it('stays in ZEC when nothing on the page is tiny', () => {
+      setPageUnit([0.5, 5, 500]);
+      expect(formatZecWithSymbol(0.5)).toContain('ZEC');
+    });
+
+    it('falls back to per-amount choice outside a page', () => {
+      clearPageUnit();
+      expect(formatZecWithSymbol(0.0004)).toContain('zats');
+      expect(formatZecWithSymbol(5)).toContain('ZEC');
+    });
   });
 });

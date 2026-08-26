@@ -25,7 +25,11 @@ function usesDotDecimal(lang: string | undefined): boolean {
   let sep = decimalSepCache.get(lang);
   if (sep === undefined) {
     try {
+      // The ?? cannot fire: formatToParts(1.1) yields a decimal part for every
+      // locale that constructs at all, and one that does not construct throws
+      // into the catch below instead.
       sep = new Intl.NumberFormat(lang).formatToParts(1.1)
+        /* v8 ignore next */
         .find((part) => part.type === 'decimal')?.value ?? '.';
     } catch {
       sep = '.';
@@ -33,6 +37,42 @@ function usesDotDecimal(lang: string | undefined): boolean {
     decimalSepCache.set(lang, sep);
   }
   return sep === '.';
+}
+
+/**
+ * Whether two matched spans cover any of the same characters.
+ *
+ * Exported and tested directly for the same reason as isBetterMatch: the
+ * containment case cannot be produced through parsePrice with today's pattern
+ * list, and it is the case that decides whether a wider match silently
+ * duplicates a narrower one already in the results.
+ */
+export function overlaps(
+  a: Pick<ParsedPrice, 'startIndex' | 'endIndex'>,
+  b: Pick<ParsedPrice, 'startIndex' | 'endIndex'>,
+): boolean {
+  return (a.startIndex >= b.startIndex && a.startIndex < b.endIndex)
+    || (a.endIndex > b.startIndex && a.endIndex <= b.endIndex)
+    || (a.startIndex <= b.startIndex && a.endIndex >= b.endIndex);
+}
+
+/**
+ * Which of two overlapping matches to keep: the one that starts earlier, and
+ * on a tie the longer one.
+ *
+ * Exported and tested directly because the tie is not reachable through
+ * parsePrice with today's pattern list — every pair that can overlap starts at
+ * different offsets. That makes it exactly the rule most likely to be silently
+ * wrong when the next pattern is added.
+ */
+export function isBetterMatch(
+  candidate: Pick<ParsedPrice, 'startIndex' | 'endIndex'>,
+  existing: Pick<ParsedPrice, 'startIndex' | 'endIndex'>,
+): boolean {
+  if (candidate.startIndex !== existing.startIndex) {
+    return candidate.startIndex < existing.startIndex;
+  }
+  return candidate.endIndex - candidate.startIndex > existing.endIndex - existing.startIndex;
 }
 
 export function parsePrice(
@@ -99,28 +139,13 @@ export function parsePrice(
         const price = { ...parsed.price, currency };
 
         // Check for overlap with existing results
-        const overlapIndex = results.findIndex(
-          (r) =>
-            (price.startIndex >= r.startIndex && price.startIndex < r.endIndex)
-            || (price.endIndex > r.startIndex && price.endIndex <= r.endIndex)
-            || (price.startIndex <= r.startIndex && price.endIndex >= r.endIndex),
-        );
+        const overlapIndex = results.findIndex((r) => overlaps(price, r));
 
         if (overlapIndex === -1) {
           // No overlap, add new result
           results.push(price);
-        } else {
-          // Overlap found - prefer the match that starts earlier or is longer
-          const existing = results[overlapIndex];
-          const parsedLen = price.endIndex - price.startIndex;
-          const existingLen = existing.endIndex - existing.startIndex;
-
-          if (
-            price.startIndex < existing.startIndex
-            || (price.startIndex === existing.startIndex && parsedLen > existingLen)
-          ) {
-            results[overlapIndex] = price;
-          }
+        } else if (isBetterMatch(price, results[overlapIndex])) {
+          results[overlapIndex] = price;
         }
       }
     }
@@ -129,47 +154,14 @@ export function parsePrice(
   // Sort by position
   results.sort((a, b) => a.startIndex - b.startIndex);
 
-  // Deduplicate prices with the same original text or overlapping positions
-  // Prefer currency that matches the symbol in the original text
-  const deduped: ParsedPrice[] = [];
-  for (const price of results) {
-    // Check for existing price with same original text
-    const sameTextIdx = deduped.findIndex(p => p.original === price.original);
-    if (sameTextIdx !== -1) {
-      // Prefer the currency that matches the symbol in the original
-      const existing = deduped[sameTextIdx];
-      const priceMatchesSymbol = (price.original.includes('€') && price.currency === 'EUR')
-        || (price.original.includes('$') && price.currency === 'USD')
-        || (price.original.includes('£') && price.currency === 'GBP');
-      const existingMatchesSymbol = (existing.original.includes('€') && existing.currency === 'EUR')
-        || (existing.original.includes('$') && existing.currency === 'USD')
-        || (existing.original.includes('£') && existing.currency === 'GBP');
-
-      if (priceMatchesSymbol && !existingMatchesSymbol) {
-        deduped[sameTextIdx] = price;
-      }
-      continue;
-    }
-
-    // Check for overlapping positions with same amount
-    const overlapIdx = deduped.findIndex(
-      (p) =>
-        Math.abs(p.amount - price.amount) < 0.01
-        && ((price.startIndex >= p.startIndex && price.startIndex < p.endIndex)
-          || (price.endIndex > p.startIndex && price.endIndex <= p.endIndex)),
-    );
-    if (overlapIdx !== -1) {
-      // Keep the longer (more specific) match
-      if (price.original.length > deduped[overlapIdx].original.length) {
-        deduped[overlapIdx] = price;
-      }
-      continue;
-    }
-
-    deduped.push(price);
-  }
-
-  return deduped;
+  // No second dedup pass. There used to be one that collapsed matches sharing
+  // the same ORIGINAL TEXT, which dropped legitimate repeats: "Buy 2 for
+  // $19.99 or 1 for $19.99" converted only the first, leaving the second in
+  // dollars right next to its converted twin. Its overlap half was dead code —
+  // the loop above already resolves every overlap by position, using a strictly
+  // wider rule — and its currency-preference half could only ever see matches
+  // that loop had already collapsed.
+  return results;
 }
 
 // A minus sign binds tightly to its number: "-$5" is negative, "Basic – $10" is
@@ -218,6 +210,10 @@ function extractPriceFromMatch(
     }
   }
 
+  // Unreachable: every pattern alternative contains NUM, so a match always
+  // carries a group with digits in it. Kept because the alternative to
+  // returning null here is indexing past the end of the array below.
+  /* v8 ignore next */
   if (numericGroups.length === 0) return null;
 
   // Handle bol.com "X euro en Y cent" format - two separate numeric groups
@@ -234,6 +230,10 @@ function extractPriceFromMatch(
 
   const preferUsDecimal = US_DECIMAL_CURRENCIES.has(pattern.code) && usesDotDecimal(documentLang);
   const amount = parseNumber(numStr, preferUsDecimal);
+  // Also unreachable from the patterns: NUM guarantees digits, so parseNumber
+  // succeeds, and NUM carries no sign, so it cannot be negative. Negative
+  // prices are rejected earlier, at isNegatedAt.
+  /* v8 ignore next */
   if (amount === null || amount < 0) return null;
 
   // Resolve currency - use locale for ambiguous symbols

@@ -43,7 +43,7 @@ export function startObserver(
   // A light-DOM observer receives no records for mutations inside a shadow
   // tree, so each root needs its own observation. Without this, components
   // convert once and then never again as they re-render.
-  observeShadowRoots(document.body);
+  observeShadowRoots(observer, document.body);
   uninstallRouteHooks = installRouteHooks();
 
   observer.observe(document.body, OBSERVE_OPTIONS);
@@ -54,14 +54,27 @@ export function startObserver(
   setActiveObserver(observer, {
     // Page mutations swept up by the drain are replayed rather than dropped.
     replay: handleMutations,
-    isOwnWrite: (node) => {
-      const el = node instanceof Element ? node : node.parentElement;
-      return el?.closest(`.${SPAN_CLASS}, .${CONVERTED_MARKER}`) !== null;
-    },
+    isOwnWrite,
   });
 }
 
+/**
+ * Whether a drained record describes one of our own DOM writes.
+ *
+ * Exported for tests: getting it wrong in either direction is invisible until
+ * it is expensive — too loose and the page's own updates are dropped, too
+ * tight and we re-detect the ZEC text we just wrote.
+ */
+export function isOwnWrite(node: Node): boolean {
+  const el = node instanceof Element ? node : node.parentElement;
+  return el?.closest(`.${SPAN_CLASS}, .${CONVERTED_MARKER}`) != null;
+}
+
 function handleMutations(mutations: MutationRecord[]): void {
+  // A MutationObserver callback already scheduled when disconnect() is called
+  // still runs in some browsers, so this can fire after teardown. happy-dom
+  // does not model that, which is why it is not reachable from a test.
+  /* v8 ignore next */
   if (!config) return;
 
   for (const mutation of mutations) {
@@ -93,8 +106,9 @@ function handleMutations(mutations: MutationRecord[]): void {
     // reach this callback — the converter drains them with takeRecords()
     // while still inside its conversion pass.
     if (mutation.type === 'characterData') {
-      const target = mutation.target;
-      const element = target instanceof Element ? target : target.parentElement;
+      // A characterData record always targets the text node itself, never an
+      // element, so the owner is always its parent.
+      const element = mutation.target.parentElement;
       if (!element || element.closest(`.${SPAN_CLASS}`)) continue;
       const marked = element.closest(`.${CONVERTED_MARKER}`);
       if (marked) {
@@ -124,30 +138,28 @@ const OBSERVE_OPTIONS: MutationObserverInit = {
 // idempotent. Weak so a detached component does not pin its root.
 const observedShadowRoots = new WeakSet<ShadowRoot>();
 
-function observeShadowRoots(root: ParentNode): void {
-  if (!observer) return;
+function observeShadowRoots(active: MutationObserver, root: ParentNode): void {
   for (const shadow of collectShadowRoots(root)) {
     if (observedShadowRoots.has(shadow)) continue;
     observedShadowRoots.add(shadow);
-    observer.observe(shadow, OBSERVE_OPTIONS);
+    active.observe(shadow, OBSERVE_OPTIONS);
   }
 }
 
 // document.body.contains() is false for anything inside a shadow tree, so the
 // liveness check has to climb out through each host first — otherwise every
 // shadow-hosted price is discarded as detached.
-function isStillInPage(node: Node): boolean {
-  let current: Node | null = node;
-  while (current) {
-    const rootNode = current.getRootNode();
-    if (rootNode === document) return document.contains(current);
-    if (rootNode instanceof ShadowRoot) {
-      current = rootNode.host;
-      continue;
-    }
-    return false;
+/** Exported for tests: three DOM concepts meet here and each one can be wrong. */
+export function isStillInPage(node: Node): boolean {
+  // Climb out through every shadow boundary first: a shadow tree is only live
+  // if its host is, and document.contains() is false for anything inside one.
+  let current: Node = node;
+  let root = current.getRootNode();
+  while (root instanceof ShadowRoot) {
+    current = root.host;
+    root = current.getRootNode();
   }
-  return false;
+  return root === document && document.contains(current);
 }
 
 function addPending(el: Element): void {
@@ -194,7 +206,7 @@ function processPendingNodes(): void {
 
   for (const root of roots) {
     // A newly-added component brings its own shadow root with it.
-    observeShadowRoots(root);
+    if (observer) observeShadowRoots(observer, root);
     if (isStillInPage(root)) {
       convertPricesInNode(root, config.rates, config.settings, config.held);
     }
@@ -215,11 +227,15 @@ function processPendingNodes(): void {
  */
 function installRouteHooks(): () => void {
   const onRouteChange = () => {
+    // Queued by a microtask from the patched history methods, so it can land
+    // after stopObserver has already cleared the config. Same reason as
+    // handleMutations: not reachable from happy-dom.
+    /* v8 ignore next */
     if (!config) return;
     // Drop stale markers, then re-run over the new content.
     revertConversions();
     convertPricesInDocument(config.rates, config.settings, config.held);
-    observeShadowRoots(document.body);
+    if (observer) observeShadowRoots(observer, document.body);
   };
 
   const { pushState, replaceState } = history;

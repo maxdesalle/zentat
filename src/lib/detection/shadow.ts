@@ -27,6 +27,18 @@ export function shadowRootOf(el: Element): ShadowRoot | null {
 }
 
 /**
+ * `root` itself when it is an element, then everything under it.
+ *
+ * querySelectorAll only looks downwards, so probing a newly added component
+ * missed the case where the added node IS the host — the component's shadow
+ * tree was then never observed and its prices never converted.
+ */
+function selfAndDescendants(root: ParentNode): Element[] {
+  const within = Array.from(root.querySelectorAll('*'));
+  return root instanceof Element ? [root, ...within] : within;
+}
+
+/**
  * Every shadow root at or beneath `root`, depth-first.
  *
  * Bounded because a component tree can nest arbitrarily and this runs on every
@@ -38,10 +50,7 @@ export function collectShadowRoots(root: ParentNode, limit = 200): ShadowRoot[] 
 
   while (queue.length > 0 && found.length < limit) {
     const current = queue.shift()!;
-    const hosts = current.querySelectorAll?.('*');
-    if (!hosts) continue;
-
-    for (const host of hosts) {
+    for (const host of selfAndDescendants(current)) {
       const shadow = shadowRootOf(host);
       if (!shadow) continue;
       found.push(shadow);
@@ -58,9 +67,7 @@ export function collectShadowRoots(root: ParentNode, limit = 200): ShadowRoot[] 
  * have no shadow DOM at all and should not pay for the walk.
  */
 export function hasShadowDom(root: ParentNode): boolean {
-  const elements = root.querySelectorAll?.('*');
-  if (!elements) return false;
-  for (const el of elements) {
+  for (const el of selfAndDescendants(root)) {
     if (shadowRootOf(el)) return true;
   }
   return false;

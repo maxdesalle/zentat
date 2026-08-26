@@ -15,6 +15,8 @@
  *    visible must be reconciled, not trusted.
  */
 
+import { textOf } from './dom';
+
 export interface StructuredPrice {
   amount: number;
   currency: string;
@@ -23,7 +25,12 @@ export interface StructuredPrice {
 
 const MAX_JSONLD_BYTES = 512 * 1024;
 
-function toAmount(value: unknown): number | null {
+/**
+ * Exported for tests: JSON cannot carry a non-finite number, so that arm is
+ * unreachable through readStructuredPrices — and it is the one that decides
+ * whether Infinity reaches a price on the page.
+ */
+export function toAmount(value: unknown): number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (typeof value !== 'string') return null;
   // Structured `price` is machine-normalised: dot decimal, no grouping.
@@ -63,7 +70,7 @@ export function readStructuredPrices(root: ParentNode = document): StructuredPri
   const prices: StructuredPrice[] = [];
 
   for (const script of root.querySelectorAll('script[type="application/ld+json"]')) {
-    const text = script.textContent ?? '';
+    const text = textOf(script);
     // Malformed ld+json is common in the wild; parse defensively, never eval.
     if (!text || text.length > MAX_JSONLD_BYTES) continue;
     try {
@@ -76,11 +83,11 @@ export function readStructuredPrices(root: ParentNode = document): StructuredPri
   // Microdata is uniquely valuable: the attribute sits ON the element about to
   // be rewritten, so it answers detection and targeting at once.
   for (const el of root.querySelectorAll('[itemprop="price"]')) {
-    const amount = toAmount(el.getAttribute('content') ?? el.textContent);
+    const amount = toAmount(el.getAttribute('content') ?? textOf(el));
     if (amount === null || amount <= 0) continue;
     const scope = el.closest('[itemscope]') ?? root;
     const currencyEl = (scope as ParentNode).querySelector?.('[itemprop="priceCurrency"]');
-    const currency = currencyEl?.getAttribute('content') ?? currencyEl?.textContent ?? '';
+    const currency = currencyEl?.getAttribute('content') ?? textOf(currencyEl);
     if (isCurrency(currency)) {
       prices.push({ amount, currency: currency.toUpperCase(), source: 'microdata' });
     }
@@ -147,7 +154,7 @@ export function locatePrices(root: ParentNode, prices: StructuredPrice[]): Locat
   if (prices.length === 0) return [];
 
   const candidates = Array.from(root.querySelectorAll('*'))
-    .filter((el) => el.children.length > 0 || (el.textContent ?? '').trim().length > 0);
+    .filter((el) => el.children.length > 0 || textOf(el).length > 0);
 
   const located: Located[] = [];
   const claimed = new Set<Element>();
@@ -170,7 +177,7 @@ export function locatePrices(root: ParentNode, prices: StructuredPrice[]): Locat
 
     for (const el of candidates) {
       if (claimed.has(el)) continue;
-      const text = el.textContent ?? '';
+      const text = textOf(el);
       const projection = digitProjection(text);
       if (!projection) continue;
       if (!targets.has(projection) && centsTargets?.has(projection) !== true) continue;

@@ -1,0 +1,26 @@
+I18nTest
+├── t
+│   ├── given the key exists in the catalogue
+│   │   └── it returns the translation
+│   ├── when substitutions are given
+│   │   └── it passes them through
+│   ├── given the key is missing
+│   │   └── it returns the key so the omission is visible
+│   └── given the i18n API is unavailable
+│       └── it returns the key rather than throwing
+└── localizeDocument
+    ├── given an element carries a text key
+    │   └── it replaces the text
+    ├── given an element carries attribute keys
+    │   ├── it sets each named attribute
+    │   └── it handles more than one pair
+    ├── given the attribute list is empty
+    │   └── it leaves the element alone
+    ├── given an attribute pair is malformed
+    │   └── it skips that pair without touching the others
+    ├── given an element carries an empty text key
+    │   └── it leaves the element alone
+    ├── given no root is given
+    │   └── it localizes the whole document
+    └── given a root is given
+        └── it leaves elements outside that root alone

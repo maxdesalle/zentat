@@ -1,0 +1,12 @@
+CoingeckoTest
+└── fetchFromCoinGecko
+    ├── given a successful response
+    │   ├── it converts fiat-per-ZEC to ZEC-per-fiat
+    │   ├── it upper-cases the currency codes
+    │   └── it names itself as the source
+    ├── given a price that is not usable
+    │   └── it filters zero/negative/non-numeric prices
+    ├── given ZEC data is missing
+    │   └── it throws
+    └── given an HTTP error
+        └── it throws

@@ -26,9 +26,20 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npx dprint check
+      # Every .tree file is a specification. Left unchecked it drifts from the
+      # tests it describes, and a spec nobody has read in six months is worse
+      # than no spec at all.
+      - name: Trees match their tests
+        run: npm run test:trees
+
       # Unit tests plus the golden corpus: saved markup shapes from real sites,
       # which is the only thing that pins detection against the actual web.
-      - run: npm run test -- --run
+      #
+      # Coverage is a GATE at 100%, not a target to drift toward: a line
+      # nobody executes is a line nobody has checked. Two of the bugs this
+      # suite has caught in shipped code lived on untested branches.
+      # `npm run uncovered` names the missing arm when this fails.
+      - run: npm run test:coverage
       - run: npm run build
       - run: npm run build:firefox
 

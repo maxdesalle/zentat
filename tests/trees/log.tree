@@ -1,0 +1,7 @@
+LogTest
+└── debug
+    ├── given a development build
+    │   ├── it writes to the console
+    │   └── it prefixes the message so it is greppable
+    └── given a production build
+        └── it writes nothing

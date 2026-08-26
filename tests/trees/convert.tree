@@ -1,0 +1,23 @@
+ConvertTest
+└── convertPrice
+    ├── given a spot rate
+    │   ├── it multiplies by the stored rate
+    │   ├── it is not the reciprocal
+    │   ├── it scales linearly across magnitudes
+    │   ├── it handles a currency with a very small rate
+    │   └── it carries the original text through
+    ├── given a held rate
+    │   ├── given the held rate covers this currency
+    │   │   └── it converts at the held rate rather than spot
+    │   └── given the held rate cannot cover this currency
+    │       └── it refuses rather than falling back to spot
+    ├── given a currency it has no rate for
+    │   └── it refuses
+    ├── given the rate for that currency is past the hard cap
+    │   └── it refuses rather than converting at a stale rate
+    └── given the arithmetic does not produce a usable amount
+        ├── it never yields a non-finite amount
+        ├── given the rate overflows
+        │   └── it refuses
+        └── given the rate is negative
+            └── it refuses

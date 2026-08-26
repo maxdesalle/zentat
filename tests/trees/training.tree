@@ -1,0 +1,30 @@
+TrainingTest
+├── scoreGuess
+│   ├── given an exact guess
+│   │   └── it gives full marks
+│   ├── given a guess off by a factor
+│   │   ├── it treats double and half as equally wrong
+│   │   ├── it scores zero at a factor of four out, and never negative
+│   │   └── it reports the signed error so the user learns which way they lean
+│   ├── it grades the verdict by how far off, in either direction
+│   └── given nonsense input
+│       ├── it refuses a non-positive guess
+│       └── it refuses a non-positive answer
+├── nextQuestion
+│   ├── given a spot rate
+│   │   └── it asks about a real item at the current rate
+│   ├── given a held rate
+│   │   └── it asks at the rate the pages are showing
+│   ├── when an item is excluded
+│   │   └── it does not repeat the item just asked
+│   ├── given no rate to ask about
+│   │   └── it returns nothing
+│   └── given a held rate that cannot cover the currency
+│       └── it returns nothing
+├── recordAttempt
+│   ├── it builds a streak on good answers and breaks it on a bad one
+│   └── it remembers the best streak reached
+└── accuracy
+    ├── it reports mean accuracy, which is what shows improvement
+    └── given no attempts yet
+        └── it reports nothing

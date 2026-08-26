@@ -1,0 +1,18 @@
+ContentStateTest
+├── setActiveObserver
+│   ├── given an observer and handlers
+│   │   └── it uses them on the next flush
+│   └── given the observer is cleared
+│       └── it stops flushing
+└── flushObserverRecords
+    ├── given no observer is active
+    │   └── it does nothing
+    ├── given the queue is empty
+    │   └── it replays nothing
+    ├── given only our own writes are queued
+    │   └── it discards them
+    ├── given a page mutation is queued alongside ours
+    │   ├── it replays the page mutation
+    │   └── it does not replay ours
+    └── given an observer with no handlers
+        └── it drains without replaying

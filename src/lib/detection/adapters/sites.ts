@@ -40,6 +40,12 @@ export const SITE_ADAPTERS: SiteAdapter[] = [
     hosts: ['bol.com'],
     assume: { currency: 'EUR' },
     containers: ['.font-produkt'],
+    // The extracted text is the accessible sentence, not what is on screen, so
+    // there is nothing in the visible markup for a partial replace to match.
+    // This used to be carried by a WeakSet the walker filled and the converter
+    // read; the adapter refactor stopped filling it and nothing noticed,
+    // because no test covered bol's replacement path.
+    replaceWhole: ['.font-produkt'],
     // The visible spans are aria-hidden fragments; the absolutely-positioned
     // span carries the whole price as a sentence.
     extract: (el) =>
