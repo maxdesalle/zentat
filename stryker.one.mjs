@@ -22,5 +22,7 @@ export default {
   mutate: [target],
   thresholds: { high: 100, low: 100, break: 100 },
   timeoutMS: 20000,
-  concurrency: 2,
+  // One worker per run. Several of these go at once, and at two apiece the
+  // machine ran out of headroom.
+  concurrency: 1,
 };

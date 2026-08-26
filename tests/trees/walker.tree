@@ -20,7 +20,8 @@ WalkerTest
 ├── isNonPriceText
 │   ├── given text this extension itself produced
 │   │   ├── it rejects a ZEC amount
-│   │   └── it rejects a zats amount
+│   │   ├── it rejects a zats amount
+│   │   └── it rejects a single zat
 │   ├── given a rating
 │   │   ├── it rejects an out-of-five score
 │   │   ├── it rejects a score with no word after it
@@ -63,7 +64,9 @@ WalkerTest
 │   │   └── it is concatenated
 │   ├── given several children and an ordinary price
 │   │   └── it is not concatenated
-│   └── given the symbol is spaced away from the digits
+│   ├── given the symbol is spaced away from the digits
+│   │   └── it is still concatenated
+│   └── given the run of digits is followed by other text
 │       └── it is still concatenated
 ├── accessibleCopyCovers
 │   ├── given the copy accounts for every price inside
@@ -72,6 +75,12 @@ WalkerTest
 │   │   └── it may not
 │   ├── given a child holds no price at all
 │   │   └── it is not counted against the copy
+│   ├── given a child holds a number that is not a price
+│   │   └── it is not counted against the copy
+│   ├── given a child holds our own earlier output
+│   │   └── it is not counted against the copy
+│   ├── given the copy and the child punctuate the price differently
+│   │   └── it compares the digits
 │   └── given there is no copy
 │       └── it reports nothing
 ├── accessiblePriceText
@@ -84,6 +93,8 @@ WalkerTest
 │   ├── given a visually hidden price
 │   │   └── it uses that text
 │   ├── given a visually hidden element that is not a price
+│   │   └── it ignores it
+│   ├── given a visually hidden element holding ordinary words
 │   │   └── it ignores it
 │   └── given no accessible copy
 │       └── it reports nothing
@@ -115,6 +126,10 @@ WalkerTest
     │   └── it is left alone
     ├── given a page that exhausts the pass budget
     │   └── it stops rather than freezing the tab
+    ├── given the budget lands exactly on zero
+    │   └── it stops there
+    ├── given an element whose class is reported as an object
+    │   └── it is still considered
     ├── given a site adapter declares price containers
     │   ├── it collects the container as a whole
     │   ├── it marks it as a price container
@@ -130,6 +145,10 @@ WalkerTest
     │   │   └── it still reads a price the page added beside it
     │   ├── given the container's own text lost its separator
     │   │   └── it refuses rather than risk a hundredfold error
+    │   ├── given the adapter extracted the text itself
+    │   │   └── it trusts the extraction over the visible markup
+    │   ├── given container text of exactly the greatest length
+    │   │   └── it is still collected
     │   └── given the container text is too long
     │       └── it is skipped
     ├── given the root element itself holds the price
@@ -142,6 +161,10 @@ WalkerTest
     │   └── it is collected
     ├── given a price beside one that already converted
     │   └── it is still collected
+    ├── given an accessibility copy of a price on the page
+    │   └── it is not collected in its own right
+    ├── given a price nested inside another collected element
+    │   └── it is collected once
     ├── given the accessibility layer holds the canonical price
     │   ├── it prefers that text
     │   └── it does not collect the hidden copy separately

@@ -136,6 +136,12 @@ describe('isNonPriceText', () => {
     it('rejects a zats amount', () => {
       expect(isNonPriceText('6,200 zats')).toBe(true);
     });
+
+    it('rejects a single zat', () => {
+      // Our own output at the smallest magnitude. Reading it back as a price
+      // is how a conversion compounds into a wrong number.
+      expect(isNonPriceText('1 zat')).toBe(true);
+    });
   });
 
   describe('given a rating', () => {
@@ -321,6 +327,15 @@ describe('looksConcatenated', () => {
       expect(looksConcatenated(document.getElementById('p')!, '$\u00A04999')).toBe(true);
     });
   });
+
+  describe('given the run of digits is followed by other text', () => {
+    it('is still concatenated', () => {
+      // "$4999/mo" is the same lost separator as "$4999" — the unit after it
+      // says nothing about whether the cents went missing.
+      render('<div id="p"><span>49</span><span>99</span></div>');
+      expect(looksConcatenated(document.getElementById('p')!, '$4999/mo')).toBe(true);
+    });
+  });
 });
 
 describe('accessiblePriceText', () => {
@@ -361,6 +376,15 @@ describe('accessiblePriceText', () => {
     });
   });
 
+  describe('given a visually hidden element holding ordinary words', () => {
+    it('ignores it', () => {
+      // Screen-reader spans carry all sorts of prose. Only one that reads as
+      // a price may stand in for the element's text.
+      render('<div id="p"><span class="sr-only">free returns</span>$19.99</div>');
+      expect(accessiblePriceText(document.getElementById('p')!)).toBeNull();
+    });
+  });
+
   describe('given no accessible copy', () => {
     it('reports nothing', () => {
       render('<div id="p">$19.99</div>');
@@ -394,6 +418,34 @@ describe('accessibleCopyCovers', () => {
     it('is not counted against the copy', () => {
       render('<div id="p"><span>Deal of the day</span><span>$18.79</span></div>');
       expect(accessibleCopyCovers(document.getElementById('p')!, '$18.79')).toBe('$18.79');
+    });
+  });
+
+  describe('given a child holds a number that is not a price', () => {
+    it('is not counted against the copy', () => {
+      // An SKU or a model number shares no digits with the price, and holding
+      // it against the copy would refuse a perfectly good one.
+      render('<div id="p"><span>SKU 12345</span><span>$18.79</span></div>');
+      expect(accessibleCopyCovers(document.getElementById('p')!, '$18.79')).toBe('$18.79');
+    });
+  });
+
+  describe('given a child holds our own earlier output', () => {
+    it('is not counted against the copy', () => {
+      render(
+        `<div id="p"><span class="${SPAN_CLASS}">6,200 zats</span>`
+          + '<span>$18.79</span></div>',
+      );
+      expect(accessibleCopyCovers(document.getElementById('p')!, '$18.79')).toBe('$18.79');
+    });
+  });
+
+  describe('given the copy and the child punctuate the price differently', () => {
+    it('compares the digits', () => {
+      // The accessible copy and the visible rendering almost never agree on
+      // separators — that is most of why the copy exists.
+      render('<div id="p"><span>$1,879</span></div>');
+      expect(accessibleCopyCovers(document.getElementById('p')!, '$1879')).toBe('$1879');
     });
   });
 
@@ -517,6 +569,35 @@ describe('walkPriceElements', () => {
     });
   });
 
+  describe('given the budget lands exactly on zero', () => {
+    it('stops there', () => {
+      // Two hundred elements of a thousand characters is the budget exactly.
+      // Whether the next one is examined turns on one comparison, and the
+      // whole point of the budget is that the pass ends rather than runs on.
+      const filler = `$19.99 ${'x'.repeat(993)}`;
+      expect(filler).toHaveLength(1000);
+      const page = Array.from({ length: 200 }, () => `<p>${filler}</p>`).join('')
+        + '<p>$1,600</p>';
+      const texts = walkPriceElements(render(page)).map((r) => r.text);
+      expect(texts).not.toContain('$1,600');
+    });
+  });
+
+  describe('given an element whose class is reported as an object', () => {
+    it('is still considered', () => {
+      // SVG elements report className as an SVGAnimatedString rather than a
+      // string. Only <svg> itself is a skipped tag, so its children reach the
+      // class check and a bare regex test on the object matches nothing.
+      const root = render('<div id="p">$19.99</div>');
+      const element = document.getElementById('p')!;
+      Object.defineProperty(element, 'className', {
+        value: { baseVal: 'price', animVal: 'price' },
+        configurable: true,
+      });
+      expect(walkPriceElements(root).map((r) => r.text)).toContain('$19.99');
+    });
+  });
+
   describe('given a site adapter declares price containers', () => {
     beforeEach(() => onHost('www.coolblue.nl'));
 
@@ -614,6 +695,36 @@ describe('walkPriceElements', () => {
       });
     });
 
+    describe('given the adapter extracted the text itself', () => {
+      it('trusts the extraction over the visible markup', () => {
+        // bol's visible spans are aria-hidden fragments that concatenate to a
+        // separator-less number. The extraction is the whole point, and the
+        // refusal that protects the generic path must not override it.
+        onHost('www.bol.com');
+        const results = walkPriceElements(render(
+          '<div class="font-produkt"><span aria-hidden="true">149</span>'
+            + '<span aria-hidden="true">95</span>'
+            + "<span style=\"position: absolute\">'149' euro en '95' cent</span></div>",
+        ));
+        expect(results).toHaveLength(1);
+        expect(results[0].text).toBe("'149' euro en '95' cent");
+      });
+    });
+
+    describe('given container text of exactly the greatest length', () => {
+      it('is still collected', () => {
+        onHost('www.coolblue.nl');
+        // Padded after a space so the bare-number pattern still sees a word
+        // boundary; the cap is about total length, not about the price.
+        const price = `1.349 ${'x'.repeat(994)}`;
+        expect(price).toHaveLength(1000);
+        const results = walkPriceElements(render(
+          `<div data-testid="price">${price}</div>`,
+        ));
+        expect(results.filter((r) => r.inPriceContainer)).toHaveLength(1);
+      });
+    });
+
     describe('given the container text is too long', () => {
       it('is skipped', () => {
         const long = `${'a'.repeat(1001)} 1.349`;
@@ -642,6 +753,28 @@ describe('walkPriceElements', () => {
         expect(results).toHaveLength(1);
         expect(results[0].inPriceContainer).toBe(true);
       });
+    });
+  });
+
+  describe('given an accessibility copy of a price on the page', () => {
+    it('is not collected in its own right', () => {
+      // The hidden copy is read THROUGH its owner, not converted in place.
+      // Converting it leaves the visible price in fiat and rewrites the only
+      // text a screen reader ever gets.
+      const results = walkPriceElements(render(
+        '<div class="p"><span class="a-offscreen">$19.99</span>'
+          + '<span aria-hidden="true">$19</span></div>',
+      ));
+      expect(results.filter((r) => r.node.className === 'a-offscreen')).toHaveLength(0);
+    });
+  });
+
+  describe('given a price nested inside another collected element', () => {
+    it('is collected once', () => {
+      // Once an element is taken, everything under it is covered. Collecting
+      // both converts the same price twice.
+      const results = walkPriceElements(render('<div><p><span>$19.99</span></p></div>'));
+      expect(results).toHaveLength(1);
     });
   });
 

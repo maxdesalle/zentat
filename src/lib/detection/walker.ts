@@ -113,7 +113,7 @@ export function accessiblePriceText(el: Element): string | null {
     return label.trim();
   }
   for (const node of el.querySelectorAll(A11Y_TEXT_SELECTOR)) {
-    const text = node.textContent?.trim();
+    const text = textOf(node);
     if (text && QUICK_DETECT_PATTERN.test(text) && !isNonPriceText(text)) return text;
   }
   return null;
@@ -185,6 +185,9 @@ export function isConvertible(el: Element): boolean {
 // patterns are quadratic on long digit runs. Budget the whole pass too.
 const MAX_PASS_CHARS = 200_000;
 
+/** Shared so the no-adapter path allocates nothing and has no literal to vary. */
+const EMPTY_SELECTORS: readonly string[] = Object.freeze([]);
+
 /** A selector's matches within `root`, plus `root` itself when it matches. */
 function selfAndMatching(root: Element, selector: string): Element[] {
   const within = Array.from(root.querySelectorAll(selector));
@@ -210,7 +213,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
   const hostname = window.location.hostname;
   const adapter = adapterFor(hostname);
 
-  for (const selector of adapter?.containers ?? []) {
+  for (const selector of adapter?.containers ?? EMPTY_SELECTORS) {
     for (const container of selfAndMatching(root, selector)) {
       if (processedElements.has(container)) continue;
       if (!isConvertible(container)) continue;
@@ -221,7 +224,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
       const extracted = adapter?.extract?.(container, { hostname });
       // Page-authored, so our own earlier output inside this container neither
       // disqualifies it nor ends up in the text we hand the converter.
-      const text = (extracted ?? pageAuthoredText(container)).trim();
+      const text = extracted ?? pageAuthoredText(container);
 
       if (!text || text.length > MAX_PURE_PRICE_LENGTH) continue;
       if (!QUICK_DETECT_PATTERN.test(text) || isNonPriceText(text)) continue;
@@ -287,8 +290,9 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // Prefer the accessibility text when the visible text is split or styled.
     const rawText = pageAuthoredText(element);
     const accessible = accessibleCopyCovers(element, accessiblePriceText(element));
-    const text = accessible ?? rawText;
-    const trimmed = text.trim();
+    // Both are trimmed already: accessiblePriceText trims what it returns and
+    // pageAuthoredText goes through textOf.
+    const trimmed = accessible ?? rawText;
 
     if (!trimmed) continue;
     if (!QUICK_DETECT_PATTERN.test(trimmed)) continue;
