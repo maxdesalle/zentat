@@ -131,6 +131,8 @@ WalkerTest
     │   └── it is left alone
     ├── given a parent of exactly the greatest length holding a child price
     │   └── it converts its own text and defers the child
+    ├── given a parent whose direct text is padded with whitespace
+    │   └── it collects the text tight
     ├── given a page that exhausts the pass budget
     │   └── it stops rather than freezing the tab
     ├── given the budget lands exactly on zero
@@ -159,7 +161,9 @@ WalkerTest
     │   ├── given the container's own text lost its separator
     │   │   └── it refuses rather than risk a hundredfold error
     │   ├── given the adapter extracted the text itself
-    │   │   └── it trusts the extraction over the visible markup
+    │   │   ├── it trusts the extraction over the visible markup
+    │   │   └── given the visible fragments concatenate to a bare run of digits
+    │   │       └── it still trusts the extraction
     │   ├── given container text of exactly the greatest length
     │   │   └── it is still collected
     │   └── given the container text is too long
@@ -176,6 +180,8 @@ WalkerTest
     │   └── it is still collected
     ├── given an accessibility copy of a price on the page
     │   └── it is not collected in its own right
+    ├── given the accessibility copy is the root of the walk
+    │   └── it is still not collected
     ├── given a price nested inside another collected element
     │   └── it is collected once
     ├── given the accessibility layer holds the canonical price

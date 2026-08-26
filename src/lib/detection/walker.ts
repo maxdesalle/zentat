@@ -210,37 +210,39 @@ export function walkPriceElements(root: Node): WalkResult[] {
   const hostname = window.location.hostname;
   const adapter = adapterFor(hostname);
 
-  for (const selector of adapter?.containers ?? []) {
-    for (const container of selfAndMatching(root, selector)) {
-      if (processedElements.has(container)) continue;
-      if (!isConvertible(container)) continue;
-      if (isExcluded(adapter, container)) continue;
+  if (adapter?.containers) {
+    for (const selector of adapter.containers) {
+      for (const container of selfAndMatching(root, selector)) {
+        if (processedElements.has(container)) continue;
+        if (!isConvertible(container)) continue;
+        if (isExcluded(adapter, container)) continue;
 
-      // An adapter's extract() exists for markup no selector can express —
-      // an accessible copy of a price that the visible DOM has split up.
-      const extracted = adapter?.extract?.(container, { hostname });
-      // Page-authored, so our own earlier output inside this container neither
-      // disqualifies it nor ends up in the text we hand the converter.
-      const text = extracted ?? pageAuthoredText(container);
+        // An adapter's extract() exists for markup no selector can express —
+        // an accessible copy of a price that the visible DOM has split up.
+        const extracted = adapter.extract?.(container, { hostname });
+        // Page-authored, so our own earlier output inside this container neither
+        // disqualifies it nor ends up in the text we hand the converter.
+        const text = extracted ?? pageAuthoredText(container);
 
-      if (!text || text.length > MAX_PURE_PRICE_LENGTH) continue;
-      if (!QUICK_DETECT_PATTERN.test(text) || isNonPriceText(text)) continue;
-      // The same refusal the generic pass makes, which this one was missing.
-      // A .a-price whose decimal point is CSS rather than a node reads as
-      // "$1879" once its children are concatenated, and being named by an
-      // adapter is not evidence about the separator — so the adapter path was
-      // the one remaining route to a silent 100x error.
-      if (extracted == null && looksConcatenated(container, text)) {
-        // Refusing the container is not enough on its own: its children are
-        // the fragments of that same price, and converting "$49" while
-        // leaving "99" beside it is its own wrong price. Marking it processed
-        // makes the refusal cover the subtree it was about.
+        if (!text || text.length > MAX_PURE_PRICE_LENGTH) continue;
+        if (!QUICK_DETECT_PATTERN.test(text) || isNonPriceText(text)) continue;
+        // The same refusal the generic pass makes, which this one was missing.
+        // A .a-price whose decimal point is CSS rather than a node reads as
+        // "$1879" once its children are concatenated, and being named by an
+        // adapter is not evidence about the separator — so the adapter path was
+        // the one remaining route to a silent 100x error.
+        if (extracted == null && looksConcatenated(container, text)) {
+          // Refusing the container is not enough on its own: its children are
+          // the fragments of that same price, and converting "$49" while
+          // leaving "99" beside it is its own wrong price. Marking it processed
+          // makes the refusal cover the subtree it was about.
+          processedElements.add(container);
+          continue;
+        }
+
+        results.push({ node: container, text, inPriceContainer: true });
         processedElements.add(container);
-        continue;
       }
-
-      results.push({ node: container, text, inPriceContainer: true });
-      processedElements.add(container);
     }
   }
 
@@ -346,13 +348,12 @@ export function walkPriceElements(root: Node): WalkResult[] {
         .join(' ');
       const directTrimmed = directText.trim();
       if (
-        // Stryker disable next-line ConditionalExpression,LogicalOperator:
-        // equivalent — empty direct text fails the price pattern below.
+        // empty direct text fails the price pattern below.
+        // Stryker disable next-line ConditionalExpression,LogicalOperator: equivalent, see above.
         directTrimmed
-        // Stryker disable next-line ConditionalExpression,EqualityOperator:
-        // equivalent — reaching here means a child holds a price too, so the
-        // direct text is strictly shorter than the parent's, which was already
-        // checked against this limit.
+        // reaching here means a child holds a price too, so the direct text is strictly shorter
+        // than the parent's, which was already checked against this limit.
+        // Stryker disable next-line ConditionalExpression,EqualityOperator: equivalent, see above.
         && directTrimmed.length <= MAX_PURE_PRICE_LENGTH
         && QUICK_DETECT_PATTERN.test(directTrimmed)
         && !isNonPriceText(directTrimmed)

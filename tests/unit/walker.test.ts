@@ -593,6 +593,16 @@ describe('walkPriceElements', () => {
     });
   });
 
+  describe('given a parent whose direct text is padded with whitespace', () => {
+    it('collects the text tight', () => {
+      // The collected text is what the converter searches for the price in,
+      // and what the tooltip shows as the original. Whitespace either side
+      // belongs to the page's layout, not to the price.
+      const results = walkPriceElements(render('<p>  $10  <span>$8</span></p>'));
+      expect(results.find((r) => r.node.tagName === 'P')?.text).toBe('$10');
+    });
+  });
+
   describe('given a page that exhausts the pass budget', () => {
     it('stops rather than freezing the tab', () => {
       // The per-element cap bounds one string, not the pass. The number
@@ -779,6 +789,22 @@ describe('walkPriceElements', () => {
       });
     });
 
+    describe('given the visible fragments concatenate to a bare run of digits', () => {
+      it('still trusts the extraction', () => {
+        // The concatenation refusal exists for markup we have to read by
+        // eye. An adapter that told us the canonical price outright has
+        // already answered the question the refusal is asking.
+        onHost('www.amazon.com');
+        const results = walkPriceElements(render(
+          '<span class="a-price"><span class="a-offscreen">$4999</span>'
+            + '<span aria-hidden="true"><span>49</span><span>99</span></span></span>',
+        ));
+        expect(results).toHaveLength(1);
+        expect(results[0].inPriceContainer).toBe(true);
+        expect(results[0].text).toBe('$4999');
+      });
+    });
+
     describe('given container text of exactly the greatest length', () => {
       it('is still collected', () => {
         onHost('www.coolblue.nl');
@@ -834,6 +860,16 @@ describe('walkPriceElements', () => {
           + '<span aria-hidden="true">$19</span></div>',
       ));
       expect(results.filter((r) => r.node.className === 'a-offscreen')).toHaveLength(0);
+    });
+  });
+
+  describe('given the accessibility copy is the root of the walk', () => {
+    it('is still not collected', () => {
+      // The observer queues each ADDED element as a root of its own, so a
+      // hidden copy that arrives on its own must refuse itself rather than
+      // rely on an ancestor having been taken first.
+      render('<div><span id="a" class="a-offscreen">$19.99</span></div>');
+      expect(walkPriceElements(document.getElementById('a')!)).toEqual([]);
     });
   });
 
