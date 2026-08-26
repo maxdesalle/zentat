@@ -4,33 +4,46 @@ ConverterDomTest
 │   ├── it gives every price on the page one decimal shape
 │   ├── it starts a fresh scale for each page it is given
 │   ├── given conversion is switched off
-│   │   └── it does nothing
+│   │   ├── it does nothing
+│   │   └── it leaves the page scale as it found it
 │   ├── given the rates cannot be used
-│   │   └── it does nothing
+│   │   ├── it does nothing
+│   │   └── it leaves the page scale as it found it
 │   └── given there is no body
-│       └── it does nothing
+│       ├── it does nothing
+│       └── it leaves the page scale as it found it
 ├── convertPricesInNode
 │   ├── it wraps converted prices in marked spans with an accurate tooltip
+│   ├── it marks a converted price without disturbing the line it sits on
 │   ├── it reverts precisely, restoring the original text
 │   ├── given append mode
 │   │   └── it keeps the original price visible
 │   ├── given a price inside a button
 │   │   └── it never rewrites it
 │   ├── given a price split across inline child nodes
-│   │   └── it converts it
+│   │   ├── it converts it
+│   │   ├── it leaves nothing of the split markup behind
+│   │   ├── given the container had a title of its own
+│   │   │   └── it is put back on revert
+│   │   └── given the container had none
+│   │       └── it leaves no title behind
 │   ├── given a child also holds a price
 │   │   └── it converts a parent's direct text too
 │   ├── given conversion is switched off
 │   │   └── it does nothing
 │   ├── given rates that cannot be used
-│   │   └── it refuses to convert with empty or stale rates
+│   │   ├── it refuses to convert with empty or stale rates
+│   │   └── it leaves the page's pending mutations queued
 │   ├── given no price converts
-│   │   └── it leaves the element alone
+│   │   ├── it leaves the element alone
+│   │   └── it marks nothing and counts nothing
 │   ├── given the same price twice in one element
 │   │   └── it converts both from one replacement
 │   ├── given a longer price contains a shorter one
 │   │   └── it replaces the longer one
 │   ├── given two different prices in one text node
+│   │   ├── it replaces the longer one when a shorter price begins it
+│   │   ├── it does so whichever order the page wrote them in
 │   │   ├── it replaces them in the order they appear
 │   │   └── it replaces the longer of two that start together
 │   ├── given the same price written twice in one text node
@@ -44,25 +57,32 @@ ConverterDomTest
 │   ├── given a converted span gains other content
 │   │   └── the new content is not converted inside it
 │   ├── given one of our spans is left inside an element being converted
-│   │   └── its text is not replaced again
+│   │   ├── its text is not replaced again
+│   │   └── it is left alone even when it repeats the price being converted
 │   ├── given text inside a contenteditable region
 │   │   ├── it is left alone
-│   │   └── given it sits under a convertible element
-│   │       ├── it is still left alone
-│   │       ├── it does not stop the rest of the element converting
-│   │       └── given the region holds no price of its own
-│   │           └── its text is still skipped
+│   │   ├── given it sits under a convertible element
+│   │   │   ├── it is still left alone
+│   │   │   ├── it does not stop the rest of the element converting
+│   │   │   └── given the region holds no price of its own
+│   │   │       └── its text is still skipped
+│   │   └── given the element's price comes from a label
+│   │       └── it is still left alone
 │   ├── given text inside a skipped tag
 │   │   ├── it is left alone
-│   │   └── given it sits under a convertible element
+│   │   ├── given it sits under a convertible element
+│   │   │   └── it is still left alone
+│   │   └── given the element's price comes from a label
 │   │       └── it is still left alone
 │   └── given text inside a button
 │       ├── it is left alone
-│       └── given it sits under a convertible element
-│           ├── it is still left alone
-│           ├── it does not stop the rest of the element converting
-│           └── given the control holds no price of its own
-│               └── its text is still skipped
+│       ├── given it sits under a convertible element
+│       │   ├── it is still left alone
+│       │   ├── it does not stop the rest of the element converting
+│       │   └── given the control holds no price of its own
+│       │       └── its text is still skipped
+│       └── given the element's price comes from a label
+│           └── it is still left alone
 │   ├── given its own output
 │   │   ├── it never re-processes it
 │   │   ├── given a second pass over an already-converted element
@@ -88,6 +108,8 @@ ConverterDomTest
 │       └── it keeps the original
 ├── the held-rate disclosure states its age
 │   ├── it signs a gap above spot positive
+│   ├── given the peg still matches spot
+│   │   └── it signs a zero gap positive
 │   ├── given the peg was taken exactly an hour ago
 │   │   └── it says one hour, not just now
 │   ├── given the peg was taken minutes ago
@@ -104,9 +126,17 @@ ConverterDomTest
 │   ├── it swaps ZEC back to the original in clipboard text
 │   ├── it stops the browser writing the ZEC text over the top
 │   ├── it catches the copy before the page can
+│   ├── it copies only the price the user selected
+│   ├── it writes the fiat as plain text
 │   ├── it stops swapping once the handler is removed
 │   └── given the selection is empty
 │       └── it leaves the clipboard alone
+│   ├── given the event carries no clipboard
+│   │   └── it still stops the browser writing the ZEC text
+│   ├── given the browser reports a collapsed selection
+│   │   └── it leaves the clipboard alone
+│   ├── given the browser reports no ranges
+│   │   └── it leaves the clipboard alone
 │   ├── given a selection with no converted price
 │   │   └── it leaves the selection alone
 │   ├── given nothing is selected
@@ -116,7 +146,12 @@ ConverterDomTest
 ├── reverting
 │   ├── it puts the original text back in place
 │   ├── it clears the marker so the element can convert again
+│   ├── it restores the prices inside a single element
+│   ├── it leaves no marker on a partly converted element
 │   ├── it clears the marker on a partly converted element too
+│   ├── given the page mutated in the same task
+│   │   ├── the page's own mutations are handed back
+│   │   └── they are handed back when a single element is reverted too
 │   ├── given a span the page created
 │   │   └── it is left alone
 │   ├── given a container that had no title before
@@ -136,7 +171,11 @@ ConverterDomTest
     ├── it leaves an accessible copy behind
     ├── it hides that copy from sight
     ├── it separates two prices in one container
+    ├── it writes nothing into the container but the price
+    ├── it puts the original price on the price itself, not only the container
     ├── it clears the original markup rather than appending to it
     ├── it keeps the untrimmed original out of the tooltip
+    ├── given nothing in the container converts
+    │   └── it leaves it alone
     └── given the container had a title of its own
         └── it puts that title back on revert

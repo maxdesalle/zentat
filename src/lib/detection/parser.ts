@@ -14,6 +14,13 @@ export interface ParsedPrice {
 // pricing), not a thousands separator.
 const US_DECIMAL_CURRENCIES = new Set(['USD', 'GBP', 'CAD', 'AUD', 'MXN']);
 
+// The same table as AMBIGUOUS_SYMBOLS, keyed so that a match carrying no symbol
+// at all can be looked up without a guard in front of it: it simply is not in
+// the map.
+const AMBIGUITY_BY_SYMBOL = new Map<string | undefined, string[]>(
+  Object.entries(AMBIGUOUS_SYMBOLS),
+);
+
 // The gas-style "$3.499" read is only safe on a page that writes decimals with
 // a dot. "$1.500" on an es-AR page is 1500 pesos, and reading it as 1.5 is a
 // 1000x error. Ask ICU rather than keeping a hand-list of locales — es-MX uses
@@ -21,16 +28,20 @@ const US_DECIMAL_CURRENCIES = new Set(['USD', 'GBP', 'CAD', 'AUD', 'MXN']);
 const decimalSepCache = new Map<string, string>();
 
 function usesDotDecimal(lang: string | undefined): boolean {
+  // A page that declares no language is read with a dot. We never let Intl
+  // fall back to its default locale here: that is the machine's language, and
+  // how the reader's own OS writes numbers says nothing about how this page
+  // does — it would make one page read differently for two people.
   if (!lang) return true;
   let sep = decimalSepCache.get(lang);
   if (sep === undefined) {
     try {
-      // The ?? cannot fire: formatToParts(1.1) yields a decimal part for every
-      // locale that constructs at all, and one that does not construct throws
-      // into the catch below instead.
-      sep = new Intl.NumberFormat(lang).formatToParts(1.1)
-        /* v8 ignore next */
-        .find((part) => part.type === 'decimal')?.value ?? '.';
+      const parts = new Intl.NumberFormat(lang).formatToParts(1.1);
+      // Indexing straight into the filtered parts on purpose: 1.1 has a
+      // decimal part in every locale that constructs at all, and a locale that
+      // does not construct throws from the line above. Either way the catch is
+      // the only fallback this needs.
+      sep = parts.filter((part) => part.type === 'decimal')[0].value;
     } catch {
       sep = '.';
     }
@@ -51,9 +62,10 @@ export function overlaps(
   a: Pick<ParsedPrice, 'startIndex' | 'endIndex'>,
   b: Pick<ParsedPrice, 'startIndex' | 'endIndex'>,
 ): boolean {
-  return (a.startIndex >= b.startIndex && a.startIndex < b.endIndex)
-    || (a.endIndex > b.startIndex && a.endIndex <= b.endIndex)
-    || (a.startIndex <= b.startIndex && a.endIndex >= b.endIndex);
+  // Each span starts before the other ends. This covers containment in both
+  // directions, and it treats spans that merely touch as disjoint: "$5$6" is
+  // two prices, not one.
+  return a.startIndex < b.endIndex && b.startIndex < a.endIndex;
 }
 
 /**
@@ -70,6 +82,8 @@ export function isBetterMatch(
   existing: Pick<ParsedPrice, 'startIndex' | 'endIndex'>,
 ): boolean {
   if (candidate.startIndex !== existing.startIndex) {
+    // Stryker disable next-line EqualityOperator: the guard above has already
+    // ruled out equal start offsets, so < and <= cannot disagree here.
     return candidate.startIndex < existing.startIndex;
   }
   return candidate.endIndex - candidate.startIndex > existing.endIndex - existing.startIndex;
@@ -113,6 +127,9 @@ export function parsePrice(
 
     while ((match = pattern.regex.exec(text)) !== null) {
       const parsed = extractPriceFromMatch(match, pattern, hostname, documentLang);
+      // Stryker disable next-line ConditionalExpression: extractPriceFromMatch
+      // only returns null for matches no pattern in CURRENCY_PATTERNS can
+      // produce (its own tests cover those), so this guard never sees one.
       if (parsed) {
         // Skip negative amounts (refunds, discounts): a minus sign directly
         // before the match — but not a range dash, which has a price/digit on
@@ -120,20 +137,20 @@ export function parsePrice(
         if (isNegatedAt(text, parsed.price.startIndex)) continue;
 
         let currency = parsed.price.currency;
+        // Undefined for every unambiguous symbol, and for a match that carried
+        // no symbol at all.
+        const candidates = AMBIGUITY_BY_SYMBOL.get(parsed.symbol);
         // An ambiguous symbol resolved by TLD is a guess; the page's own
-        // declaration is not.
-        if (pageCurrency && parsed.symbol && AMBIGUOUS_SYMBOLS[parsed.symbol]) {
-          const candidates = AMBIGUOUS_SYMBOLS[parsed.symbol];
-          if (candidates.includes(pageCurrency)) currency = pageCurrency;
-        }
+        // declaration is not — but a declaration the symbol cannot mean is no
+        // evidence at all, and "$" prices read as yen are off by 150x.
+        const declared = candidates?.find((c) => c === pageCurrency);
+        if (declared) currency = declared;
         // If the locale-resolved currency for an ambiguous symbol is disabled,
         // fall back to another enabled candidate for that symbol instead of
         // silently dropping the price (e.g. "$" resolved to MXN on a .mx site
         // while the user only enabled USD).
-        if (!enabledSet.has(currency) && parsed.symbol) {
-          const candidates = AMBIGUOUS_SYMBOLS[parsed.symbol];
-          const fallback = candidates?.find((c) => enabledSet.has(c));
-          if (fallback) currency = fallback;
+        if (!enabledSet.has(currency)) {
+          currency = candidates?.find((c) => enabledSet.has(c)) ?? currency;
         }
         if (!enabledSet.has(currency)) continue;
         const price = { ...parsed.price, currency };
@@ -171,8 +188,9 @@ export function parsePrice(
 const MINUS_SIGNS = new Set(['-', '\u2212', '\u2013', '\u2014']);
 
 function isNegatedAt(text: string, startIndex: number): boolean {
-  const ch = text[startIndex - 1];
-  if (ch === undefined || !MINUS_SIGNS.has(ch)) return false;
+  // A price at index 0 has no character before it, and the set does not hold
+  // undefined either.
+  if (!MINUS_SIGNS.has(text[startIndex - 1])) return false;
   // A dash with a price on its left is a range ("£10-£20"), not a sign.
   return !/[\d$€£¥₩₹]$/.test(text.slice(0, startIndex - 1));
 }
@@ -182,7 +200,17 @@ interface ExtractedPrice {
   symbol?: string;
 }
 
-function extractPriceFromMatch(
+/**
+ * One regex match turned into a price, or null if the match does not carry a
+ * number this can trust.
+ *
+ * Exported and tested directly for the same reason as overlaps: no pattern in
+ * CURRENCY_PATTERNS can reach the null cases today, because every one of them
+ * captures a run of digits. They are here for the next pattern that does not,
+ * and what they stop is a price of NaN or zero rendered with exactly as much
+ * confidence as a real one.
+ */
+export function extractPriceFromMatch(
   match: RegExpExecArray,
   pattern: CurrencyPattern,
   hostname?: string,
@@ -196,24 +224,23 @@ function extractPriceFromMatch(
   const numericGroups: string[] = [];
   let detectedSymbol: string | undefined;
 
-  for (let i = 1; i < match.length; i++) {
-    const group = match[i];
+  for (const group of match.slice(1)) {
+    // Stryker disable next-line ConditionalExpression: a group that did not
+    // take part is undefined, and neither test below matches the string
+    // "undefined" — skipping it early only saves the work.
     if (!group) continue;
-    if (/^\d+$/.test(group)) {
-      // Pure digit group (like euros or cents separately)
+    if (/\d/.test(group)) {
+      // Any numeric shape a pattern can capture: "149", "53,95", "1'299.00".
       numericGroups.push(group);
-    } else if (/\d/.test(group)) {
-      // Mixed group with digits (like "149" or "53,95")
-      numericGroups.push(group);
-    } else if (/[$€£¥₩₹]/.test(group)) {
-      detectedSymbol = group;
+      continue;
     }
+    // Stryker disable next-line ConditionalExpression: the only symbols
+    // anything downstream treats as ambiguous are "$" and "¥", both inside
+    // this class, so recording a currency CODE group here as if it were a
+    // symbol would change no reading.
+    if (/[$€£¥₩₹]/.test(group)) detectedSymbol = group;
   }
 
-  // Unreachable: every pattern alternative contains NUM, so a match always
-  // carries a group with digits in it. Kept because the alternative to
-  // returning null here is indexing past the end of the array below.
-  /* v8 ignore next */
   if (numericGroups.length === 0) return null;
 
   // Handle bol.com "X euro en Y cent" format - two separate numeric groups
@@ -230,10 +257,9 @@ function extractPriceFromMatch(
 
   const preferUsDecimal = US_DECIMAL_CURRENCIES.has(pattern.code) && usesDotDecimal(documentLang);
   const amount = parseNumber(numStr, preferUsDecimal);
-  // Also unreachable from the patterns: NUM guarantees digits, so parseNumber
-  // succeeds, and NUM carries no sign, so it cannot be negative. Negative
-  // prices are rejected earlier, at isNegatedAt.
-  /* v8 ignore next */
+  // A price of exactly zero is a real price ("$0.00 shipping"), so only a
+  // failed read or a negative amount is rejected here. Negatives from a minus
+  // sign on the page are rejected earlier, at isNegatedAt.
   if (amount === null || amount < 0) return null;
 
   // Resolve currency - use locale for ambiguous symbols
@@ -270,9 +296,16 @@ const SUFFIX_MULTIPLIERS: Record<string, number> = {
   T: 1_000_000_000_000,
 };
 
-// Spelled-out multipliers (multilingual)
-// Includes English, French, German, Dutch, Spanish, Portuguese, Italian
+// Spelled-out multipliers (multilingual), written as regex fragments so a
+// compound can allow any run of whitespace between its words.
+// Includes English, French, German, Dutch, Spanish, Portuguese, Italian.
+//
+// ORDER MATTERS. The first entry that matches the end of the string wins, so a
+// compound has to sit ahead of the word that is its own tail: "5 hundred
+// thousand" read as a plain "thousand" is 5,000 instead of 500,000.
 const WORD_MULTIPLIERS: Record<string, number> = {
+  // Hundred thousand (10^5)
+  'hundred\\s+thousand': 100_000,
   // Thousand (10^3)
   thousand: 1_000,
   mille: 1_000, // FR, IT
@@ -296,31 +329,23 @@ const WORD_MULTIPLIERS: Record<string, number> = {
   biljoen: 1_000_000_000_000, // NL
 };
 
-// Longest-first so a word is never consumed as a prefix of a longer word
-const WORD_MULTIPLIER_ENTRIES = Object.entries(WORD_MULTIPLIERS).sort(
-  (a, b) => b[0].length - a[0].length,
-);
+const WORD_MULTIPLIER_ENTRIES = Object.entries(WORD_MULTIPLIERS);
 
 export function parseNumber(str: string, preferUsDecimal: boolean = false): number | null {
-  let cleaned = str.trim();
+  // No trim: every kind of space comes off a few lines down anyway.
+  let cleaned = str;
 
   // Check for spelled-out multipliers first (e.g., "10 million", "5 hundred thousand")
   let multiplier = 1;
-  const lowerStr = cleaned.toLowerCase();
-
-  // Handle "hundred thousand" = 100,000
-  if (/hundred\s+thousand/i.test(lowerStr)) {
-    multiplier = 100_000;
-    cleaned = cleaned.replace(/\s*hundred\s+thousand\s*/i, '');
-  } else {
-    // Check for single word multipliers, longest first
-    for (const [word, mult] of WORD_MULTIPLIER_ENTRIES) {
-      const wordPattern = new RegExp(`\\s*${word}\\s*$`, 'i');
-      if (wordPattern.test(cleaned)) {
-        multiplier = mult;
-        cleaned = cleaned.replace(wordPattern, '');
-        break;
-      }
+  for (const [word, mult] of WORD_MULTIPLIER_ENTRIES) {
+    const wordPattern = new RegExp(`\\s*${word}\\s*$`, 'i');
+    if (wordPattern.test(cleaned)) {
+      multiplier = mult;
+      // The word has to come off rather than being left for parseFloat to
+      // ignore: "1,500 hundred thousand" still has to read its comma as
+      // grouping, and it only can once the words are gone.
+      cleaned = cleaned.replace(wordPattern, '');
+      break;
     }
   }
 
@@ -339,31 +364,20 @@ export function parseNumber(str: string, preferUsDecimal: boolean = false): numb
   const lastComma = cleaned.lastIndexOf(',');
   const lastDot = cleaned.lastIndexOf('.');
 
-  // Multiple commas with no dot = thousand separators only — covers both US
-  // grouping ("150,000,000") and Indian lakh grouping ("1,00,000")
-  if (commaCount > 1 && dotCount === 0) {
+  // Two or more commas means every comma is a thousands separator, whatever
+  // else is in the string: US grouping ("150,000,000"), Indian lakh grouping
+  // ("1,00,000"), and either of them with a decimal dot ("1,234,567.89").
+  if (commaCount > 1) {
     cleaned = cleaned.replace(/,/g, '');
     const num = parseFloat(cleaned);
     return isNaN(num) ? null : num * multiplier;
   }
 
-  // Multiple dots with no comma = EU thousand separators only (e.g., "150.000.000")
+  // Multiple dots with no comma = EU thousand separators only (e.g., "150.000.000").
+  // The comma test is what keeps "1.234.567,89" out of here, where stripping
+  // the dots would leave parseFloat to stop dead at the comma.
   if (dotCount > 1 && commaCount === 0) {
     cleaned = cleaned.replace(/\./g, '');
-    const num = parseFloat(cleaned);
-    return isNaN(num) ? null : num * multiplier;
-  }
-
-  // Multiple dots + one comma = EU format with decimal (e.g., "1.234.567,89")
-  if (dotCount > 1 && commaCount === 1) {
-    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-    const num = parseFloat(cleaned);
-    return isNaN(num) ? null : num * multiplier;
-  }
-
-  // Multiple commas + one dot = US format with decimal (e.g., "1,234,567.89")
-  if (commaCount > 1 && dotCount === 1) {
-    cleaned = cleaned.replace(/,/g, '');
     const num = parseFloat(cleaned);
     return isNaN(num) ? null : num * multiplier;
   }
@@ -377,7 +391,8 @@ export function parseNumber(str: string, preferUsDecimal: boolean = false): numb
   if (commaCount + dotCount === 1) {
     const sepIndex = Math.max(lastComma, lastDot);
     const afterSep = cleaned.slice(sepIndex + 1);
-    if (afterSep.length === 3 && /^\d{3}$/.test(afterSep)) {
+    // Anchored at both ends: "1.2345" is four decimals, not a grouped 12,345.
+    if (/^\d{3}$/.test(afterSep)) {
       const isUsDecimalRead = preferUsDecimal && cleaned[sepIndex] === '.'
         && sepIndex <= 1 && !afterSep.endsWith('0');
       if (!isUsDecimalRead) {
@@ -390,6 +405,8 @@ export function parseNumber(str: string, preferUsDecimal: boolean = false): numb
   }
 
   // Detect format: 1,234.56 (US) vs 1.234,56 (EU)
+  // Stryker disable next-line EqualityOperator: the two indexes are equal only
+  // when both are -1, and with no separator at all either branch is a no-op.
   if (lastComma > lastDot) {
     // EU format: 1.234,56 -> remove dots, replace comma with dot
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');

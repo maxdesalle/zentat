@@ -2,14 +2,28 @@ PayDomTest
 └── payment requests come from the page, not from us
     ├── given the page published an address
     │   ├── it finds an address the page published
-    │   └── it renders a QR and names the rate when it can
+    │   ├── it renders a QR and names the rate when it can
+    │   ├── it names itself so a screen reader can announce it
+    │   ├── it draws the whole QR at the size the panel gives it
+    │   ├── it floats above the page in a corner of the viewport
+    │   ├── it brings its own colours and type rather than inheriting them
+    │   ├── it sets the amount apart from the rate line beneath it
+    │   ├── it offers a close button that cannot submit a form on the page
+    │   └── it gives the close button keyboard focus
     ├── given the page has no address
     │   └── it offers nothing
+    ├── when the page is longer than the address scan
+    │   └── it ignores an address past the end of the scan
     ├── given the amount cannot be expressed as a payment request
     │   └── it offers nothing
     ├── given the amount is too large to fit a QR
     │   └── it offers nothing
+    ├── when the request only just fits a QR
+    │   └── it still offers the payment request
+    ├── given the QR generator returns markup that is not an SVG
+    │   └── it offers nothing
     ├── given a panel is already open
     │   └── it replaces a previous panel rather than stacking them
     └── when the panel is dismissed
-        └── it closes cleanly
+        ├── it closes cleanly
+        └── it closes when its own button is pressed

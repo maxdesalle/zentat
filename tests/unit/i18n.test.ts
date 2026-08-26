@@ -95,6 +95,17 @@ describe('localizeDocument', () => {
       localizeDocument();
       expect(document.querySelector('input')?.getAttribute('title')).toBe('Titulo');
     });
+
+    it('never writes a name with no key', () => {
+      document.body.innerHTML = '<input data-i18n-attr="placeholder, title:titleKey">';
+      localizeDocument();
+
+      const input = document.querySelector('input');
+      // Writing the half-formed pair anyway puts the literal word "undefined"
+      // in front of the user as the field's own prompt.
+      expect(input?.hasAttribute('placeholder')).toBe(false);
+      expect(input?.getAttribute('title')).toBe('Titulo');
+    });
   });
 
   describe('given an element carries an empty text key', () => {

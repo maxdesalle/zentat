@@ -77,6 +77,31 @@ describe('given the request outlives the timeout', () => {
   });
 });
 
+describe('given the request finishes before the timeout', () => {
+  let signal: AbortSignal | undefined;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    signal = undefined;
+    stubFetch(async (_url, init) => {
+      signal = init?.signal ?? undefined;
+      return { ok: true, status: 200, json: async () => ({}) };
+    });
+    await createDirectFetcher(5).fetch('https://x.test');
+  });
+
+  it('leaves no timer running', () => {
+    // One abandoned timer per rate fetch keeps the service worker from going
+    // idle, which is the one thing MV3 gives us no way to recover from.
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('never aborts the finished request', () => {
+    vi.advanceTimersByTime(50);
+    expect(signal?.aborted).toBe(false);
+  });
+});
+
 describe('hardened defaults', () => {
   beforeEach(() => {
     stubFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));

@@ -1,6 +1,11 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CONVERTED_MARKER, SPAN_CLASS } from '../../src/entrypoints/content/markers';
+import {
+  CONVERTED_MARKER,
+  PARTIAL_MARKER,
+  SPAN_CLASS,
+} from '../../src/entrypoints/content/markers';
+import { setActiveObserver } from '../../src/entrypoints/content/state';
 import { clearPageScale } from '../../src/lib/conversion/format';
 
 vi.mock('wxt/utils/storage', () => ({
@@ -42,6 +47,27 @@ function settings(overrides: Partial<Settings> = {}): Settings {
   return { ...DEFAULT_SETTINGS, ...overrides };
 }
 
+/**
+ * Queue one page-authored mutation, run `pass`, and report how many records
+ * were handed back for replay. The observer's queue is shared with the page,
+ * so whether a pass drains it decides whether the page's own mutations are
+ * seen at all.
+ */
+function replayedDuring(pass: () => void): number {
+  const replayed: MutationRecord[] = [];
+  const observer = new MutationObserver(() => {});
+  observer.observe(document.body, { childList: true, subtree: true });
+  setActiveObserver(observer, {
+    replay: (records) => replayed.push(...records),
+    isOwnWrite: () => false,
+  });
+  document.body.appendChild(document.createElement('div'));
+  pass();
+  setActiveObserver(null);
+  observer.disconnect();
+  return replayed.length;
+}
+
 /** happy-dom lets the hostname be set directly; the adapters key off it. */
 function onHost(hostname: string) {
   Object.defineProperty(window, 'location', {
@@ -78,6 +104,19 @@ describe('convertPricesInNode', () => {
     // Surrounding text and structure survive
     expect(document.body.textContent).toContain('Price:');
     expect(document.body.textContent).toContain('today');
+  });
+
+  it('marks a converted price without disturbing the line it sits on', () => {
+    // The dotted underline is the only sign the page has been rewritten, and
+    // it is styled inline because a stylesheet with a known id would be a
+    // one-selector extension detector. nowrap keeps "1.00" with its "ZEC".
+    document.body.innerHTML = '<p>$800</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    const span = document.querySelector(`.${SPAN_CLASS}`) as HTMLElement;
+    expect(span.style.textDecoration).toBe('underline dotted');
+    expect(span.style.textUnderlineOffset).toBe('0.18em');
+    expect(span.style.whiteSpace).toBe('nowrap');
+    expect(span.style.cursor).toBe('help');
   });
 
   it('reverts precisely, restoring the original text', () => {
@@ -120,6 +159,35 @@ describe('convertPricesInNode', () => {
       revertConversions();
       expect(document.getElementById('split')!.textContent).toBe('$99');
     });
+
+    it('leaves nothing of the split markup behind', () => {
+      // The fragments are pieces of the same number. Leaving one of them
+      // beside the conversion reads as a second price on the same product.
+      document.body.innerHTML = '<div id="split"><span>$</span><span>99</span></div>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.getElementById('split')!.textContent).toBe('0.124 ZEC');
+    });
+
+    describe('given the container had a title of its own', () => {
+      it('is put back on revert', () => {
+        document.body.innerHTML =
+          '<div id="split" title="Frito-Lay"><span>$</span><span>99</span></div>';
+        convertPricesInNode(document.body, freshRates(), settings());
+        revertConversions();
+        expect(document.getElementById('split')!.getAttribute('title')).toBe('Frito-Lay');
+      });
+    });
+
+    describe('given the container had none', () => {
+      it('leaves no title behind', () => {
+        // An empty title attribute is not the same as no title: it suppresses
+        // whatever tooltip the page would otherwise have shown there.
+        document.body.innerHTML = '<div id="split"><span>$</span><span>99</span></div>';
+        convertPricesInNode(document.body, freshRates(), settings());
+        revertConversions();
+        expect(document.getElementById('split')!.hasAttribute('title')).toBe(false);
+      });
+    });
   });
 
   describe('given a child also holds a price', () => {
@@ -146,6 +214,15 @@ describe('convertPricesInNode', () => {
         ),
       ).toBe(0);
       expect(document.body.textContent).toBe('$19.99');
+    });
+
+    it("leaves the page's pending mutations queued", () => {
+      // A pass that converts nothing must not take the observer's records:
+      // they are the page's own, and the observer is about to act on them.
+      document.body.innerHTML = '<p>$19.99</p>';
+      const stale = freshRates({ updatedAt: Date.now() - 25 * 60 * 60 * 1000 });
+      expect(replayedDuring(() => convertPricesInNode(document.body, stale, settings())))
+        .toBe(0);
     });
   });
 
@@ -209,6 +286,21 @@ describe('convertPricesInNode', () => {
       convertPricesInNode(document.body, partial, settings({ currencies: ['USD', 'CHF'] }));
       expect(document.body.textContent).toBe('CHF 1299');
     });
+
+    it('marks nothing and counts nothing', () => {
+      // A marker left on an element nothing happened to is permanent: the
+      // element is skipped for the rest of the visit, so the price the site
+      // renders into it next never converts.
+      document.body.innerHTML = '<p>CHF 1299</p>';
+      const partial: RatesData = { ...freshRates(), rates: { USD: RATE } };
+      const count = convertPricesInNode(
+        document.body,
+        partial,
+        settings({ currencies: ['USD', 'CHF'] }),
+      );
+      expect(count).toBe(0);
+      expect(document.querySelector(`.${CONVERTED_MARKER}`)).toBeNull();
+    });
   });
 
   describe('given the same price twice in one element', () => {
@@ -238,6 +330,23 @@ describe('convertPricesInNode', () => {
       document.body.innerHTML = '<p>$1,600 and $1.00</p>';
       convertPricesInNode(document.body, freshRates(), settings());
       expect(document.body.textContent).not.toContain(',600');
+    });
+
+    it('replaces the longer one when a shorter price begins it', () => {
+      // "$1" and "$1,600" start at the same offset in the second half of this
+      // sentence. Take the short one and ",600" is stranded in the page beside
+      // a converted price — a hundredfold error a reader cannot see.
+      document.body.innerHTML = '<p>$1 and $1,600</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.body.textContent).toBe('0.00125 ZEC and 2.000 ZEC');
+    });
+
+    it('does so whichever order the page wrote them in', () => {
+      // Same two prices, written the other way round: the rule has to be the
+      // length of the match, not the order the page happened to use.
+      document.body.innerHTML = '<p>$1,600 and $1</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.body.textContent).toBe('2.000 ZEC and 0.00125 ZEC');
     });
 
     it('replaces them in the order they appear', () => {
@@ -305,6 +414,14 @@ describe('convertPricesInNode', () => {
       convertPricesInNode(document.body, freshRates(), settings());
       expect(document.getElementById('left')!.textContent).toBe('stale');
     });
+
+    it('is left alone even when it repeats the price being converted', () => {
+      // Stale text is easy to leave alone; text that matches the price we are
+      // replacing is the case that would nest a conversion inside a conversion.
+      document.body.innerHTML = `<p>$800 <span id="ours" class="${SPAN_CLASS}">$800</span></p>`;
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.getElementById('ours')!.textContent).toBe('$800');
+    });
   });
 
   describe('given a converted span gains other content', () => {
@@ -350,6 +467,18 @@ describe('convertPricesInNode', () => {
         });
       });
     });
+
+    describe("given the element's price comes from a label", () => {
+      it('is still left alone', () => {
+        // A label covering the whole element stops the walk deferring to the
+        // children, so the region's own text is now on the replacement path.
+        // Rewriting text under a cursor loses whatever the user was typing.
+        document.body.innerHTML =
+          '<div aria-label="$800 total"><b contenteditable="true">$800</b> total</div>';
+        convertPricesInNode(document.body, freshRates(), settings());
+        expect(document.querySelector('b')!.textContent).toBe('$800');
+      });
+    });
   });
 
   describe('given text inside a skipped tag', () => {
@@ -365,6 +494,16 @@ describe('convertPricesInNode', () => {
         convertPricesInNode(document.body, freshRates(), settings());
         expect(document.querySelector('script')!.textContent).toBe('var note;');
         expect(document.querySelector(`.${SPAN_CLASS}`)).not.toBeNull();
+      });
+    });
+
+    describe("given the element's price comes from a label", () => {
+      it('is still left alone', () => {
+        // Source and style sheets read as text to a tree walker. Rewriting a
+        // price inside one changes what the page runs, not what it shows.
+        document.body.innerHTML = '<div aria-label="$800 total"><style>$800</style> total</div>';
+        convertPricesInNode(document.body, freshRates(), settings());
+        expect(document.querySelector('style')!.textContent).toBe('$800');
       });
     });
   });
@@ -399,6 +538,17 @@ describe('convertPricesInNode', () => {
           expect(document.querySelector('[role="button"]')!.textContent).toBe('Add');
           expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('1.00 ZEC');
         });
+      });
+    });
+
+    describe("given the element's price comes from a label", () => {
+      it('is still left alone', () => {
+        // The user pays the merchant's figure in the merchant's currency; a
+        // ZEC amount on the control they press is a number nobody will charge.
+        document.body.innerHTML =
+          '<div aria-label="$800 total"><span role="button">$800</span> total</div>';
+        convertPricesInNode(document.body, freshRates(), settings());
+        expect(document.querySelector('[role="button"]')!.textContent).toBe('$800');
       });
     });
   });
@@ -507,15 +657,51 @@ describe('copying a converted price yields the fiat', () => {
   });
 
   it('catches the copy before the page can', () => {
-    // Registered on the capture phase: a site that stops the event on its own
-    // container would otherwise take the ZEC text to the clipboard.
+    // Registered on the capture phase: the event is dispatched from the price
+    // itself, so a site that stops it on the container in between would take
+    // the ZEC text to the clipboard instead.
     document.body.innerHTML = '<div id="wrap"><p id="p">$800</p></div>';
     convertPricesInNode(document.body, freshRates(), settings());
     document.getElementById('wrap')!.addEventListener(
       'copy',
       (e) => e.stopPropagation(),
     );
-    expect(copyAfter(() => select(document.getElementById('p')!))).toBe('$800');
+    const uninstall = installCopyHandler();
+    select(document.getElementById('p')!);
+    let copied: string | null = null;
+    const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', {
+      value: { setData: (_t: string, d: string) => (copied = d) },
+    });
+    document.getElementById('p')!.dispatchEvent(event);
+    uninstall();
+    expect(copied).toBe('$800');
+  });
+
+  it('copies only the price the user selected', () => {
+    // The clipboard's spans are paired with the page's by position, so the
+    // page list has to be the selection's own. Paired against every span in
+    // the document, a two-price page puts the other price on the clipboard.
+    document.body.innerHTML = '<p id="a">$800</p><p id="b">$1,600</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    expect(copyAfter(() => select(document.getElementById('b')!))).toBe('$1,600');
+  });
+
+  it('writes the fiat as plain text', () => {
+    // Under any other type it is a clipboard entry no paste target reads, and
+    // the ZEC text the browser wrote wins by default.
+    document.body.innerHTML = '<p id="p">$800</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    const uninstall = installCopyHandler();
+    select(document.getElementById('p')!);
+    let type: string | null = null;
+    const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', {
+      value: { setData: (t: string) => (type = t) },
+    });
+    document.dispatchEvent(event);
+    uninstall();
+    expect(type).toBe('text/plain');
   });
 
   it('stops swapping once the handler is removed', () => {
@@ -560,6 +746,54 @@ describe('copying a converted price yields the fiat', () => {
     it('leaves it alone', () => {
       document.body.innerHTML = `<p id="p"><span class="${SPAN_CLASS}">1 ZEC</span></p>`;
       expect(copyAfter(() => select(document.getElementById('p')!))).toBeNull();
+    });
+  });
+
+  describe('given the event carries no clipboard', () => {
+    it('still stops the browser writing the ZEC text', () => {
+      // Some embedders fire copy without a clipboardData of any kind. Throwing
+      // there skips preventDefault, and the ZEC text goes to the clipboard.
+      document.body.innerHTML = '<p id="p">$800</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      const uninstall = installCopyHandler();
+      select(document.getElementById('p')!);
+      const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      document.dispatchEvent(event);
+      uninstall();
+      expect(event.defaultPrevented).toBe(true);
+    });
+  });
+
+  describe('given the browser reports a collapsed selection', () => {
+    it('leaves the clipboard alone', () => {
+      // The three signals are read separately because browsers disagree about
+      // which one they set. Trusting fewer of them rewrites the clipboard for
+      // a copy the user never made against a price.
+      document.body.innerHTML = '<p id="p">$800</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById('p')!);
+      const stub = vi.spyOn(window, 'getSelection').mockReturnValue(
+        { isCollapsed: true, rangeCount: 1, getRangeAt: () => range } as unknown as Selection,
+      );
+      const copied = copyAfter(() => {});
+      stub.mockRestore();
+      expect(copied).toBeNull();
+    });
+  });
+
+  describe('given the browser reports no ranges', () => {
+    it('leaves the clipboard alone', () => {
+      document.body.innerHTML = '<p id="p">$800</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById('p')!);
+      const stub = vi.spyOn(window, 'getSelection').mockReturnValue(
+        { isCollapsed: false, rangeCount: 0, getRangeAt: () => range } as unknown as Selection,
+      );
+      const copied = copyAfter(() => {});
+      stub.mockRestore();
+      expect(copied).toBeNull();
     });
   });
 
@@ -699,6 +933,48 @@ describe('a site adapter that replaces the whole container', () => {
       .toContain('1.04 ZEC 2.08 ZEC');
   });
 
+  it('writes nothing into the container but the price', () => {
+    // Two nodes and no more: the visible price and the copy a screen reader
+    // reads. Anything else left behind is a second price on the same product.
+    onHost('www.bol.com');
+    document.body.innerHTML = '<div class="font-produkt"><span>149,95</span>'
+      + "<span style=\"position: absolute\">'149' euro en '95' cent</span></div>";
+    convertPricesInNode(document.body, freshRates(), settings({ currencies: ['EUR'] }));
+    const container = document.querySelector('.font-produkt')!;
+    expect(container.childNodes).toHaveLength(2);
+    expect(container.textContent).toBe('0.195 ZEC0.195 ZEC');
+  });
+
+  it('puts the original price on the price itself, not only the container', () => {
+    // The tooltip on the container is easy to miss; the one on the underlined
+    // text is the one a user hovers, and it has to name the fiat price.
+    onHost('www.bol.com');
+    document.body.innerHTML = '<div class="font-produkt">'
+      + "<span style=\"position: absolute\">'149' euro en '95' cent</span></div>";
+    convertPricesInNode(document.body, freshRates(), settings({ currencies: ['EUR'] }));
+    expect(document.querySelector(`.font-produkt .${SPAN_CLASS}`)!.getAttribute('title'))
+      .toBe("Original: '149' euro en '95' cent");
+  });
+
+  describe('given nothing in the container converts', () => {
+    it('leaves it alone', () => {
+      // Being named by a site adapter is not a reason to empty a container.
+      // With no rate for its currency the merchant's own price is all the user
+      // has, and replacing it with nothing is worse than not converting.
+      onHost('www.bol.com');
+      document.body.innerHTML = '<div class="font-produkt">'
+        + "<span style=\"position: absolute\">'149' euro en '95' cent</span></div>";
+      convertPricesInNode(
+        document.body,
+        freshRates({ rates: { USD: RATE } }),
+        settings({ currencies: ['EUR'] }),
+      );
+      const container = document.querySelector('.font-produkt')!;
+      expect(container.textContent).toContain('149');
+      expect(container.querySelector(`.${SPAN_CLASS}`)).toBeNull();
+    });
+  });
+
   it('clears the original markup rather than appending to it', () => {
     onHost('www.bol.com');
     document.body.innerHTML = '<div class="font-produkt"><span>149,95</span>'
@@ -777,11 +1053,32 @@ describe('convertPricesInDocument', () => {
     expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('1.00 ZEC');
   });
 
+  /**
+   * Fix the page's decimal grid on a page of small amounts, then read it back
+   * through a later pass. A pass that converted nothing must not have thrown
+   * the grid away: the prices already on screen keep their shape, and the ones
+   * that arrive next have to share it.
+   */
+  function gridAfterRefusedPass(refuse: () => void): string {
+    document.body.innerHTML = '<p>$0.80</p>';
+    convertPricesInDocument(freshRates(), settings());
+    refuse();
+    document.body.innerHTML = '<p>$800</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    return document.querySelector(`.${SPAN_CLASS}`)!.textContent ?? '';
+  }
+
   describe('given conversion is switched off', () => {
     it('does nothing', () => {
       document.body.innerHTML = '<p>$800</p>';
       expect(convertPricesInDocument(freshRates(), settings({ enabled: false }))).toBe(0);
       expect(document.body.textContent).toBe('$800');
+    });
+
+    it('leaves the page scale as it found it', () => {
+      expect(gridAfterRefusedPass(() => {
+        convertPricesInDocument(freshRates(), settings({ enabled: false }));
+      })).toBe('1.000 ZEC');
     });
   });
 
@@ -793,6 +1090,12 @@ describe('convertPricesInDocument', () => {
       const empty: RatesData = { rates: {}, updatedAt: 0, source: '' };
       expect(convertPricesInDocument(empty, settings())).toBe(0);
     });
+
+    it('leaves the page scale as it found it', () => {
+      expect(gridAfterRefusedPass(() => {
+        convertPricesInDocument({ rates: {}, updatedAt: 0, source: '' }, settings());
+      })).toBe('1.000 ZEC');
+    });
   });
 
   describe('given there is no body', () => {
@@ -802,6 +1105,15 @@ describe('convertPricesInDocument', () => {
       Object.defineProperty(document, 'body', { value: null, configurable: true });
       expect(convertPricesInDocument(freshRates(), settings())).toBe(0);
       Object.defineProperty(document, 'body', { value: body, configurable: true });
+    });
+
+    it('leaves the page scale as it found it', () => {
+      expect(gridAfterRefusedPass(() => {
+        const body = document.body;
+        Object.defineProperty(document, 'body', { value: null, configurable: true });
+        convertPricesInDocument(freshRates(), settings());
+        Object.defineProperty(document, 'body', { value: body, configurable: true });
+      })).toBe('1.000 ZEC');
     });
   });
 });
@@ -861,7 +1173,7 @@ describe('the held-rate disclosure states its age', () => {
   it('signs a gap above spot positive', () => {
     // A sign that only ever appears one way teaches nothing about which
     // direction the held rate is lagging.
-    expect(tooltipWithPeg(RATE / 2, Date.now())).toContain('+100.0%');
+    expect(tooltipWithPeg(RATE / 2, Date.now())).toContain('spot +100.0%');
   });
 
   describe('given the peg was taken exactly an hour ago', () => {
@@ -894,11 +1206,19 @@ describe('the held-rate disclosure states its age', () => {
     });
   });
 
+  describe('given the peg still matches spot', () => {
+    it('signs a zero gap positive', () => {
+      // A disclosure whose shape changes with the gap reads as two different
+      // messages. It says the same thing at zero as it does at ten percent.
+      expect(tooltipWithPeg(RATE, Date.now())).toContain('spot +0.0%');
+    });
+  });
+
   describe('given spot has fallen below the peg', () => {
     it('signs the gap negative', () => {
       // A sign that only ever appears one way teaches nothing about which
       // direction the held rate is lagging.
-      expect(tooltipWithPeg(RATE * 2, Date.now())).toContain('-50.0%');
+      expect(tooltipWithPeg(RATE * 2, Date.now())).toContain('spot -50.0%');
     });
   });
 });
@@ -922,6 +1242,26 @@ describe('reverting', () => {
     expect(document.querySelectorAll(`.${SPAN_CLASS}`)).toHaveLength(1);
   });
 
+  it('restores the prices inside a single element', () => {
+    // The observer reverts one element at a time when the page rewrites under
+    // it. Reverting only the container leaves our spans behind, holding ZEC
+    // text against markup the page has already moved on from.
+    document.body.innerHTML = '<p id="p">Total: $800 today</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    revertElement(document.getElementById('p')!);
+    expect(document.getElementById('p')!.textContent).toBe('Total: $800 today');
+  });
+
+  it('leaves no marker on a partly converted element', () => {
+    // The partial marker is what says "this element's direct text is done".
+    // Left behind after a revert it is a claim about work that was undone.
+    document.body.innerHTML = '<p id="pair">$10 – <span>$8</span></p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    expect(document.querySelectorAll(`.${PARTIAL_MARKER}`)).toHaveLength(1);
+    revertConversions();
+    expect(document.querySelectorAll(`.${PARTIAL_MARKER}`)).toHaveLength(0);
+  });
+
   it('clears the marker on a partly converted element too', () => {
     // A partly converted element carries a different marker, and leaving it
     // behind means the element is skipped for the rest of the visit.
@@ -930,6 +1270,25 @@ describe('reverting', () => {
     revertConversions();
     convertPricesInNode(document.body, freshRates(), settings());
     expect(document.querySelectorAll(`.${SPAN_CLASS}`)).toHaveLength(1);
+  });
+
+  describe('given the page mutated in the same task', () => {
+    it("the page's own mutations are handed back", () => {
+      // Reverting drains the observer's queue so our writes are not
+      // re-processed. The queue is shared, so anything the page did in the
+      // same task is drained with it — and dropping it means that element
+      // never converts.
+      document.body.innerHTML = '<p id="p">$800</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(replayedDuring(() => revertConversions())).toBeGreaterThan(0);
+    });
+
+    it('they are handed back when a single element is reverted too', () => {
+      document.body.innerHTML = '<p id="p">$800</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(replayedDuring(() => revertElement(document.getElementById('p')!)))
+        .toBeGreaterThan(0);
+    });
   });
 
   describe('given a span the page created', () => {

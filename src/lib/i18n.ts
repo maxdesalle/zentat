@@ -45,6 +45,9 @@ export function localizeDocument(root: ParentNode = document): void {
   // data-i18n-attr="placeholder:someKey,title:otherKey"
   for (const el of root.querySelectorAll<HTMLElement>('[data-i18n-attr]')) {
     const spec = el.dataset.i18nAttr;
+    // Narrows `string | undefined` to `string`; the selector guarantees the
+    // attribute is present, so '' is the only value this can reject.
+    // Stryker disable next-line ConditionalExpression: '' parses to a pair with no name, which the attr && key test below rejects anyway.
     if (!spec) continue;
     for (const pair of spec.split(',')) {
       const [attr, key] = pair.split(':').map((part) => part.trim());

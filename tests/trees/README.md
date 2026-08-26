@@ -63,6 +63,34 @@ mechanically that no branch was written down and then never tested.
    says nothing was left unexecuted. Neither alone is sufficient — a tree can
    omit a branch, and coverage can be satisfied by a test that asserts nothing.
 
+## Coverage is a floor, not the measure
+
+Line coverage answers "did this line run". It cannot answer "was the assertion
+right", and the difference is not academic: this suite sat at 100% line
+coverage while six bugs shipped, and three of them had tests asserting the
+broken behaviour as correct — each with a tree written to match.
+
+So the number that matters is the MUTATION score. `npm run test:mutation`
+changes the source in every way Stryker can and fails on any change no test
+notices. It is a hard 100% in CI.
+
+When you fix a bug, the question to ask is not "is this line covered" but
+"if someone put this bug back, would anything fail?". Three honest answers
+when a mutant survives, in order of preference:
+
+1. **Write the test.** Almost always the right one. An off-by-one needs an
+   input sized exactly on the boundary; a regex mutant needs the string the
+   mutated pattern would newly match or newly miss.
+2. **Delete the code**, when it is dead by construction and grep proves no
+   caller. Two functions and one export went this way.
+3. **Annotate it** with `// Stryker disable next-line <Mutator>: <reason>`,
+   and only when no input can distinguish the change. The reason must be an
+   argument a reviewer can check in half a minute, never "hard to test".
+
+`scripts/mutants.mjs` is a faster subset — every bug this project has actually
+shipped, put back one at a time. It exists because the full run is slow, and
+it can be retired once the full run has been green for a while.
+
 ## What is not a tree
 
 Four suites are deliberately not tree-shaped, and it would be dishonest to

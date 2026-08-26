@@ -9,6 +9,9 @@ DirectFetcherTest
 │   └── it propagates the rejection
 ├── given the request outlives the timeout
 │   └── it aborts the request
+├── given the request finishes before the timeout
+│   ├── it leaves no timer running
+│   └── it never aborts the finished request
 └── hardened defaults
     ├── when the caller passes no init
     │   ├── it omits credentials

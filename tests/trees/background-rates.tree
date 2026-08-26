@@ -11,31 +11,51 @@ BackgroundRatesTest
     │   ├── given nothing is cached at all
     │   │   └── it does not wait, because the user is watching
     │   ├── given a forced refresh joins a cycle already waiting
+    │   │   ├── it leaves no timer behind
     │   │   └── it cuts the wait short
-    │   └── it reports that it is fetching
+    │   ├── given an unforced refresh joins a cycle already waiting
+    │   │   └── it leaves the wait in place
+    │   ├── it reports that it is fetching
+    │   └── it reports that it is waiting
     ├── given Nym is disabled
     │   ├── it fetches directly
+    │   ├── it tells the provider which source the user chose
     │   ├── given the fetch succeeds
     │   │   └── it stores the rates
-    │   └── given the fetch fails
-    │       └── it reports the provider errors
+    │   ├── given the fetch fails
+    │   │   └── it reports the provider errors
+    │   └── given the provider reports a failure but returns rates anyway
+    │       └── it stores nothing
     ├── given Nym is enabled
     │   ├── it never falls back to a direct fetch
+    │   ├── it tells the provider the fetch is going through the mixnet
     │   ├── given the first attempt succeeds
     │   │   ├── it stores the rates
-    │   │   └── it clears any backoff
+    │   │   ├── it clears any backoff
+    │   │   └── it notes the success in the log
     │   ├── given the first attempt fails
     │   │   ├── it tears the connection down for a fresh gateway
-    │   │   └── it tries again
+    │   │   ├── it tries again
+    │   │   └── it waits before churning to a new gateway
     │   ├── given every attempt fails
     │   │   ├── it backs off before the next cycle
-    │   │   └── it reports the failure
-    │   └── given the backoff window is still open
-    │       ├── it skips the cycle entirely
-    │       └── when the caller forces a refresh
-    │           └── it fetches anyway
+    │   │   ├── it waits fifteen minutes before trying the mixnet again
+    │   │   ├── it does not tear down a gateway it will not use
+    │   │   ├── it reports the failure
+    │   │   └── it narrates each attempt in the log
+    │   ├── given the provider reports a failure but returns rates anyway
+    │   │   └── it stores nothing
+    │   ├── given the backoff window is still open
+    │   │   ├── it skips the cycle entirely
+    │   │   ├── it explains why the rate is not updating
+    │   │   └── when the caller forces a refresh
+    │   │       └── it fetches anyway
+    │   └── given the backoff window has just expired
+    │       └── it fetches again
     ├── given a fetch outlives the worker's idle timer
-    │   └── it keeps the worker alive
+    │   ├── it keeps the worker alive
+    │   └── given the browser cannot report platform info
+    │       └── it keeps fetching anyway
     ├── given the fetch fails with no error to report
     │   └── it says so generically
     ├── given the fetch throws
@@ -45,12 +65,17 @@ BackgroundRatesTest
     └── storing rates
         ├── it merges over the existing cache
         ├── given some currencies fail the plausibility check
-        │   └── it keeps the ones that passed
+        │   ├── it keeps the ones that passed
+        │   └── it names them in the log
+        ├── given every currency passes the plausibility check
+        │   └── it says nothing about rejections
         ├── given every currency fails the plausibility check
         │   ├── it stores nothing
         │   └── it reports the failure
         ├── given the held rate is unchanged
-        │   └── it is not rewritten
+        │   ├── it is not rewritten
+        │   └── it says nothing about a re-peg
         ├── given spot has left the band
-        │   └── it re-pegs
+        │   ├── it re-pegs
+        │   └── it says how wide the band was
         └── it reports success

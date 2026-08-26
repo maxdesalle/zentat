@@ -85,7 +85,8 @@ export function convertPricesInNode(
       if (node.classList.contains(CONVERTED_MARKER)) continue;
       if (node.closest(`.${SPAN_CLASS}`)) continue;
 
-      // Captured BEFORE any mutation — this is what tooltips must show
+      // Captured BEFORE any mutation — this is what tooltips must show. Every
+      // detection path trims before it gets here, so this is already tight.
       const originalText = text;
 
       let converted = false;
@@ -126,12 +127,12 @@ export function convertPricesInNode(
           // container does the same job and leaves one path to maintain, with
           // the accessible copy written by the same code as everywhere else.
           node.textContent = '';
-          node.appendChild(makeSpan(originalText.trim(), newText));
+          node.appendChild(makeSpan(originalText, newText));
           node.appendChild(makeAccessibleCopy(newText));
 
           // Tooltip carries the pre-conversion price (the old code read
           // textContent AFTER replacing it, labeling the ZEC value "Original")
-          setOwnTitle(node, `Original: ${originalText.trim()}`);
+          setOwnTitle(node, `Original: ${originalText}`);
         }
       } else {
         // For complex content (Wikipedia, etc.), replace within text nodes to preserve HTML
@@ -160,12 +161,11 @@ function displayText(original: string, formatted: string, settings: Settings): s
 // quantity: the ratio line is what a person can actually remember, because it
 // does not move when the ZEC price does.
 function tooltipFor(original: string, zecAmount: number, ctx: ConvertContext): string {
-  const stage = ctx.settings.weanFromFiat
-    ? weanStage(ctx.settings.weanStartedAt)
-    : 'always';
   // 'delayed' and 'on-demand' are handled by CSS and the Alt-hold peek; only
   // 'hidden' removes the number from the tooltip entirely.
-  const showFiat = !ctx.settings.hideFiat && stage !== 'hidden';
+  const weanedOff = ctx.settings.weanFromFiat
+    && weanStage(ctx.settings.weanStartedAt) === 'hidden';
+  const showFiat = !ctx.settings.hideFiat && !weanedOff;
   const lines = showFiat ? [`Original: ${original}`] : [];
   const comparison = formatComparisons(
     compareToAnchors(zecAmount, ctx.settings.anchors ?? [], ctx.rates),
@@ -182,6 +182,10 @@ function tooltipFor(original: string, zecAmount: number, ctx: ConvertContext): s
   // not less.
   if (ctx.held) {
     const gap = divergence(ctx.held, ctx.rates);
+    // Stryker disable next-line ConditionalExpression: equivalent — reaching a
+    // tooltip at all means a price converted at the held rate, which needs a
+    // positive peg and a positive spot numeraire: the only two things
+    // divergence returns null for.
     if (gap !== null) {
       const sign = gap >= 0 ? '+' : '';
       lines.push(
@@ -271,18 +275,17 @@ function replacePricesInTextNodes(
     }
   }
 
+  // Stryker disable next-line ConditionalExpression: equivalent — with nothing
+  // to replace, every loop below runs over an empty list and the cross-node
+  // fallback searches that same empty list. The exit saves work, not an answer.
   if (replacements.length === 0) return false;
 
-  // Deduplicate replacements by original text (keep first occurrence)
-  const seen = new Set<string>();
-  const uniqueReplacements = replacements.filter((r) => {
-    if (seen.has(r.original)) return false;
-    seen.add(r.original);
-    return true;
-  });
-
-  // Sort by length descending - replace longest matches first
-  uniqueReplacements.sort((a, b) => b.original.length - a.original.length);
+  // Longest first: a shorter price that BEGINS a longer one ('' inside
+  // ',600') must not win the tie in replaceInTextNode, or the rest of the
+  // digits are stranded in the page beside a converted price. Repeated prices
+  // need no pass of their own — two entries with the same text produce the
+  // same span, whichever one is picked.
+  replacements.sort((a, b) => b.original.length - a.original.length);
 
   const textNodes = directTextOnly
     ? (Array.from(element.childNodes).filter((n) => n.nodeType === Node.TEXT_NODE) as Text[])
@@ -290,7 +293,7 @@ function replacePricesInTextNodes(
 
   let anyReplaced = false;
   for (const tNode of textNodes) {
-    if (replaceInTextNode(tNode, uniqueReplacements, { rates, settings, held })) {
+    if (replaceInTextNode(tNode, replacements, { rates, settings, held })) {
       anyReplaced = true;
     }
   }
@@ -299,9 +302,14 @@ function replacePricesInTextNodes(
   // (<span>$</span><span>99</span>) is detected via concatenated textContent
   // but lives in no single text node. When the element's whole text IS the
   // price, replace at the element level.
+  // Stryker disable next-line ConditionalExpression,LogicalOperator: equivalent —
+  // the fallback only fires when a page-written price IS the element's whole
+  // text. Once a text node has been replaced that text holds our own output
+  // instead, and a direct-text-only element by definition also holds a child's
+  // price, so neither state can produce that equality.
   if (!anyReplaced && !directTextOnly) {
     const trimmed = textOf(element);
-    const match = uniqueReplacements.find((r) => r.original === trimmed);
+    const match = replacements.find((r) => r.original === trimmed);
     if (match) {
       rememberContainer(element, element.innerHTML, element.getAttribute('title'));
       element.textContent = '';
@@ -328,6 +336,8 @@ function collectTextNodes(element: Element): Text[] {
       // The walker is rooted at an Element, so every text node it reaches has
       // an element parent. Kept because the alternative is a non-null
       // assertion on a value the DOM types say can be null.
+      // Stryker disable next-line ConditionalExpression: equivalent — a walker
+      // rooted at an Element reaches no text node without an element parent.
       /* v8 ignore next */
       if (!parent) return NodeFilter.FILTER_REJECT;
       if (isSkippedTag(parent.tagName)) return NodeFilter.FILTER_REJECT;
@@ -360,6 +370,9 @@ function replaceInTextNode(
   let cursor = 0;
   let replacedAny = false;
 
+  // Stryker disable next-line EqualityOperator: equivalent — the one extra turn
+  // this admits starts with the cursor at the very end of the string, where
+  // every indexOf returns -1 and the loop breaks before appending anything.
   while (cursor < content.length) {
     let bestIdx = -1;
     let best: Replacement | null = null;
@@ -374,7 +387,8 @@ function replaceInTextNode(
         best = r;
       }
     }
-    if (bestIdx === -1 || best === null) break;
+    // bestIdx and best are assigned together above, so one test covers both.
+    if (best === null) break;
 
     if (bestIdx > cursor) {
       fragment.appendChild(document.createTextNode(content.slice(cursor, bestIdx)));
@@ -391,6 +405,9 @@ function replaceInTextNode(
   if (cursor < content.length) {
     fragment.appendChild(document.createTextNode(content.slice(cursor)));
   }
+  // Stryker disable next-line OptionalChaining: equivalent — every text node
+  // here came from a walk of a live element, and replacing one text node cannot
+  // detach another. Kept over a non-null assertion on a nullable DOM type.
   tNode.parentNode?.replaceChild(fragment, tNode);
   return true;
 }
@@ -411,6 +428,9 @@ export function installCopyHandler(): () => void {
     const range = selection.getRangeAt(0);
     const fragment = range.cloneContents();
     const clones = fragment.querySelectorAll(`.${SPAN_CLASS}`);
+    // Stryker disable next-line ConditionalExpression: equivalent — with no
+    // clones the count check below compares against an empty list and returns
+    // anyway. This spares every ordinary copy a whole-document query.
     if (clones.length === 0) return;
 
     // cloneContents() produces new nodes, so the WeakMap cannot be consulted on
@@ -423,6 +443,9 @@ export function installCopyHandler(): () => void {
     // allowed to disagree at a range boundary in a real browser, and pairing
     // mismatched lists positionally puts the WRONG price on the clipboard —
     // which is the one failure here that costs the user money.
+    // Stryker disable next-line ConditionalExpression: equivalent — no
+    // selection this suite can build makes happy-dom's cloneContents and
+    // intersectsNode disagree about which spans a range covers.
     /* v8 ignore next */
     if (live.length !== clones.length) return;
 
@@ -440,6 +463,8 @@ export function installCopyHandler(): () => void {
   };
 
   document.addEventListener('copy', onCopy, true);
+  // Stryker disable next-line BooleanLiteral: equivalent under happy-dom, whose
+  // removeEventListener drops the listener whatever capture flag it is handed.
   return () => document.removeEventListener('copy', onCopy, true);
 }
 
@@ -452,9 +477,7 @@ export function revertConversions(): void {
 // page rewrites content under a converted element).
 export function revertElement(el: Element): void {
   revertWithin(el);
-  if (el instanceof Element) {
-    revertContainer(el);
-  }
+  revertContainer(el);
   flushObserverRecords();
 }
 
@@ -466,6 +489,8 @@ function revertWithin(root: ParentNode): void {
     // markup alone rather than rewriting it from an attribute it controls.
     const original = spanOriginalText(span);
     if (original === undefined) continue;
+    // Stryker disable next-line OptionalChaining: equivalent — these spans came
+    // from a query on a live root, and replacing one cannot detach another.
     span.parentNode?.replaceChild(document.createTextNode(original), span);
   }
 

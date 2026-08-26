@@ -23,8 +23,9 @@ vi.mock('wxt/utils/storage', () => ({
 
 // vi.mock factories are hoisted above ordinary consts, so the spies they
 // return have to be created in a hoisted block of their own.
-const { createFetcher, destroyNymConnection, fetchRatesWithRetry } = vi.hoisted(() => ({
+const { createFetcher, debug, destroyNymConnection, fetchRatesWithRetry } = vi.hoisted(() => ({
   createFetcher: vi.fn(() => ({ fetch: vi.fn() })),
+  debug: vi.fn(),
   destroyNymConnection: vi.fn(async () => {}),
   fetchRatesWithRetry: vi.fn(),
 }));
@@ -32,6 +33,10 @@ const { createFetcher, destroyNymConnection, fetchRatesWithRetry } = vi.hoisted(
 vi.mock('../../src/lib/rates/provider', () => ({ fetchRatesWithRetry }));
 vi.mock('../../src/lib/fetch/nym', () => ({ destroyNymConnection }));
 vi.mock('../../src/lib/fetch', () => ({ createFetcher }));
+// The log is the only place a user can check which transport a cycle actually
+// used, and the only account of why a cycle did nothing. What it says is part
+// of the behaviour, not decoration.
+vi.mock('../../src/lib/log', () => ({ debug }));
 
 import { refreshRates } from '../../src/entrypoints/background/rates';
 import { resetRateValidation } from '../../src/lib/rates/validate';
@@ -47,6 +52,20 @@ function settingsOf(over: Record<string, unknown> = {}) {
 
 function fetched(rates: Record<string, number>, source = 'coingecko') {
   return { success: true, data: { rates, updatedAt: Date.now(), source }, errors: [] };
+}
+
+/** Everything the cycle wrote to the log, as one blob to search. */
+function log() {
+  return debug.mock.calls.map(([message]) => String(message)).join('\n');
+}
+
+/** A cache old enough to need refreshing, and old enough to have a cadence. */
+function staleCache() {
+  store.set('local:rates', {
+    rates: { USD: RATE },
+    updatedAt: NOW - 60 * 60_000,
+    source: 'coingecko',
+  });
 }
 
 /**
@@ -153,6 +172,20 @@ describe('refreshRates', () => {
     });
 
     describe('given a forced refresh joins a cycle already waiting', () => {
+      it('leaves no timer behind', async () => {
+        // A timer outliving its wait holds the service worker awake for the
+        // rest of the jitter window, which is the opposite of what the
+        // keepalive interval is carefully torn down for.
+        staleCache();
+        vi.spyOn(Math, 'random').mockReturnValue(1);
+        const joined = refreshRates(false);
+        await vi.advanceTimersByTimeAsync(1);
+        refreshRates(true);
+        await vi.advanceTimersByTimeAsync(1);
+        await joined;
+        expect(vi.getTimerCount()).toBe(0);
+      });
+
       it('cuts the wait short', async () => {
         // The background body starts an unforced cycle during script
         // evaluation, so the install's forced fetch always joined one that
@@ -175,6 +208,25 @@ describe('refreshRates', () => {
       });
     });
 
+    describe('given an unforced refresh joins a cycle already waiting', () => {
+      it('leaves the wait in place', async () => {
+        // The alarm fires more often than the wait is long, so if any joiner
+        // could cut it the jitter would almost never apply and the cadence
+        // would be machine-precise again.
+        staleCache();
+        vi.spyOn(Math, 'random').mockReturnValue(1);
+        const joined = refreshRates(false);
+        await vi.advanceTimersByTimeAsync(1);
+
+        refreshRates(false);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(fetchRatesWithRetry).not.toHaveBeenCalled();
+
+        await vi.runAllTimersAsync();
+        await joined;
+      });
+    });
+
     it('reports that it is fetching', async () => {
       let seen: string | undefined;
       fetchRatesWithRetry.mockImplementation(async () => {
@@ -184,6 +236,20 @@ describe('refreshRates', () => {
       await runCycle();
       expect(seen).toBe('fetching');
     });
+
+    it('reports that it is waiting', async () => {
+      // The wait can run to a minute and a half and a Nym fetch longer still.
+      // A popup that shows nothing for that long reads as a broken extension,
+      // so the state is written before the wait rather than after it.
+      staleCache();
+      vi.spyOn(Math, 'random').mockReturnValue(1);
+      const cycle = refreshRates();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fetchRatesWithRetry).not.toHaveBeenCalled();
+      expect((await getFetchStatus()).state).toBe('fetching');
+      await vi.runAllTimersAsync();
+      await cycle;
+    });
   });
 
   describe('given Nym is disabled', () => {
@@ -192,6 +258,15 @@ describe('refreshRates', () => {
     it('fetches directly', async () => {
       await runCycle(true);
       expect(createFetcher).toHaveBeenCalledWith({ nymEnabled: false });
+    });
+
+    it('tells the provider which source the user chose', async () => {
+      // Picking a source is how a user opts out of a provider they do not
+      // want to talk to at all. Dropping it silently restores the default
+      // chain and contacts the very host they excluded.
+      settingsOf({ nymEnabled: false, rateSource: 'kraken' });
+      await runCycle(true);
+      expect(fetchRatesWithRetry).toHaveBeenCalledWith(expect.anything(), { source: 'kraken' });
     });
 
     describe('given the fetch succeeds', () => {
@@ -213,6 +288,21 @@ describe('refreshRates', () => {
         expect(status.error).toBe('CoinGecko: 429; Kraken: down');
       });
     });
+
+    describe('given the provider reports a failure but returns rates anyway', () => {
+      it('stores nothing', async () => {
+        // A half-parsed response carries numbers alongside its own verdict of
+        // failure. Pricing off them is the wrong-price-worse-than-no-price
+        // case in its purest form.
+        fetchRatesWithRetry.mockResolvedValue({
+          success: false,
+          data: { rates: { USD: RATE }, updatedAt: NOW, source: 'coingecko' },
+          errors: ['truncated response'],
+        });
+        expect(await runCycle(true)).toBe(false);
+        expect((await getRates()).rates).toEqual({});
+      });
+    });
   });
 
   describe('given Nym is enabled', () => {
@@ -228,6 +318,18 @@ describe('refreshRates', () => {
       }
     });
 
+    it('tells the provider the fetch is going through the mixnet', async () => {
+      // The provider gives a mixnet fetch a gentler retry ladder. Without the
+      // flag it retries on a direct fetch's schedule, hammering a gateway that
+      // is merely slow.
+      settingsOf({ nymEnabled: true, rateSource: 'kraken' });
+      await runCycle(true);
+      expect(fetchRatesWithRetry).toHaveBeenCalledWith(expect.anything(), {
+        isNym: true,
+        source: 'kraken',
+      });
+    });
+
     describe('given the first attempt succeeds', () => {
       it('stores the rates', async () => {
         expect(await runCycle(true)).toBe(true);
@@ -238,6 +340,13 @@ describe('refreshRates', () => {
         store.set('local:nymBackoffUntil', NOW + 60_000);
         await runCycle(true);
         expect(store.get('local:nymBackoffUntil')).toBe(0);
+      });
+
+      it('notes the success in the log', async () => {
+        // PRIVACY.md claims the rate never leaves over the clear net when Nym
+        // is on. The log is where a user can hold us to that.
+        await runCycle(true);
+        expect(log()).toContain('succeeded');
       });
     });
 
@@ -259,6 +368,18 @@ describe('refreshRates', () => {
         expect(await runCycle(true)).toBe(true);
         expect(fetchRatesWithRetry).toHaveBeenCalledTimes(2);
       });
+
+      it('waits before churning to a new gateway', async () => {
+        // Retrying the instant the old gateway died just meets the same
+        // congested state, and does it while holding a fresh registration.
+        const cycle = refreshRates(true);
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(fetchRatesWithRetry).toHaveBeenCalledOnce();
+
+        await vi.advanceTimersByTimeAsync(15_000);
+        await cycle;
+        expect(fetchRatesWithRetry).toHaveBeenCalledTimes(2);
+      });
     });
 
     describe('given every attempt fails', () => {
@@ -273,9 +394,50 @@ describe('refreshRates', () => {
         expect(store.get('local:nymBackoffUntil')).toBeGreaterThan(NOW);
       });
 
+      it('waits fifteen minutes before trying the mixnet again', async () => {
+        // Long enough that a broken mixnet is not one gateway registration per
+        // alarm; short enough that a transient outage heals in a cycle or two.
+        await runCycle(true);
+        // Measured from the moment it gave up, which is already later than NOW
+        // because the cycle paused between gateways.
+        const gaveUpAt = (await getFetchStatus()).changedAt;
+        expect(store.get('local:nymBackoffUntil')).toBe(gaveUpAt + 15 * 60_000);
+      });
+
+      it('does not tear down a gateway it will not use', async () => {
+        // Every teardown buys a fresh registration for the next attempt. After
+        // the last one there is no next attempt, so it buys nothing and still
+        // shows up on the network.
+        await runCycle(true);
+        expect(destroyNymConnection).toHaveBeenCalledOnce();
+      });
+
       it('reports the failure', async () => {
         await runCycle(true);
         expect((await getFetchStatus()).error).toContain('Nym');
+        expect((await getFetchStatus()).state).toBe('error');
+      });
+
+      it('narrates each attempt in the log', async () => {
+        // From outside, a mixnet cycle that is retrying and one that has hung
+        // look identical: both are a popup saying nothing for a minute.
+        await runCycle(true);
+        expect(log()).toContain('attempt 1/2');
+        expect(log()).toContain('attempt 2/2');
+        expect(log()).toContain('destroying');
+        expect(log()).toContain('backing off');
+      });
+    });
+
+    describe('given the provider reports a failure but returns rates anyway', () => {
+      it('stores nothing', async () => {
+        fetchRatesWithRetry.mockResolvedValue({
+          success: false,
+          data: { rates: { USD: RATE }, updatedAt: NOW, source: 'coingecko' },
+          errors: ['truncated response'],
+        });
+        expect(await runCycle(true)).toBe(false);
+        expect((await getRates()).rates).toEqual({});
       });
     });
 
@@ -287,12 +449,32 @@ describe('refreshRates', () => {
         expect(fetchRatesWithRetry).not.toHaveBeenCalled();
       });
 
+      it('explains why the rate is not updating', async () => {
+        // Deliberately sitting out a cycle looks exactly like a broken
+        // extension unless it says which one it is.
+        await runCycle();
+        const status = await getFetchStatus();
+        expect(status.state).toBe('error');
+        expect(status.error).toContain('Nym');
+        expect(log()).toContain('backoff');
+      });
+
       describe('when the caller forces a refresh', () => {
         it('fetches anyway', async () => {
           // A user pressing refresh has asked for it explicitly.
           await runCycle(true);
           expect(fetchRatesWithRetry).toHaveBeenCalled();
         });
+      });
+    });
+
+    describe('given the backoff window has just expired', () => {
+      it('fetches again', async () => {
+        // Exactly on the boundary. A window that outlasts its own deadline by
+        // one cycle silently doubles every backoff.
+        store.set('local:nymBackoffUntil', NOW);
+        expect(await runCycle()).toBe(true);
+        expect(fetchRatesWithRetry).toHaveBeenCalled();
       });
     });
   });
@@ -315,6 +497,25 @@ describe('refreshRates', () => {
       release(fetched({ USD: RATE }));
       await cycle;
     });
+
+    describe('given the browser cannot report platform info', () => {
+      it('keeps fetching anyway', async () => {
+        // The API is not on every runtime the extension ships to. A throw
+        // inside the keepalive tick would abort the refresh it exists to
+        // protect, turning a missing convenience into no rate at all.
+        vi.stubGlobal('browser', { runtime: {} });
+        let release: (value: unknown) => void = () => {};
+        fetchRatesWithRetry.mockImplementation(() =>
+          new Promise((resolve) => {
+            release = resolve;
+          })
+        );
+        const cycle = refreshRates(true);
+        await vi.advanceTimersByTimeAsync(45_000);
+        release(fetched({ USD: RATE }));
+        expect(await cycle).toBe(true);
+      });
+    });
   });
 
   describe('given the fetch fails with no error to report', () => {
@@ -332,6 +533,13 @@ describe('refreshRates', () => {
       fetchRatesWithRetry.mockRejectedValue(new Error('worker died'));
       expect(await runCycle(true)).toBe(false);
       expect((await getFetchStatus()).error).toBe('worker died');
+      expect((await getFetchStatus()).state).toBe('error');
+      // Named in the console so a user reading their own devtools can tell an
+      // extension failure from the host page's noise.
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('Zentat: Rate refresh'),
+        expect.any(Error),
+      );
     });
 
     describe('given what was thrown is not an Error', () => {
@@ -368,6 +576,22 @@ describe('refreshRates', () => {
         expect(stored.rates.USD).toBe(RATE);
         expect(stored.rates.EUR).toBeUndefined();
       });
+
+      it('names them in the log', async () => {
+        // A currency quietly missing from the popup is indistinguishable from
+        // one the provider never quoted, so the only way to tell a dropped
+        // rate from an unsupported one is to say which were dropped.
+        fetchRatesWithRetry.mockResolvedValue(fetched({ USD: RATE, EUR: 99_999, GBP: 0 }));
+        await runCycle(true);
+        expect(log()).toContain('EUR, GBP');
+      });
+    });
+
+    describe('given every currency passes the plausibility check', () => {
+      it('says nothing about rejections', async () => {
+        await runCycle(true);
+        expect(log()).not.toContain('Rejected');
+      });
     });
 
     describe('given every currency fails the plausibility check', () => {
@@ -383,6 +607,7 @@ describe('refreshRates', () => {
       it('reports the failure', async () => {
         await runCycle(true);
         expect((await getFetchStatus()).error).toContain('plausibility');
+        expect((await getFetchStatus()).state).toBe('error');
       });
     });
 
@@ -391,8 +616,20 @@ describe('refreshRates', () => {
         await runCycle(true);
         const first = await getHeldRate();
         fetchRatesWithRetry.mockResolvedValue(fetched({ USD: RATE * 1.01 }));
+        // Writing the same peg back still fires every watcher, so the popup
+        // and every open tab re-render on a rate that did not move.
+        const writes = vi.spyOn(store, 'set');
         await runCycle(true);
         expect(await getHeldRate()).toEqual(first);
+        expect(writes.mock.calls.filter(([key]) => key === 'local:heldRate')).toEqual([]);
+      });
+
+      it('says nothing about a re-peg', async () => {
+        await runCycle(true);
+        fetchRatesWithRetry.mockResolvedValue(fetched({ USD: RATE * 1.01 }));
+        debug.mockClear();
+        await runCycle(true);
+        expect(log()).not.toContain('re-pegged');
       });
     });
 
@@ -404,6 +641,17 @@ describe('refreshRates', () => {
         fetchRatesWithRetry.mockResolvedValue(fetched({ USD: RATE * 1.12 }));
         await runCycle(true);
         expect((await getHeldRate())!.peg).toBeCloseTo(RATE * 1.12, 12);
+      });
+
+      it('says how wide the band was', async () => {
+        // The band is the accuracy bound PRIVACY.md and the options page both
+        // quote. A displayed rate that jumps without naming the threshold it
+        // crossed is a number the user cannot check.
+        await runCycle(true);
+        fetchRatesWithRetry.mockResolvedValue(fetched({ USD: RATE * 1.12 }));
+        await runCycle(true);
+        expect(log()).toContain('re-pegged');
+        expect(log()).toContain('10%');
       });
     });
 

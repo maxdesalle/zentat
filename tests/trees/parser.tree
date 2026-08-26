@@ -10,7 +10,8 @@ ParserTest
 │   │   │   └── it reads a dot as the decimal point
 │   │   ├── given EU grouping
 │   │   │   ├── it reads a dot as thousands
-│   │   │   └── it reads a comma as the decimal point
+│   │   │   ├── it reads a comma as the decimal point
+│   │   │   └── it keeps three decimals after the comma
 │   │   ├── given Indian lakh grouping
 │   │   │   └── it reads the two-digit groups
 │   │   └── given Swiss apostrophe grouping
@@ -21,17 +22,26 @@ ParserTest
 │   │   │   └── it reads them as a decimal
 │   │   └── given the caller does not
 │   │       └── it reads them as thousands
+│   ├── given exactly three digits after a single comma
+│   │   └── given the caller expects US decimals
+│   │       └── it still reads them as thousands
+│   ├── given more than three digits after a single dot
+│   │   └── it reads them all as decimals
+│   ├── given a magnitude on top of grouped digits
+│   │   └── it applies the magnitude to the grouped number
 │   ├── given both separators appear more than once
 │   │   ├── it reads dots as grouping when the comma is the decimal
 │   │   └── it reads commas as grouping when the dot is the decimal
 │   ├── given a magnitude suffix
 │   │   ├── it reads it case-insensitively
-│   │   └── it applies the right magnitude for each letter
+│   │   ├── it applies the right magnitude for each letter
+│   │   └── it takes the suffix off before reading the separators
 │   ├── given a spelled-out multiplier
 │   │   ├── it matches the whole word rather than a prefix
 │   │   ├── it multiplies rather than divides
 │   │   ├── it handles compound multipliers
-│   │   └── it handles non-English words
+│   │   ├── it handles non-English words
+│   │   └── it reads the word whatever its case
 │   └── given input that is not a number
 │       ├── it returns null for letters
 │       ├── it returns null for an empty string
@@ -67,6 +77,15 @@ ParserTest
 │   │       └── it loses
 │   └── given the candidate starts at the same offset as the other
 │       └── it compares lengths rather than positions
+├── extractPriceFromMatch
+│   ├── given the match captured no digits
+│   │   └── it reads nothing
+│   ├── given the captured digits are not a number
+│   │   └── it reads nothing
+│   ├── given the captured amount is negative
+│   │   └── it reads nothing
+│   └── given the captured amount is zero
+│       └── it reads the price
 └── parsePrice
     ├── given a symbol before the amount
     │   ├── it reads a dollar sign
@@ -79,12 +98,15 @@ ParserTest
     │   │   └── it reads three digits as cents
     │   ├── given the page declares no language
     │   │   └── it assumes a dot decimal
-    │   └── given the same language twice
-    │       └── it reads it the same way both times
+    │   ├── given the same language twice
+    │       ├── it reads it the same way both times
+    │       └── it asks the browser about that language only once
     │   └── given the language tag is not one the browser knows
     │       └── it falls back to a dot decimal rather than failing
     ├── given a code after the amount
     │   └── it reads the code
+    ├── given a code before the amount
+    │   └── it reads the code without the space in front of it
     ├── given several prices in one string
     │   └── it returns each of them
     ├── given a magnitude in the price
@@ -94,10 +116,13 @@ ParserTest
     │   ├── it skips the negative price
     │   ├── it still reads both ends of a range
     │   ├── it treats every dash the web uses as a separator
+    │   ├── it looks only at the character beside the dash
     │   └── given the sign is attached to another number
     │       └── it is not treated as a minus
     ├── given a currency that prices in cents
     │   └── it reads three digits after the dot as cents
+    ├── given a price of zero
+    │   └── it reads it as zero
     ├── given an ambiguous symbol
     │   ├── given the page states its own currency
     │   │   ├── it beats the guess from the hostname
@@ -121,7 +146,9 @@ ParserTest
     │   ├── it applies on the bare domain as well as a subdomain
     │   ├── it does not apply to a host that merely ends in the same letters
     │   ├── it does not apply elsewhere
-    │   └── it reads a site's split euro-and-cent markup
+    │   ├── it reads a site's split euro-and-cent markup
+    │   ├── it reads that markup when the price has no cents
+    │   └── it keeps a single-digit cent in the cents place
     ├── given the same price appears twice in one string
     │   ├── it returns both of them
     │   └── it keeps them at their own positions

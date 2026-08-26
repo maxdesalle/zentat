@@ -28,6 +28,11 @@ const NYM_BACKOFF_MS = 15 * 60 * 1000;
 // cadence is not a machine-precise fingerprint.
 const MAX_JITTER_MS = 90 * 1000;
 
+// The fallback is read at exactly one place, the `Date.now() <` comparison
+// below, and 'local:nymBackoffUntil' is not read anywhere else in the codebase.
+// Both 0 and the fallback-less undefined make that comparison false, so no
+// stored state and no argument can tell the two apart.
+// Stryker disable next-line ObjectLiteral: no input distinguishes it from {}
 const nymBackoffItem = storage.defineItem<number>('local:nymBackoffUntil', { fallback: 0 });
 
 let inFlight: Promise<boolean> | null = null;

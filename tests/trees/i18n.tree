@@ -17,7 +17,8 @@ I18nTest
     ├── given the attribute list is empty
     │   └── it leaves the element alone
     ├── given an attribute pair is malformed
-    │   └── it skips that pair without touching the others
+    │   ├── it skips that pair without touching the others
+    │   └── it never writes a name with no key
     ├── given an element carries an empty text key
     │   └── it leaves the element alone
     ├── given no root is given

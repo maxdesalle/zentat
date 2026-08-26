@@ -113,6 +113,16 @@ describe('textOf', () => {
       expect(textOf(undefined)).toBe('');
     });
   });
+
+  describe('given a node whose text is null', () => {
+    it('returns an empty string', () => {
+      // Document and DocumentType really do answer null in a browser, which is
+      // why the DOM types say `string | null`; happy-dom hands back '' instead,
+      // so the shape has to be built by hand. A throw from here would land
+      // mid-pass and leave the page half converted.
+      expect(textOf({ textContent: null } as unknown as Node)).toBe('');
+    });
+  });
 });
 
 describe('isNonPriceText', () => {

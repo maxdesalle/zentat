@@ -1,10 +1,38 @@
-import { describe, expect, it } from 'vitest';
-import { isBetterMatch, overlaps, parseNumber, parsePrice } from '../../src/lib/detection/parser';
+import { afterAll, describe, expect, it } from 'vitest';
+import {
+  extractPriceFromMatch,
+  isBetterMatch,
+  overlaps,
+  parseNumber,
+  parsePrice,
+} from '../../src/lib/detection/parser';
+import type { CurrencyPattern } from '../../src/lib/detection/patterns';
 
 // Spec: tests/trees/parser.tree
 // Bugs found in the field live in parser.regressions.test.ts alongside this.
 
 const enabledCurrencies = ['USD', 'EUR', 'GBP'];
+
+// The machine is not the page. Every test in this file runs as if the reader's
+// own computer were German, so that any reading which quietly asks the machine
+// how numbers are written — instead of asking the page — comes out as a wrong
+// number here rather than only on someone else's laptop.
+const RealNumberFormat = Intl.NumberFormat;
+const languagesAsked: string[] = [];
+
+function GermanByDefault(
+  this: unknown,
+  locales?: string,
+  options?: Intl.NumberFormatOptions,
+): Intl.NumberFormat {
+  languagesAsked.push(String(locales));
+  return new RealNumberFormat(locales ?? 'de-DE', options);
+}
+
+Intl.NumberFormat = GermanByDefault as unknown as typeof Intl.NumberFormat;
+afterAll(() => {
+  Intl.NumberFormat = RealNumberFormat;
+});
 
 describe('parseNumber', () => {
   describe('given a bare number', () => {
@@ -47,6 +75,13 @@ describe('parseNumber', () => {
         expect(parseNumber('1.234,56')).toBe(1234.56);
         expect(parseNumber('1.234.567,89')).toBe(1234567.89);
       });
+
+      it('keeps three decimals after the comma', () => {
+        // Three digits after a separator usually means grouping, and that rule
+        // must not reach across a number that already has a grouping dot.
+        // Reading "1.234,567" that way loses the fraction and returns 1234.
+        expect(parseNumber('1.234,567')).toBe(1234.567);
+      });
     });
 
     describe('given Indian lakh grouping', () => {
@@ -85,6 +120,37 @@ describe('parseNumber', () => {
     });
   });
 
+  describe('given exactly three digits after a single comma', () => {
+    describe('given the caller expects US decimals', () => {
+      it('still reads them as thousands', () => {
+        // The gas-price reading is about a DOT. A comma on a US page is a
+        // thousands separator and nothing else, so "3,499" is three and a half
+        // thousand dollars — reading it as 3.499 is off by a thousand.
+        expect(parseNumber('3,499', true)).toBe(3499);
+      });
+    });
+  });
+
+  describe('given more than three digits after a single dot', () => {
+    it('reads them all as decimals', () => {
+      // Unit prices and crypto quotes carry four or more decimals. Matching
+      // only the last three digits would turn 1.2345 into 12,345.
+      expect(parseNumber('1.2345')).toBe(1.2345);
+      expect(parseNumber('0.00595')).toBe(0.00595);
+    });
+  });
+
+  describe('given a magnitude on top of grouped digits', () => {
+    it('applies the magnitude to the grouped number', () => {
+      // Each grouping shape leaves parseNumber by a different exit, and an
+      // exit that forgets the magnitude reads a million times small.
+      expect(parseNumber('1,500,000k')).toBe(1_500_000_000);
+      expect(parseNumber('1.500.000k')).toBe(1_500_000_000);
+      expect(parseNumber('1.500.000,5k')).toBe(1_500_000_500);
+      expect(parseNumber('1,500,000.5k')).toBe(1_500_000_500);
+    });
+  });
+
   describe('given both separators appear more than once', () => {
     it('reads dots as grouping when the comma is the decimal', () => {
       expect(parseNumber('1.234.567,89')).toBe(1234567.89);
@@ -112,6 +178,13 @@ describe('parseNumber', () => {
       expect(parseNumber('1.2t')).toBe(1_200_000_000_000);
       expect(parseNumber('69.5k')).toBe(69500);
     });
+
+    it('takes the suffix off before reading the separators', () => {
+      // Left on, the letter makes "1,200M" look like a number with four
+      // characters after its comma, so the comma reads as a decimal point and
+      // a $1.2 billion market cap renders as $1.2 million.
+      expect(parseNumber('1,200M')).toBe(1_200_000_000);
+    });
   });
 
   describe('given a spelled-out multiplier', () => {
@@ -129,13 +202,26 @@ describe('parseNumber', () => {
     });
 
     it('handles compound multipliers', () => {
+      // "thousand" is the tail of "hundred thousand", so the compound has to be
+      // tried first or the same text reads a hundred times small.
       expect(parseNumber('5 hundred thousand')).toBe(500_000);
+      // Markup keeps whitespace the page collapses on screen.
+      expect(parseNumber('5 hundred  thousand')).toBe(500_000);
+      // The words have to come off before the comma is read, or the comma
+      // turns into a decimal point.
+      expect(parseNumber('1,500 hundred thousand')).toBe(150_000_000);
     });
 
     it('handles non-English words', () => {
       expect(parseNumber('5 milliard')).toBe(5_000_000_000);
       expect(parseNumber('5 milione')).toBe(5_000_000);
       expect(parseNumber('5 millón')).toBe(5_000_000);
+    });
+
+    it('reads the word whatever its case', () => {
+      // Headlines and banners shout.
+      expect(parseNumber('5 MILLION')).toBe(5_000_000);
+      expect(parseNumber('5 Hundred Thousand')).toBe(500_000);
     });
   });
 
@@ -266,6 +352,39 @@ describe('isBetterMatch', () => {
   });
 });
 
+describe('extractPriceFromMatch', () => {
+  // None of these can arrive through parsePrice today: every pattern captures
+  // a run of digits. They are the rules that decide what happens when the next
+  // pattern does not, and the answer has to be "no price" rather than a price
+  // of NaN shown with as much confidence as a real one.
+  const dollars: CurrencyPattern = { code: 'USD', symbols: ['$'], regex: /never/g };
+  const matchOf = (regex: RegExp, text: string) => regex.exec(text) as RegExpExecArray;
+
+  describe('given the match captured no digits', () => {
+    it('reads nothing', () => {
+      expect(extractPriceFromMatch(matchOf(/(\$)/, '$'), dollars)).toBe(null);
+    });
+  });
+
+  describe('given the captured digits are not a number', () => {
+    it('reads nothing', () => {
+      expect(extractPriceFromMatch(matchOf(/(a\d)/, 'a1'), dollars)).toBe(null);
+    });
+  });
+
+  describe('given the captured amount is negative', () => {
+    it('reads nothing', () => {
+      expect(extractPriceFromMatch(matchOf(/(-\d)/, '-1'), dollars)).toBe(null);
+    });
+  });
+
+  describe('given the captured amount is zero', () => {
+    it('reads the price', () => {
+      expect(extractPriceFromMatch(matchOf(/(0)/, '0'), dollars)?.price.amount).toBe(0);
+    });
+  });
+});
+
 describe('parsePrice', () => {
   describe('given a symbol before the amount', () => {
     it('reads a dollar sign', () => {
@@ -325,6 +444,16 @@ describe('parsePrice', () => {
         const second = parsePrice('$3.499', ['USD'], 'a.com', 'en-US')[0]?.amount;
         expect(second).toBe(first);
       });
+
+      it('asks the browser about that language only once', () => {
+        // This runs for every price on the page, and a shopping page has
+        // hundreds. Building a fresh formatter each time is work the content
+        // script spends on someone else's page.
+        languagesAsked.length = 0;
+        parsePrice('$3.499', ['USD'], 'a.com', 'fr-FR');
+        parsePrice('$9.999', ['USD'], 'a.com', 'fr-FR');
+        expect(languagesAsked.filter((l) => l === 'fr-FR')).toHaveLength(1);
+      });
     });
 
     describe('given the language tag is not one the browser knows', () => {
@@ -343,6 +472,17 @@ describe('parsePrice', () => {
       expect(results).toHaveLength(1);
       expect(results[0].amount).toBe(99.99);
       expect(results[0].currency).toBe('USD');
+    });
+  });
+
+  describe('given a code before the amount', () => {
+    it('reads the code without the space in front of it', () => {
+      // The pattern has to swallow the space before "USD" to be sure the code
+      // stands on its own. Reporting that space as part of the price makes the
+      // replacement eat the gap between the label and the number.
+      const [price] = parsePrice('Total USD 19.99', ['USD']);
+      expect(price.original).toBe('USD 19.99');
+      expect(price.amount).toBe(19.99);
     });
   });
 
@@ -370,7 +510,18 @@ describe('parsePrice', () => {
 
   describe('given a negative amount', () => {
     it('skips the negative price', () => {
-      expect(parsePrice('Refund: -$5.99', ['USD'])).toHaveLength(0);
+      // Every dash the web uses as a minus, not just the ASCII one: a refund
+      // line written with an en dash is still a refund.
+      for (const dash of ['-', '−', '–', '—']) {
+        expect(parsePrice(`Refund: ${dash}$5.99`, ['USD'])).toHaveLength(0);
+      }
+    });
+
+    it('looks only at the character beside the dash', () => {
+      // A digit earlier in the line is what makes a dash a range separator,
+      // and only a digit right next to it counts. Any digit anywhere would
+      // make "Item 2: -$5.99" a positive price.
+      expect(parsePrice('Item 2: -$5.99', ['USD'])).toHaveLength(0);
     });
 
     it('treats every dash the web uses as a separator', () => {
@@ -408,6 +559,14 @@ describe('parsePrice', () => {
       expect(parsePrice('C$3.499', ['CAD'], 'shop.ca')[0]?.amount).toBe(3.499);
       expect(parsePrice('A$3.499', ['AUD'], 'shop.com.au')[0]?.amount).toBe(3.499);
       expect(parsePrice('MX$3.499', ['MXN'], 'tienda.com.mx')[0]?.amount).toBe(3.499);
+    });
+  });
+
+  describe('given a price of zero', () => {
+    it('reads it as zero', () => {
+      // Free shipping and free tiers are quoted as prices, and dropping them
+      // leaves a bare "$0.00" beside converted prices as if it had failed.
+      expect(parsePrice('$0.00 shipping', ['USD'])[0]?.amount).toBe(0);
     });
   });
 
@@ -515,6 +674,20 @@ describe('parsePrice', () => {
       expect(results).toHaveLength(1);
       expect(results[0].amount).toBe(149.95);
     });
+
+    it('reads that markup when the price has no cents', () => {
+      // The same accessible label drops the cents half on a whole-euro price.
+      const results = parsePrice("'149' euro", ['EUR'], 'www.bol.com');
+      expect(results).toHaveLength(1);
+      expect(results[0].amount).toBe(149);
+    });
+
+    it('keeps a single-digit cent in the cents place', () => {
+      // "149 euro en 5 cent" is 149.05. Joining the halves without padding
+      // reads it as 149.50, ten times the cents.
+      const results = parsePrice("'149' euro en '5' cent", ['EUR'], 'www.bol.com');
+      expect(results[0]?.amount).toBe(149.05);
+    });
   });
 
   describe('given the same price appears twice in one string', () => {
@@ -581,6 +754,9 @@ describe('parsePrice', () => {
   describe('given a currency is not enabled', () => {
     it('returns nothing for that currency', () => {
       expect(parsePrice('¥1000', ['USD'])).toHaveLength(0);
+      // A symbol that means one currency and nothing else has no second
+      // reading to fall back to, and asking for one must not throw.
+      expect(parsePrice('€49.99', ['USD'])).toHaveLength(0);
     });
 
     describe('given the symbol could mean an enabled one instead', () => {

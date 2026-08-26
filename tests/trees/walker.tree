@@ -13,7 +13,9 @@ WalkerTest
 │   │   └── it returns its trimmed text
 │   ├── given a text node
 │   │   └── it returns its trimmed value
-│   └── given nothing
+│   ├── given nothing
+│   │   └── it returns an empty string
+│   └── given a node whose text is null
 │       └── it returns an empty string
 ├── isNonPriceText
 │   ├── given text this extension itself produced

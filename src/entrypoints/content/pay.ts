@@ -44,6 +44,10 @@ export function showPaymentRequest(
   spot: RatesData,
 ): boolean {
   const address = pageAddress();
+  // Removing this guard changes nothing observable: buildPaymentUri rejects a
+  // null address and the check below refuses on exactly the same input. It
+  // stays because the rule it states is the reason this mode exists.
+  // Stryker disable next-line ConditionalExpression: the uri check below refuses the same input
   if (!address) return false;
 
   const uri = buildPaymentUri({
@@ -51,9 +55,15 @@ export function showPaymentRequest(
     zecAmount,
     message: `${originalPrice} at ${new Date(spot.updatedAt).toISOString().slice(0, 16)}Z`,
   });
+  // qrSvg returns null for any falsy text, so the check below refuses the same
+  // input this one does.
+  // Stryker disable next-line ConditionalExpression: the svg check below refuses the same input
   if (!uri) return false;
 
   const svg = qrSvg(uri, { size: 200 });
+  // Nothing falsy parses into an <svg> root, so the parse check further down
+  // refuses on the same input.
+  // Stryker disable next-line ConditionalExpression: the parse check below refuses the same input
   if (!svg) return false;
 
   closePaymentPanel();
@@ -84,7 +94,6 @@ export function showPaymentRequest(
   // was handled above. Kept because the alternative to checking is importing
   // whatever the parser produced into the page, and a parse guard that is only
   // correct as long as its input never changes is not a guard at all.
-  /* v8 ignore next */
   if (qrNode.nodeName.toLowerCase() !== 'svg') return false;
   panel.appendChild(document.importNode(qrNode, true));
 

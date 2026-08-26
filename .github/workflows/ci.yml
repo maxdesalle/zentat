@@ -47,6 +47,17 @@ jobs:
       # This puts every bug we have shipped back, one at a time, and fails if
       # the suite does not notice. Slower than the rest of CI and worth it.
       - run: npm run test:mutants
+
+      # The full mutation run: every mutation Stryker can generate, not just
+      # the bugs we already know about. Slow — around ten minutes — so it sits
+      # after the fast gates rather than in front of them.
+      #
+      # The threshold is 100 and it breaks the build. That is deliberate: a
+      # surviving mutant is a change to the source that no test noticed, and
+      # this codebase has already shipped six bugs while line coverage read
+      # 100%. Where a mutant genuinely cannot be observed, it is annotated in
+      # the source with the argument for why — never suppressed silently.
+      - run: npm run test:mutation
       - run: npm run build
       - run: npm run build:firefox
 
