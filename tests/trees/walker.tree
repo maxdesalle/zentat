@@ -199,6 +199,8 @@ WalkerTest
     │   │   └── it refuses to convert
     │   └── given an accessible copy resolves it
     │       └── it converts from the accessible copy
+    ├── given the accessible copy reads as a bare run of digits too
+    │   └── it still converts from the copy
     ├── given the same element matches two adapter selectors
     │   └── it is collected once
     ├── given an element whose class is not a plain string

@@ -54,7 +54,11 @@ export interface WalkResult {
 export function isNonPriceText(text: string): boolean {
   if (/\bZEC\b/.test(text) || /\bzats?\b/i.test(text)) return true;
   if (/out of \d/i.test(text)) return true; // "4.5 out of 5 stars"
+  // Stryker disable next-line Regex: equivalent — any run of digits contains a
+  // single digit, so requiring one or more matches exactly where one does.
   if (/\d+\s*stars?\b/i.test(text)) return true; // "5 stars" (but not "$5 Starship kit")
+  // Stryker disable next-line Regex: equivalent — as above, one digit and one
+  // or more digits match the same strings here.
   if (/\d+[KMB]?\+?\s*(bought|sold|reviews?|ratings?)/i.test(text)) return true; // "10K+ bought"
   if (/^\d+(\.\d{1,2})?$/.test(text)) return true; // Just a plain number like "4.5"
   // "(123 reviews)" — but keep parenthesized text that contains a currency symbol
@@ -133,7 +137,13 @@ export function accessiblePriceText(el: Element): string | null {
  * guard actually exists for.
  */
 function pageAuthoredText(el: Element): string {
+  // Stryker disable next-line ConditionalExpression,StringLiteral: equivalent —
+  // our own output always carries a "ZEC" or "zats" suffix, so whatever this
+  // returns for one of our spans is rejected by isNonPriceText either way.
   if (el.classList.contains(SPAN_CLASS)) return '';
+  // Stryker disable next-line ConditionalExpression: equivalent — cloning an
+  // element that contains none of our spans removes nothing, so the clone
+  // yields the same text. The shortcut saves the copy, not the answer.
   if (el.querySelector(`.${SPAN_CLASS}`) === null) return textOf(el);
   const clone = el.cloneNode(true) as Element;
   for (const own of clone.querySelectorAll(`.${SPAN_CLASS}`)) own.remove();
@@ -219,6 +229,9 @@ export function walkPriceElements(root: Node): WalkResult[] {
 
         // An adapter's extract() exists for markup no selector can express —
         // an accessible copy of a price that the visible DOM has split up.
+        // Stryker disable next-line ObjectLiteral: equivalent — no adapter reads
+        // the hostname yet. It is passed because extraction is a per-site hook,
+        // and the site is the first thing such a hook will want to know.
         const extracted = adapter.extract?.(container, { hostname });
         // Page-authored, so our own earlier output inside this container neither
         // disqualifies it nor ends up in the text we hand the converter.
@@ -271,6 +284,9 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // getAttribute, not className: on an SVG element className is an
     // SVGAnimatedString, and a regex run against that object matches nothing
     // however the element is actually classed.
+    // Stryker disable next-line StringLiteral: equivalent — the fallback only
+    // stands in for an element with no class at all, and no replacement string
+    // matches the accessibility class names tested on the next line.
     const classStr = element.getAttribute('class') ?? '';
     if (/a-offscreen|sr-only|visually-hidden|screen-reader-only/i.test(classStr)) continue;
 
@@ -287,6 +303,9 @@ export function walkPriceElements(root: Node): WalkResult[] {
 
     // Length is checked against the raw text first: cloning to strip our own
     // output is only worth doing for something that could still be a price.
+    // Stryker disable next-line ConditionalExpression,EqualityOperator:
+    // equivalent — anything this admits is rejected a few lines later by the
+    // price-length rule. The pre-filter saves the clone, never the verdict.
     if (textLengthOf(element) > MAX_PURE_PRICE_LENGTH * 4) continue;
 
     // Prefer the accessibility text when the visible text is split or styled.
@@ -296,6 +315,8 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // pageAuthoredText goes through textOf.
     const trimmed = accessible ?? rawText;
 
+    // Stryker disable next-line ConditionalExpression: equivalent — empty text
+    // fails the price pattern on the next line regardless.
     if (!trimmed) continue;
     if (!QUICK_DETECT_PATTERN.test(trimmed)) continue;
 
@@ -330,6 +351,9 @@ export function walkPriceElements(root: Node): WalkResult[] {
       const childText = pageAuthoredText(child);
       if (
         childText && QUICK_DETECT_PATTERN.test(childText)
+        // Stryker disable next-line ConditionalExpression,EqualityOperator:
+        // equivalent — a parent's text includes its child's, and the parent was
+        // already rejected at this same limit, so a child cannot reach it.
         && childText.length <= MAX_PURE_PRICE_LENGTH
         && !isNonPriceText(childText)
       ) {
@@ -354,6 +378,10 @@ export function walkPriceElements(root: Node): WalkResult[] {
         // reaching here means a child holds a price too, so the direct text is strictly shorter
         // than the parent's, which was already checked against this limit.
         // Stryker disable next-line ConditionalExpression,EqualityOperator: equivalent, see above.
+        // Stryker disable next-line ConditionalExpression,EqualityOperator:
+        // equivalent — reaching here means a child holds a price too, so the
+        // direct text is strictly shorter than the parent's, which was already
+        // checked against this limit.
         && directTrimmed.length <= MAX_PURE_PRICE_LENGTH
         && QUICK_DETECT_PATTERN.test(directTrimmed)
         && !isNonPriceText(directTrimmed)

@@ -1011,6 +1011,20 @@ describe('walkPriceElements', () => {
     });
   });
 
+  describe('given the accessible copy reads as a bare run of digits too', () => {
+    it('still converts from the copy', () => {
+      // "$4999" is a real four-figure price as often as it is lost cents. The
+      // refusal is for markup we can only read by eye; a copy the page wrote
+      // for screen readers has already answered the question, so refusing
+      // anyway would drop every genuine price over a thousand.
+      const results = walkPriceElements(render(
+        '<div class="p"><span class="sr-only">$4999</span>'
+        + '<span aria-hidden="true">49</span><span aria-hidden="true">99</span></div>',
+      ));
+      expect(results.map((r) => r.text)).toContain('$4999');
+    });
+  });
+
   describe('given text that is not a price', () => {
     it('is skipped', () => {
       expect(textsFrom('<span>Hello world</span>')).toEqual([]);
