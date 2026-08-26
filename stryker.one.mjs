@@ -12,6 +12,10 @@ export default {
   reporters: ['clear-text', 'json'],
   jsonReporter: { fileName: `reports/mutation/${slug}.json` },
   tempDirName: `.stryker-tmp-${slug}`,
+  // Every parallel run's sandbox is a sibling directory, and Stryker only
+  // ignores the DEFAULT temp dir by name — so without this each run copies
+  // the others into its own sandbox and dies partway through.
+  ignorePatterns: ['.stryker-tmp-*', 'reports', 'dist', '.wxt', '.output'],
   coverageAnalysis: 'perTest',
   mutate: [target],
   thresholds: { high: 100, low: 100, break: 100 },

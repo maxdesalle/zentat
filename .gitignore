@@ -41,3 +41,4 @@ coverage/
 # Mutation testing output
 reports/
 .stryker-tmp/
+.stryker-tmp-*/
