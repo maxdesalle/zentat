@@ -15,7 +15,9 @@ export default {
   // Every parallel run's sandbox is a sibling directory, and Stryker only
   // ignores the DEFAULT temp dir by name — so without this each run copies
   // the others into its own sandbox and dies partway through.
-  ignorePatterns: ['.stryker-tmp-*', 'reports', 'dist', '.wxt', '.output'],
+  // NOT .wxt — tsconfig.json extends the tsconfig WXT generates in there, and
+  // without it the sandbox cannot resolve a single type.
+  ignorePatterns: ['.stryker-tmp-*', 'reports'],
   coverageAnalysis: 'perTest',
   mutate: [target],
   thresholds: { high: 100, low: 100, break: 100 },

@@ -2,8 +2,13 @@ QrTest
 └── qrSvg
     ├── given a payment URI
     │   ├── it encodes a real ZIP-321 URI
+    │   ├── it draws exactly the dark modules the encoder produced
     │   ├── it leaves the quiet zone scanners need
+    │   ├── it holds the code four modules clear of every edge
+    │   ├── it paints the background across the quiet zone as well
     │   └── it carries an accessible label
+    ├── when no colours are given
+    │   └── it falls back to black on white
     ├── when a size is given
     │   └── it scales without blurring, because it is vector
     ├── given more data

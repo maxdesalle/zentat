@@ -57,7 +57,9 @@ export function nextQuestion(
   const rate = held
     ? heldRateFor(held, rates, currency)
     : rates.rates[currency.toUpperCase()];
-  if (!rate || !(rate > 0)) return null;
+  // Missing, zero, negative and NaN all fail this. A rate we cannot vouch for
+  // must yield no question at all, never a plausible-looking wrong price.
+  if (!(rate > 0)) return null;
 
   const pool = TRAINING_ITEMS.filter((item) => item.id !== exclude);
   const item = pool[Math.floor(Math.random() * pool.length)];
@@ -91,6 +93,12 @@ export function scoreGuess(guess: number, answer: number): Score | null {
   const points = Math.max(0, Math.round((1 - logError) * 100));
 
   const off = Math.abs(error);
+  // Stryker disable next-line EqualityOperator: `off < 0.1` differs only when
+  // off is exactly 0.1, and it never can be. off is |guess/answer - 1|; for a
+  // ratio in [1,2) that subtraction is exact and lands on a multiple of 2^-52,
+  // which 0.1 is not, and for a ratio in [0.5,1) on a multiple of 2^-53, which
+  // it also is not. Every other ratio puts off above 0.4. Try it: 1.1 - 1 is
+  // not 0.1. The 0.25 and 0.6 edges below are reachable and are tested.
   const verdict = off <= 0.1
     ? 'spot on'
     : off <= 0.25
