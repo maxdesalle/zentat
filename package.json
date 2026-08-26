@@ -21,7 +21,8 @@
     "test:trees": "node scripts/check-trees.mjs",
     "uncovered": "node scripts/uncovered-branches.mjs",
     "test:mutants": "node scripts/mutants.mjs",
-    "test:mutation": "stryker run"
+    "test:mutation": "stryker run",
+    "capture": "node scripts/capture-page.mjs"
   },
   "dependencies": {
     "@nymproject/mix-fetch": "1.4.4",

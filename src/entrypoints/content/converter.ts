@@ -29,6 +29,9 @@ interface Replacement {
   zecAmount: number;
 }
 
+/** Elements that had no class attribute until we marked them. */
+const markedWithoutClass = new WeakSet<Element>();
+
 export function convertPricesInDocument(
   rates: RatesData,
   settings: Settings,
@@ -140,6 +143,7 @@ export function convertPricesInNode(
       }
 
       if (converted) {
+        if (!node.hasAttribute('class')) markedWithoutClass.add(node);
         node.classList.add(directTextOnly ? PARTIAL_MARKER : CONVERTED_MARKER);
         convertedCount++;
       }
@@ -512,4 +516,14 @@ function revertContainer(el: Element): void {
   }
   el.classList.remove(CONVERTED_MARKER);
   el.classList.remove(PARTIAL_MARKER);
+  // Only an attribute WE created. Adding a class to an element that had none
+  // leaves an empty one behind when it is removed, so every page we converted
+  // would carry a scatter of elements with `class=""` their author never
+  // wrote — the same CSS-detectable signature Zentat already removed once,
+  // arriving by another route. Plenty of real markup ships `class=""` of its
+  // own, though, so this cannot simply strip every empty one it finds.
+  if (markedWithoutClass.has(el) && el.getAttribute('class') === '') {
+    el.removeAttribute('class');
+    markedWithoutClass.delete(el);
+  }
 }
