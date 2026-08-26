@@ -161,9 +161,9 @@ WalkerTest
     │   ├── given the container's own text lost its separator
     │   │   └── it refuses rather than risk a hundredfold error
     │   ├── given the adapter extracted the text itself
-    │   │   ├── it trusts the extraction over the visible markup
-    │   │   └── given the visible fragments concatenate to a bare run of digits
-    │   │       └── it still trusts the extraction
+    │   │   └── it trusts the extraction over the visible markup
+    │   ├── given the visible fragments concatenate to a bare run of digits
+    │   │   └── it still trusts the extraction
     │   ├── given container text of exactly the greatest length
     │   │   └── it is still collected
     │   └── given the container text is too long
