@@ -27,6 +27,47 @@ export const FIXTURES: Fixture[] = [
     forbid: ['4.5 out of 5 stars', '2,847 ratings'],
   },
   {
+    name: 'amazon-deal-price',
+    hostname: 'www.amazon.com',
+    lang: 'en-US',
+    // The DEAL block, which is a different shape from the plain product price
+    // above: the discount badge and the price share one aok-align-center
+    // section, and the whole string "-40% $18.79" lives in an `aok-offscreen`
+    // span — Amazon's OTHER accessibility class, not the `a-offscreen` the
+    // adapter knows. Reported by a user as an unconverted price.
+    html: `
+      <div id="corePriceDisplay_desktop_feature_div" class="celwidget">
+        <div class="a-section a-spacing-none aok-align-center aok-relative">
+          <span class="aok-offscreen">-40% $18.79</span>
+          <span class="a-size-large aok-align-center a-color-price savingsPercentage"
+            aria-hidden="true">-40%</span>
+          <span class="a-price aok-align-center reinventPriceToPayMargin priceToPay"
+            data-a-size="xl" data-a-color="base" aria-hidden="true">
+            <span class="a-offscreen">$18.79</span>
+            <span aria-hidden="true"><span class="a-price-symbol">$</span><span
+              class="a-price-whole">18<span class="a-price-decimal">.</span></span><span
+              class="a-price-fraction">79</span></span>
+          </span>
+        </div>
+        <div class="a-section a-spacing-small a-spacing-top-mini">
+          <span class="a-size-small a-color-price">($0.47 / ounce)</span>
+        </div>
+        <div class="a-section a-spacing-small aok-align-center basisPrice">
+          <span class="a-size-small aok-offscreen">Typical price: $31.35</span>
+          <span aria-hidden="true"><span class="a-size-small a-color-secondary">Typical
+            price:</span> <span class="a-size-small a-color-secondary a-text-strike"
+            >$31.35</span></span>
+        </div>
+      </div>`,
+    expect: [
+      { text: '$18.79', currency: 'USD', amount: 18.79 },
+      { text: '$0.47', currency: 'USD', amount: 0.47 },
+      { text: '$31.35', currency: 'USD', amount: 31.35 },
+    ],
+    // The discount badge is not money.
+    forbid: ['-40%'],
+  },
+  {
     name: 'split-cents-no-separator',
     hostname: 'www.example-store.com',
     lang: 'en-US',

@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
+import { SPAN_CLASS } from '../../src/entrypoints/content/markers';
 import {
   accessiblePriceText,
   isConvertible,
@@ -350,6 +351,46 @@ describe('walkPriceElements', () => {
     describe('given the container holds no price', () => {
       it('is skipped', () => {
         const results = walkPriceElements(render('<div data-testid="price">Sold out</div>'));
+        expect(results).toHaveLength(0);
+      });
+    });
+
+    describe('given the container holds only our own earlier output', () => {
+      it('is skipped', () => {
+        // A bare-number adapter site is the one place our own "1.20" could be
+        // re-read as a price, so the container pass has to recognise it.
+        const results = walkPriceElements(render(
+          `<div data-testid="price"><span class="${SPAN_CLASS}">1.20 ZEC</span></div>`,
+        ));
+        expect(results).toHaveLength(0);
+      });
+
+      it('still reads a price the page added beside it', () => {
+        // What this must NOT do is disqualify the container outright: once one
+        // price inside it had converted, the container's text contained "ZEC"
+        // and every later pass rejected it — so a price the site rendered
+        // afterwards could never convert.
+        const results = walkPriceElements(render(
+          `<div data-testid="price"><span class="${SPAN_CLASS}">1.20 ZEC</span>`
+            + `<span>1.349</span></div>`,
+        ));
+        expect(results).toHaveLength(1);
+        expect(results[0].text).toBe('1.349');
+      });
+    });
+
+    describe("given the container's own text lost its separator", () => {
+      it('refuses rather than risk a hundredfold error', () => {
+        // A price element whose decimal point is CSS rather than a node reads
+        // as "$4999". Being named by a site adapter is not evidence about the
+        // separator, and this pass used to skip the check entirely — the last
+        // route to a silent 100x error.
+        const results = walkPriceElements(render(
+          '<div data-testid="price"><span>$49</span><span>99</span></div>',
+        ));
+        // And nothing beneath it either: the children are fragments of that
+        // same price, so converting "$49" while leaving "99" is its own
+        // wrong answer.
         expect(results).toHaveLength(0);
       });
     });

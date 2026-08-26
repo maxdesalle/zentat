@@ -7,44 +7,97 @@ export type Precision = 'auto' | 'coarse' | number;
 export type DisplayUnit = 'auto' | 'zec' | 'zats';
 
 export const ZATS_PER_ZEC = 100_000_000;
-// In 'auto' unit mode, amounts below this render in zats for readability
-// Below this, decimals stop being scannable ("0.000423") and zats read better.
-// Raised from 0.0001, which left an unreadable six-decimal band populated by
-// exactly the sub-dime items that fill a shopping page.
-const ZATS_THRESHOLD_ZEC = 0.001;
 
 /**
- * The unit chosen for a whole page, rather than per price.
+ * There is no automatic switch to zats. The unit is ZEC unless the user asks
+ * for otherwise, and this is a deliberate reversal.
  *
- * Switching units per amount is locally sensible and globally wrong: a page
- * with a 0.0004 ZEC item and a 5 ZEC item would render one in zats and one in
- * ZEC, so the two numbers cannot be compared by eye at all. Consistent
- * denomination is most of what makes a unit calculable — the medieval public
- * did not learn to reckon in money by having the unit change under them.
+ * A magnitude threshold makes the unit a function of the RATE rather than of
+ * the price. The same coffee renders "0.0038 ZEC" today and "384,615 zats"
+ * after a rally, so the number a person had started to learn changes not just
+ * its value but its shape and scale. That is precisely what the held rate
+ * exists to prevent, reintroduced through the back door.
  *
- * Null means "decide per amount", which is the right behaviour for a single
- * conversion outside a page context.
+ * It also failed on its own terms. The rule keyed on the smallest amount on
+ * the page, and a shopping page is one or two real prices surrounded by
+ * per-unit figures, shipping thresholds and fees. EU and UK unit pricing is
+ * mandatory, so a per-100g figure sits beside the price on essentially every
+ * European grocery page: one 0.0006 ZEC figure rendered an $18.79 snack box
+ * as "2,399,683 zats". Seven digits is past what anyone can hold in mind,
+ * compare against the item beside it, or recall tomorrow — which is the whole
+ * job.
+ *
+ * What is shared across a page is the number of DECIMALS, not the unit. One
+ * shape for every price ("0.0241", "0.0006", "0.0401") lets the eye compare
+ * them without reading, because a constant prefix stops being read at all.
+ * Leading zeros are noise only when they vary.
  */
-let pageUnit: 'zec' | 'zats' | null = null;
 
 /**
- * Pick one unit for everything about to be rendered together.
- *
- * The smallest amount decides, because that is the one that becomes unreadable
- * first: 0.0004 ZEC is six decimals of noise, while 12,500,000 zats is merely
- * a large number. Legibility of the worst case beats tidiness of the best.
+ * Decimals every price on the page shares, or null to scale to the amount
+ * itself — the right behaviour for a single conversion outside a page.
  */
-export function setPageUnit(amounts: number[]): void {
-  const positive = amounts.filter((amount) => amount > 0);
-  if (positive.length === 0) {
-    pageUnit = null;
-    return;
-  }
-  pageUnit = Math.min(...positive) < ZATS_THRESHOLD_ZEC ? 'zats' : 'zec';
+let pageDecimals: number | null = null;
+
+/**
+ * Prices seen on this page so far, so a later pass cannot re-scale the page.
+ *
+ * The observer re-runs conversion on every mutation batch, and a batch is
+ * usually ONE lazily-loaded element. Recomputing the grid from just that
+ * element would re-scale the page around whatever happened to load last, while
+ * everything already on screen kept its old shape — the mixed-scale page this
+ * exists to prevent, arrived at from the other direction.
+ *
+ * Bounded because an infinite-scroll page never stops adding prices, and the
+ * median of a few hundred is the same as the median of ten thousand.
+ */
+const pageSample: number[] = [];
+const MAX_PAGE_SAMPLE = 500;
+
+/**
+ * Enough decimals to give an amount of this size three significant figures.
+ * Capped at eight, because a zatoshi is 1e-8 and nothing finer exists.
+ */
+function scaleFor(amount: number): number {
+  return Math.min(8, Math.max(2, 2 - Math.floor(Math.log10(amount))));
 }
 
-export function clearPageUnit(): void {
-  pageUnit = null;
+/**
+ * Never more than four significant figures. The held rate is honest to ±10%
+ * by default, so a fifth digit claims a precision the quote cannot support.
+ */
+function significantFigureCap(amount: number): number {
+  return Math.max(0, 3 - Math.floor(Math.log10(Math.abs(amount))));
+}
+
+/**
+ * Fix the decimal grid for everything about to be rendered together.
+ *
+ * The MEDIAN price decides, not the smallest. The smallest is almost always
+ * the per-unit figure or a fee — noise that no threshold can be tuned around,
+ * because on an API pricing page the real span is eight orders of magnitude.
+ * The median is what the page is actually about.
+ */
+export function setPageScale(amounts: number[]): void {
+  for (const amount of amounts) {
+    if (amount > 0 && Number.isFinite(amount) && pageSample.length < MAX_PAGE_SAMPLE) {
+      pageSample.push(amount);
+    }
+  }
+  if (pageSample.length === 0) {
+    pageDecimals = null;
+    return;
+  }
+  const sorted = [...pageSample].sort((a, b) => a - b);
+  // Lower median: erring toward more decimals is caught by the significant
+  // figure cap, erring toward fewer is not.
+  pageDecimals = scaleFor(sorted[Math.floor((sorted.length - 1) / 2)]);
+}
+
+/** Forget the page's prices. Called when the page itself changes underneath. */
+export function clearPageScale(): void {
+  pageSample.length = 0;
+  pageDecimals = null;
 }
 
 // Output honors the user's locale (decimal comma for a German user, etc.) so
@@ -144,13 +197,16 @@ export function formatZec(amount: number, precision: Precision = 'auto'): string
  *   user chose a fixed precision, which is honored with full grouped digits
  * - Everything else: formatZec + " ZEC"
  */
-/** Significant figures a currency amount should show at a given magnitude. */
-function decimalsFor(abs: number): number {
-  if (abs >= 1_000) return 0;
-  if (abs >= 100) return 1;
-  if (abs >= 1) return 2;
-  if (abs >= 0.01) return 4;
-  return 5;
+/**
+ * How many decimals to render this amount with.
+ *
+ * The page's shared grid, trimmed so no amount claims more than four
+ * significant figures. Outside a page, the amount scales itself.
+ */
+function autoDecimals(abs: number): number {
+  if (abs === 0) return 2;
+  const grid = pageDecimals ?? scaleFor(abs);
+  return Math.min(grid, significantFigureCap(abs));
 }
 
 export function formatZecWithSymbol(
@@ -160,11 +216,8 @@ export function formatZecWithSymbol(
 ): string {
   const absAmount = Math.abs(amount);
 
-  const auto = unit === 'auto'
-    && absAmount > 0
-    && (pageUnit === null ? absAmount < ZATS_THRESHOLD_ZEC : pageUnit === 'zats');
-
-  if (unit === 'zats' || auto) {
+  // 'auto' and 'zec' are the same thing. Only an explicit choice produces zats.
+  if (unit === 'zats') {
     const zats = amount * ZATS_PER_ZEC;
     const formatted = new Intl.NumberFormat(LOCALE, {
       maximumFractionDigits: Math.abs(zats) < 1 ? 2 : 0,
@@ -184,8 +237,10 @@ export function formatZecWithSymbol(
   // Grouped digits, never compact notation. No currency prices anything as
   // "1.235M" — and at four significant figures that rounding silently discards
   // hundreds of ZEC from a large amount.
-  const decimals = precision === 'auto' ? decimalsFor(absAmount) : precision;
-  const roundsToZero = amount !== 0 && Math.abs(amount) < Math.pow(10, -decimals) / 2;
+  const decimals = precision === 'auto' ? autoDecimals(absAmount) : precision;
+  // An amount too small for the page's grid gets its own decimals rather than
+  // rendering as "0.0000": a price that reads as zero is a wrong price.
+  const roundsToZero = amount !== 0 && absAmount < Math.pow(10, -decimals) / 2;
   const formatted = new Intl.NumberFormat(LOCALE, {
     minimumFractionDigits: roundsToZero ? undefined : decimals,
     maximumFractionDigits: roundsToZero ? 8 : decimals,

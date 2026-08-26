@@ -201,7 +201,10 @@ function populateForm(settings: Settings) {
     radio.checked = radio.value === settings.displayMode;
   });
   displayUnitRadios().forEach((radio) => {
-    radio.checked = radio.value === settings.displayUnit;
+    // 'auto' and 'zec' are the same behaviour now, and the auto radio is gone.
+    // A stored 'auto' — which is every existing install — selects ZEC.
+    radio.checked =
+      radio.value === (settings.displayUnit === 'auto' ? 'zec' : settings.displayUnit);
   });
   siteModeRadios().forEach((radio) => {
     radio.checked = radio.value === settings.siteMode;

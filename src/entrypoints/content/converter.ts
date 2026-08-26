@@ -1,6 +1,6 @@
 import { compareToAnchors, formatComparisons } from '../../lib/anchors';
 import { convertPrice } from '../../lib/conversion/convert';
-import { setPageUnit } from '../../lib/conversion/format';
+import { clearPageScale, setPageScale } from '../../lib/conversion/format';
 import { adapterFor, isWholeReplacement } from '../../lib/detection/adapters';
 import { textOf } from '../../lib/detection/dom';
 import type { ParsedPrice } from '../../lib/detection/parser';
@@ -41,6 +41,10 @@ export function convertPricesInDocument(
   if (!isRatesUsable(rates)) return 0;
   if (!document.body) return 0;
 
+  // A whole-document pass IS the page, so the decimal grid starts fresh here.
+  // Later passes are mutation batches and add to what this one established,
+  // rather than re-scaling the page around whatever loaded last.
+  clearPageScale();
   return convertPricesInNode(document.body, rates, settings, held);
 }
 
@@ -55,9 +59,9 @@ export function convertPricesInNode(
 
   const detections = detectPrices(root, settings.currencies);
 
-  // Choose one unit for everything in this pass, so a page never shows one
-  // price in zats beside another in ZEC — two scales the eye cannot compare.
-  setPageUnit(
+  // One decimal grid for everything in this pass, so every price on the page
+  // has the same shape and the eye can compare them without reading.
+  setPageScale(
     detections.flatMap(({ prices }) =>
       prices
         .map((parsed) =>
@@ -72,8 +76,13 @@ export function convertPricesInNode(
 
   try {
     for (const { node, text, prices, directTextOnly } of detections) {
-      // Skip if already processed or if this IS one of our converted spans
-      if (node.closest(`.${CONVERTED_MARKER}`)) continue;
+      // THIS node, not any marked ancestor. Treating an ancestor as proof the
+      // work is done meant one wrongly-marked container — in the worst case
+      // <body> — silently disabled conversion for the whole rest of the page,
+      // so a price Amazon re-rendered after the first pass stayed in dollars
+      // beside its converted neighbours. Self-mutation is already guarded by
+      // the span check below and by isNonPriceText rejecting our own output.
+      if (node.classList.contains(CONVERTED_MARKER)) continue;
       if (node.closest(`.${SPAN_CLASS}`)) continue;
 
       // Captured BEFORE any mutation — this is what tooltips must show
@@ -220,6 +229,11 @@ function makeSpan(original: string, converted: string, title?: string): HTMLSpan
 // A visually-hidden copy so the accessible name matches what is on screen.
 function makeAccessibleCopy(text: string): HTMLSpanElement {
   const span = document.createElement('span');
+  // Marked as ours. Unmarked, it added a second "… ZEC" to every ancestor's
+  // textContent, which then read as our own output and made the ancestor
+  // ineligible forever — so a container whose child had converted could never
+  // convert its own remaining text.
+  span.className = SPAN_CLASS;
   span.textContent = text;
   span.style.cssText =
     'position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap';

@@ -8,7 +8,26 @@ import { setSettings } from '../../lib/storage/settings';
 // hardcoded number would be the one thing on this page that is a lie, and if
 // the rate cannot be reached, the honest failure is worth more than a fake
 // success — it is the best possible moment to learn the network is blocked.
-const DEMO_FIAT = 348;
+//
+// Per currency, because a single number is not a single price: 348 rendered
+// as ¥348 is about two dollars, and a Korean visitor was shown ₩348 — 25
+// cents — as an example of a pair of headphones. Roughly the same real value
+// everywhere, rounded to something a shop would actually print.
+const DEMO_PRICES: Record<string, number> = {
+  USD: 348,
+  EUR: 320,
+  GBP: 275,
+  JPY: 52_000,
+  CAD: 475,
+  AUD: 530,
+  CHF: 310,
+  CNY: 2_500,
+  KRW: 480_000,
+  INR: 29_000,
+  BRL: 1_900,
+  MXN: 6_300,
+};
+const demoFiatAmount = (): number => DEMO_PRICES[reference] ?? DEMO_PRICES.USD;
 
 const demoZec = document.getElementById('demo-zec')!;
 const demoFiat = document.getElementById('demo-fiat')!;
@@ -54,14 +73,18 @@ function show(index: number): void {
 }
 
 function renderDemo(rate: number | undefined): void {
+  const amount = demoFiatAmount();
   demoFiat.textContent = new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: reference,
-  }).format(DEMO_FIAT);
+  }).format(amount);
 
+  // Says what is happening and roughly how long, rather than trailing off.
+  // This used to sit unchanged for up to ninety seconds on a fresh install,
+  // so the first thing anyone saw was the product failing at its one job.
   demoZec.textContent = rate === undefined
-    ? 'waiting for the rate…'
-    : formatZecWithSymbol(DEMO_FIAT * rate);
+    ? 'fetching today’s ZEC price…'
+    : formatZecWithSymbol(amount * rate);
   demoZec.classList.toggle('is-pending', rate === undefined);
 }
 

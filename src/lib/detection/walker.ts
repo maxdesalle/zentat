@@ -1,3 +1,4 @@
+import { SPAN_CLASS } from '../../entrypoints/content/markers';
 import { adapterFor, isExcluded } from './adapters';
 import { textOf } from './dom';
 import { QUICK_DETECT_PATTERN } from './patterns';
@@ -78,8 +79,8 @@ export function isInteractiveControl(el: Element): boolean {
     && control.getElementsByTagName('*').length <= MAX_CONTROL_DESCENDANTS;
 }
 
-const A11Y_TEXT_SELECTOR = '.a-offscreen, .sr-only, .visually-hidden, .screen-reader-only, '
-  + '[class*="visuallyhidden"], [class*="screenReader"]';
+const A11Y_TEXT_SELECTOR = '.a-offscreen, .aok-offscreen, .sr-only, .visually-hidden, '
+  + '.screen-reader-only, [class*="visuallyhidden"], [class*="screenReader"]';
 
 /**
  * Concatenating child text drops the separator between them, so
@@ -90,7 +91,10 @@ const A11Y_TEXT_SELECTOR = '.a-offscreen, .sr-only, .visually-hidden, .screen-re
  * from multiple children, is the signature.
  */
 export function looksConcatenated(el: Element, text: string): boolean {
-  if (el.children.length < 2) return false;
+  // One child is enough: `$18<sup>79</sup>` is a single-child element whose
+  // text concatenates to "$1879". Requiring two meant the most common
+  // superscript-cents markup on the web walked straight past this guard.
+  if (el.children.length < 1) return false;
   return /[$€£¥₩₹][\s\u00A0]*\d{4,}(?!\d)/.test(text);
 }
 
@@ -102,6 +106,8 @@ export function looksConcatenated(el: Element, text: string): boolean {
  * hardest markup into the easiest, so prefer it wherever it parses.
  */
 export function accessiblePriceText(el: Element): string | null {
+  // The label is ON this element, so it describes this element whatever its
+  // size. A hidden descendant is a different claim and is bounded below.
   const label = el.getAttribute('aria-label');
   if (label && QUICK_DETECT_PATTERN.test(label) && !isNonPriceText(label)) {
     return label.trim();
@@ -111,6 +117,58 @@ export function accessiblePriceText(el: Element): string | null {
     if (text && QUICK_DETECT_PATTERN.test(text) && !isNonPriceText(text)) return text;
   }
   return null;
+}
+
+/**
+ * The element's text with our own output removed.
+ *
+ * `isNonPriceText` rejects anything containing "ZEC" or "zats" so we never
+ * re-parse our own conversions. Applied to raw textContent that guard was far
+ * too wide: once ONE price inside a container had converted, the container's
+ * text contained "ZEC", so the container — and its own remaining fiat price —
+ * was rejected on every later pass. "<p>$10 – <span>$8</span></p>" lost the
+ * $10 permanently the moment the $8 converted.
+ *
+ * Residue that escaped our markers still reads as ours, which is the case the
+ * guard actually exists for.
+ */
+function pageAuthoredText(el: Element): string {
+  if (el.classList.contains(SPAN_CLASS)) return '';
+  if (el.querySelector(`.${SPAN_CLASS}`) === null) return textOf(el);
+  const clone = el.cloneNode(true) as Element;
+  for (const own of clone.querySelectorAll(`.${SPAN_CLASS}`)) own.remove();
+  return textOf(clone);
+}
+
+/** Just the digits, which is what survives whatever markup did to a price. */
+function digitsOf(text: string): string {
+  return text.replace(/\D/g, '');
+}
+
+/**
+ * Whether an accessible copy may stand in for this element's whole text.
+ *
+ * It may only do so if it accounts for EVERY price inside the element. The
+ * search for a hidden price runs the whole subtree, so without this any
+ * ancestor — right up to <body> — adopted the first accessible price it found
+ * anywhere beneath it as its own entire text. <body> then looked like a single
+ * short price, got collected, got marked converted, and the marker made the
+ * converter skip every other price on the page for the rest of the visit. One
+ * page, two units, and no way for the user to tell which prices were real.
+ *
+ * Digits rather than text, because the accessible copy and the visible
+ * rendering rarely agree on anything else: "-40% $18.79" covers a child
+ * reading "$18.79", and does not cover one reading "$0.47".
+ */
+export function accessibleCopyCovers(el: Element, accessible: string | null): string | null {
+  if (accessible === null) return null;
+  const covered = digitsOf(accessible);
+  for (const child of el.children) {
+    const childText = textOf(child);
+    if (!QUICK_DETECT_PATTERN.test(childText) || isNonPriceText(childText)) continue;
+    if (!covered.includes(digitsOf(childText))) return null;
+  }
+  return accessible;
 }
 
 /** Every eligibility rule, applied to every candidate however it was collected. */
@@ -160,10 +218,26 @@ export function walkPriceElements(root: Node): WalkResult[] {
 
       // An adapter's extract() exists for markup no selector can express —
       // an accessible copy of a price that the visible DOM has split up.
-      const text = (adapter?.extract?.(container, { hostname }) ?? textOf(container)).trim();
+      const extracted = adapter?.extract?.(container, { hostname });
+      // Page-authored, so our own earlier output inside this container neither
+      // disqualifies it nor ends up in the text we hand the converter.
+      const text = (extracted ?? pageAuthoredText(container)).trim();
 
       if (!text || text.length > MAX_PURE_PRICE_LENGTH) continue;
       if (!QUICK_DETECT_PATTERN.test(text) || isNonPriceText(text)) continue;
+      // The same refusal the generic pass makes, which this one was missing.
+      // A .a-price whose decimal point is CSS rather than a node reads as
+      // "$1879" once its children are concatenated, and being named by an
+      // adapter is not evidence about the separator — so the adapter path was
+      // the one remaining route to a silent 100x error.
+      if (extracted == null && looksConcatenated(container, text)) {
+        // Refusing the container is not enough on its own: its children are
+        // the fragments of that same price, and converting "$49" while
+        // leaving "99" beside it is its own wrong price. Marking it processed
+        // makes the refusal cover the subtree it was about.
+        processedElements.add(container);
+        continue;
+      }
 
       results.push({ node: container, text, inPriceContainer: true });
       processedElements.add(container);
@@ -206,16 +280,21 @@ export function walkPriceElements(root: Node): WalkResult[] {
     }
     if (ancestorProcessed) continue;
 
+    // Length is checked against the raw text first: cloning to strip our own
+    // output is only worth doing for something that could still be a price.
+    if ((element.textContent || '').length > MAX_PURE_PRICE_LENGTH * 4) continue;
+
     // Prefer the accessibility text when the visible text is split or styled.
-    const rawText = element.textContent || '';
-    const accessible = accessiblePriceText(element);
+    const rawText = pageAuthoredText(element);
+    const accessible = accessibleCopyCovers(element, accessiblePriceText(element));
     const text = accessible ?? rawText;
     const trimmed = text.trim();
 
     if (!trimmed) continue;
     if (!QUICK_DETECT_PATTERN.test(trimmed)) continue;
 
-    // Skip if it looks like non-price content
+    // Judged on what the PAGE wrote, so a converted child cannot disqualify
+    // its own parent.
     if (isNonPriceText(trimmed)) continue;
 
     // Only process elements where the text is SHORT (likely just a price)
@@ -224,6 +303,9 @@ export function walkPriceElements(root: Node): WalkResult[] {
 
     // Refuse rather than risk a 100x error when the text looks like it lost a
     // separator between child elements and no accessible source disambiguates.
+    // Not marked processed, unlike the adapter pass above: any ancestor can
+    // trip this, and an ancestor's refusal must not veto a descendant that
+    // still has an accessible copy to resolve it.
     if (accessible === null && looksConcatenated(element, trimmed)) continue;
 
     if (charBudget <= 0) break;
@@ -236,7 +318,10 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // split rendering of the same price, not separate prices to defer to.
     let hasMatchingChild = false;
     for (const child of accessible !== null ? [] : element.children) {
-      const childText = textOf(child);
+      // Page-authored again: a child holding only OUR output is not a child
+      // with its own price, and treating it as one made the parent look like
+      // a single price and swallow the whole page.
+      const childText = pageAuthoredText(child);
       if (
         childText && QUICK_DETECT_PATTERN.test(childText)
         && childText.length <= MAX_PURE_PRICE_LENGTH

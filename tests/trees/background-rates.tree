@@ -8,6 +8,10 @@ BackgroundRatesTest
     │       └── it fetches anyway
     ├── given the cached rates are stale
     │   ├── it waits a random moment before fetching
+    │   ├── given nothing is cached at all
+    │   │   └── it does not wait, because the user is watching
+    │   ├── given a forced refresh joins a cycle already waiting
+    │   │   └── it cuts the wait short
     │   └── it reports that it is fetching
     ├── given Nym is disabled
     │   ├── it fetches directly

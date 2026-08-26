@@ -31,7 +31,7 @@ ConverterDomTest
 │   ├── given two different prices in one text node
 │   │   └── it replaces them in the order they appear
 │   ├── given a converted container gains other content
-│   │   └── the new content is not converted inside it
+│   │   └── the new content IS converted
 │   ├── given a converted span gains other content
 │   │   └── the new content is not converted inside it
 │   ├── given one of our spans is left inside an element being converted
@@ -51,6 +51,8 @@ ConverterDomTest
 │   ├── given its own output
 │   │   ├── it never re-processes it
 │   │   ├── given a second pass over an already-converted element
+│   │   │   └── it is skipped
+│   │   ├── given the element itself is marked converted
 │   │   │   └── it is skipped
 │   │   └── given a second pass over one of our own spans
 │   │       └── it is skipped

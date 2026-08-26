@@ -31,6 +31,7 @@ const MAX_JITTER_MS = 90 * 1000;
 const nymBackoffItem = storage.defineItem<number>('local:nymBackoffUntil', { fallback: 0 });
 
 let inFlight: Promise<boolean> | null = null;
+let cutJitterShort: (() => void) | null = null;
 
 // Serialized: overlapping triggers (alarm, worker cold start, popup refresh)
 // join the running cycle instead of racing it — concurrent cycles used to
@@ -38,7 +39,17 @@ let inFlight: Promise<boolean> | null = null;
 // variable dies with the service worker, which is exactly the re-entrancy
 // we want after a mid-cycle termination.
 export function refreshRates(force: boolean = false): Promise<boolean> {
-  if (inFlight) return inFlight;
+  if (inFlight) {
+    // A forced caller joins the running cycle rather than starting a second
+    // one, but it does NOT inherit its patience. This used to swallow `force`
+    // whole: the background body kicks off an unforced cycle during script
+    // evaluation, that cycle goes to sleep in the privacy jitter, and the
+    // install's forced fetch then joined it — so the welcome page sat on
+    // "waiting for the rate…" for up to ninety seconds while the first thing
+    // a new user ever saw was the product failing to do its one job.
+    if (force) cutJitterShort?.();
+    return inFlight;
+  }
   inFlight = doRefresh(force).finally(() => {
     inFlight = null;
   });
@@ -77,7 +88,17 @@ async function attemptRefresh(force: boolean): Promise<boolean> {
     if (!isRatesStale(current)) {
       return true;
     }
-    await sleep(Math.random() * MAX_JITTER_MS);
+    // Nothing cached at all means this is the first run. The jitter blurs a
+    // RECURRING cadence into something that is not a fingerprint; a cold cache
+    // has no cadence to blur yet, and its timing is already correlated with
+    // the install event whatever we do here.
+    if (current.updatedAt) {
+      // Written before the wait, not after, so the UI can tell "waiting" from
+      // "idle". A Nym fetch can legitimately take a minute and the user is
+      // owed an explanation for it.
+      await setFetchStatus('fetching');
+      await jitterSleep(Math.random() * MAX_JITTER_MS);
+    }
   }
 
   const settings = await getSettings();
@@ -176,4 +197,17 @@ async function storeRates(data: Awaited<ReturnType<typeof getRates>>): Promise<v
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** A jitter wait that a forced refresh can cut short. */
+function jitterSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const finish = () => {
+      clearTimeout(timer);
+      cutJitterShort = null;
+      resolve();
+    };
+    const timer = setTimeout(finish, ms);
+    cutJitterShort = finish;
+  });
 }

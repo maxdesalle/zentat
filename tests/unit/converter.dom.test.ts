@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CONVERTED_MARKER, SPAN_CLASS } from '../../src/entrypoints/content/markers';
+import { clearPageScale } from '../../src/lib/conversion/format';
 
 vi.mock('wxt/utils/storage', () => ({
   storage: {
@@ -53,6 +54,8 @@ function onHost(hostname: string) {
 beforeEach(() => {
   document.body.innerHTML = '';
   onHost('example.com');
+  // Each test is its own page; the decimal grid must not carry over.
+  clearPageScale();
 });
 
 describe('convertPricesInNode', () => {
@@ -167,6 +170,17 @@ describe('convertPricesInNode', () => {
       });
     });
 
+    describe('given the element itself is marked converted', () => {
+      it('is skipped', () => {
+        // Narrowed from "any marked ancestor" to the node itself, but the
+        // node itself must still be honoured or a whole-replaced container
+        // would be converted twice.
+        document.body.innerHTML = `<div class="${CONVERTED_MARKER}">$800</div>`;
+        convertPricesInNode(document.body, freshRates(), settings());
+        expect(document.querySelector('div')!.textContent).toBe('$800');
+      });
+    });
+
     describe('given a second pass over one of our own spans', () => {
       it('is skipped', () => {
         document.body.innerHTML = '<p>$800</p>';
@@ -229,11 +243,17 @@ describe('convertPricesInNode', () => {
   });
 
   describe('given a converted container gains other content', () => {
-    it('the new content is not converted inside it', () => {
+    it('the new content IS converted', () => {
+      // This asserted the opposite until the marker gate was narrowed to the
+      // node itself. Treating a marked ANCESTOR as proof of work meant one
+      // wrongly-marked container disabled conversion for everything beneath
+      // it — and on a real Amazon page the wrongly-marked container was
+      // <body>, so every price the site rendered after the first pass stayed
+      // in dollars beside its converted neighbours.
       document.body.innerHTML = `<div class="${CONVERTED_MARKER}">`
         + `<span class="${SPAN_CLASS}">1.00 ZEC</span><em>$1,600</em></div>`;
       convertPricesInNode(document.body, freshRates(), settings());
-      expect(document.querySelector('em')!.textContent).toBe('$1,600');
+      expect(document.querySelector('em')!.textContent).toContain('ZEC');
     });
   });
 
@@ -478,7 +498,7 @@ describe('the held rate reaches the page', () => {
     document.body.innerHTML = '<p>$100.00</p>';
     // Spot is 0.00125; the peg is 0.001, inside the band.
     convertPricesInNode(document.body, freshRates(), settings(), held);
-    expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('0.1000 ZEC');
+    expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('0.100 ZEC');
   });
 
   it('always discloses the gap from spot, with no fiat figure', () => {
@@ -495,7 +515,7 @@ describe('the held rate reaches the page', () => {
     it('falls back to spot', () => {
       document.body.innerHTML = '<p>$100.00</p>';
       convertPricesInNode(document.body, freshRates(), settings(), null);
-      expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('0.1250 ZEC');
+      expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('0.125 ZEC');
     });
   });
 });

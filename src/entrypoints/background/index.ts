@@ -12,6 +12,11 @@ export default defineBackground(() => {
   debug('Background script starting...');
 
   browser.runtime.onInstalled.addListener(async (details) => {
+    // Started BEFORE the welcome tab opens and deliberately not awaited: the
+    // tab used to be created first and then wait on a fetch that had not been
+    // asked for yet.
+    const firstFetch = refreshRates(true)
+      .catch((error) => console.error('Zentat: Install rate fetch error:', error));
     await setupAlarms(true);
     if (details.reason === 'install') {
       // A real welcome, not the settings page. Someone who has just clicked
@@ -24,7 +29,7 @@ export default defineBackground(() => {
         // Not critical
       }
     }
-    refreshRates(true).catch((error) => console.error('Zentat: Install rate fetch error:', error));
+    await firstFetch;
   });
 
   // Also fetch on startup (for existing installs)

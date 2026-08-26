@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  clearPageUnit,
+  clearPageScale,
   formatZec,
   formatZecWithSymbol,
   setDisplayLocale,
-  setPageUnit,
+  setPageScale,
 } from '../../src/lib/conversion/format';
 
 // Spec: tests/trees/format.tree
@@ -120,11 +120,11 @@ describe('formatZec', () => {
 });
 
 describe('formatZecWithSymbol', () => {
-  afterEach(() => clearPageUnit());
+  afterEach(() => clearPageScale());
 
   describe('in ZEC', () => {
     it('appends ZEC suffix for small amounts', () => {
-      expect(formatZecWithSymbol(0.4231)).toBe('0.4231 ZEC');
+      expect(formatZecWithSymbol(0.4231)).toBe('0.423 ZEC');
       expect(formatZecWithSymbol(4.2314)).toBe('4.23 ZEC');
     });
 
@@ -148,17 +148,23 @@ describe('formatZecWithSymbol', () => {
     });
   });
 
-  describe('in zats', () => {
-    it('switches to zats before decimals stop being scannable', () => {
-      expect(formatZecWithSymbol(0.0004231)).toBe('42,310 zats');
+  describe('in zats, only when the user asks for it', () => {
+    it('never switches on its own', () => {
+      // A magnitude threshold makes the unit a function of the RATE, not the
+      // price: the same coffee would read "0.0038 ZEC" today and "384,615
+      // zats" after a rally. That is exactly what the held rate exists to
+      // prevent, arriving through the back door.
+      expect(formatZecWithSymbol(0.0004231)).toContain('ZEC');
+      expect(formatZecWithSymbol(0.0000001)).toContain('ZEC');
     });
 
     it('respects an explicit zats unit', () => {
       expect(formatZecWithSymbol(5, 'auto', 'zats')).toBe('500,000,000 zats');
     });
 
-    it('respects an explicit ZEC-only unit', () => {
-      expect(formatZecWithSymbol(0.0004231, 'auto', 'zec')).toContain('ZEC');
+    it('treats auto and ZEC as the same thing', () => {
+      expect(formatZecWithSymbol(0.0004231, 'auto', 'zec'))
+        .toBe(formatZecWithSymbol(0.0004231, 'auto', 'auto'));
     });
 
     describe('given an amount below one zatoshi', () => {
@@ -186,30 +192,59 @@ describe('formatZecWithSymbol', () => {
     });
   });
 
-  describe('one unit per page', () => {
-    it('keeps every price on the same scale', () => {
-      // Without this, a page with a cheap and an expensive item renders one in
-      // zats and one in ZEC — two scales the eye cannot compare.
-      setPageUnit([0.0004, 5]);
-      expect(formatZecWithSymbol(0.0004)).toContain('zats');
-      expect(formatZecWithSymbol(5)).toContain('zats');
+  describe('one scale per page', () => {
+    it('gives every price on the page the same shape', () => {
+      // The eye compares three prices of identical form without reading them.
+      // A constant prefix stops being read at all; leading zeros are noise
+      // only when they vary.
+      setPageScale([0.0240897, 0.0006002, 0.0401139]);
+      expect(formatZecWithSymbol(0.0240897)).toBe('0.0241 ZEC');
+      expect(formatZecWithSymbol(0.0006002)).toBe('0.0006 ZEC');
+      expect(formatZecWithSymbol(0.0401139)).toBe('0.0401 ZEC');
     });
 
-    it('lets the smallest amount decide, because it goes unreadable first', () => {
-      setPageUnit([0.0004, 5]);
-      // 0.0004 ZEC is six decimals of noise; 500,000,000 zats is merely large.
-      expect(formatZecWithSymbol(0.0004)).toBe('40,000 zats');
+    it('lets the typical price decide, not the per-unit noise', () => {
+      // The bug this replaced: the rule keyed on the SMALLEST amount, and a
+      // shopping page is one or two real prices surrounded by per-unit
+      // figures and fees. EU and UK unit pricing is mandatory, so one
+      // 0.0006 ZEC per-100g figure rendered an $18.79 item as "2,399,683
+      // zats" — seven digits nobody can compare or recall.
+      setPageScale([0.0240897, 0.0006002, 0.0401139]);
+      expect(formatZecWithSymbol(0.0240897)).not.toContain('zats');
+      expect(formatZecWithSymbol(0.0240897)).toBe('0.0241 ZEC');
     });
 
-    it('stays in ZEC when nothing on the page is tiny', () => {
-      setPageUnit([0.5, 5, 500]);
-      expect(formatZecWithSymbol(0.5)).toContain('ZEC');
+    it('caps significant figures so a large price is not over-precise', () => {
+      // A coffee-and-laptop page sets a five-decimal grid, but the held rate
+      // is honest to about ten percent — a fifth figure on the laptop would
+      // claim precision the quote cannot support.
+      setPageScale([0.0038462, 1.5384615]);
+      expect(formatZecWithSymbol(0.0038462)).toBe('0.00385 ZEC');
+      expect(formatZecWithSymbol(1.5384615)).toBe('1.538 ZEC');
     });
 
-    it('falls back to per-amount choice outside a page', () => {
-      clearPageUnit();
-      expect(formatZecWithSymbol(0.0004)).toContain('zats');
-      expect(formatZecWithSymbol(5)).toContain('ZEC');
+    it('gives a price below the page scale its own decimals', () => {
+      // Rendering it as "0.00" would be a wrong price, not a rounded one.
+      setPageScale([2.5, 5, 500]);
+      expect(formatZecWithSymbol(0.0000045)).not.toMatch(/^0\.0+ ZEC$/);
+    });
+
+    it('keeps the scale a later batch of prices cannot move', () => {
+      // The observer re-runs on every mutation, usually with ONE lazily
+      // loaded element. Re-scaling around whatever loaded last would leave
+      // the prices already on screen in a different shape.
+      setPageScale([0.0240897, 0.0401139]);
+      const before = formatZecWithSymbol(0.0240897);
+      setPageScale([0.0000001]);
+      expect(formatZecWithSymbol(0.0240897)).toBe(before);
+    });
+
+    it('scales to the amount itself outside a page', () => {
+      // Three significant figures, whatever the magnitude — so a lone
+      // conversion in the popup reads the same way a page price does.
+      clearPageScale();
+      expect(formatZecWithSymbol(0.0038462)).toBe('0.00385 ZEC');
+      expect(formatZecWithSymbol(1.5384615)).toBe('1.54 ZEC');
     });
   });
 });

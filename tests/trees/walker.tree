@@ -84,6 +84,11 @@ WalkerTest
     │   │   └── it is skipped
     │   ├── given the container holds no price
     │   │   └── it is skipped
+    │   ├── given the container holds only our own earlier output
+    │   │   ├── it is skipped
+    │   │   └── it still reads a price the page added beside it
+    │   ├── given the container's own text lost its separator
+    │   │   └── it refuses rather than risk a hundredfold error
     │   └── given the container text is too long
     │       └── it is skipped
     ├── given the root element itself holds the price

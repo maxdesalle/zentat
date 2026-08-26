@@ -112,7 +112,14 @@ describe('refreshRates', () => {
 
   describe('given the cached rates are stale', () => {
     it('waits a random moment before fetching', async () => {
-      // A machine-precise cadence is a fingerprint on its own.
+      // A machine-precise cadence is a fingerprint on its own — but only a
+      // RECURRING one is, so the wait applies once there is a cache to
+      // refresh, never on the very first fetch.
+      store.set('local:rates', {
+        rates: { USD: RATE },
+        updatedAt: NOW - 60 * 60_000,
+        source: 'coingecko',
+      });
       const sleeps: number[] = [];
       vi.spyOn(globalThis, 'setTimeout').mockImplementation(
         ((fn: () => void, ms: number) => {
@@ -124,6 +131,48 @@ describe('refreshRates', () => {
       vi.spyOn(Math, 'random').mockReturnValue(0.5);
       await refreshRates();
       expect(sleeps.some((ms) => ms > 0 && ms <= 90_000)).toBe(true);
+    });
+
+    describe('given nothing is cached at all', () => {
+      it('does not wait, because the user is watching', async () => {
+        // The welcome page is on screen at this exact moment. It used to sit
+        // on "waiting for the rate…" for up to ninety seconds, so the first
+        // thing a new user ever saw was the product failing to do its one job.
+        const sleeps: number[] = [];
+        vi.spyOn(globalThis, 'setTimeout').mockImplementation(
+          ((fn: () => void, ms: number) => {
+            sleeps.push(ms);
+            fn();
+            return 0;
+          }) as never,
+        );
+        vi.spyOn(Math, 'random').mockReturnValue(0.9);
+        await refreshRates();
+        expect(sleeps.filter((ms) => ms > 1_000)).toEqual([]);
+      });
+    });
+
+    describe('given a forced refresh joins a cycle already waiting', () => {
+      it('cuts the wait short', async () => {
+        // The background body starts an unforced cycle during script
+        // evaluation, so the install's forced fetch always joined one that
+        // was already asleep — and `force` was silently discarded.
+        store.set('local:rates', {
+          rates: { USD: RATE },
+          updatedAt: NOW - 60 * 60_000,
+          source: 'coingecko',
+        });
+        vi.spyOn(Math, 'random').mockReturnValue(1); // the full 90 seconds
+        const joined = refreshRates(false);
+        // Let the cycle actually reach the wait before forcing.
+        await vi.advanceTimersByTimeAsync(1);
+        expect(fetchRatesWithRetry).not.toHaveBeenCalled();
+
+        refreshRates(true);
+        await vi.advanceTimersByTimeAsync(1);
+        await joined;
+        expect(fetchRatesWithRetry).toHaveBeenCalled();
+      });
     });
 
     it('reports that it is fetching', async () => {

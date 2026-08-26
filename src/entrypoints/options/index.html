@@ -185,19 +185,22 @@
             </div>
           </div>
           <div class="field-group">
-            <span class="field-label">Small amounts</span>
+            <span class="field-label">Units</span>
+            <p class="field-hint">
+              One ZEC buys a lot, so everyday prices come out as small fractions. Every price on
+              a page is shown at the same scale, so you can compare them at a glance.
+            </p>
             <div class="precision-options">
               <label class="radio-option">
-                <input type="radio" name="displayUnit" value="auto" />
-                <span class="radio-label">Auto — use zats below 0.0001 ZEC</span>
-              </label>
-              <label class="radio-option">
                 <input type="radio" name="displayUnit" value="zec" />
-                <span class="radio-label">Always ZEC</span>
+                <span class="radio-label">ZEC — recommended. $18.79 shows as 0.0241 ZEC</span>
               </label>
               <label class="radio-option">
                 <input type="radio" name="displayUnit" value="zats" />
-                <span class="radio-label">Always zats</span>
+                <span class="radio-label">
+                  Zats — whole numbers, no decimals. $18.79 shows as 2,399,683 zats.
+                  Easier to read one price, harder to compare two.
+                </span>
               </label>
             </div>
           </div>

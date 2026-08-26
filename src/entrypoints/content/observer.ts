@@ -82,7 +82,12 @@ function handleMutations(mutations: MutationRecord[]): void {
     for (const node of mutation.addedNodes) {
       if (node.nodeType === Node.ELEMENT_NODE) {
         const element = node as Element;
-        if (!element.closest(`.${CONVERTED_MARKER}`) && !element.closest(`.${SPAN_CLASS}`)) {
+        // Same narrowing as the converter: a marked ANCESTOR must not make the
+        // observer deaf to everything beneath it.
+        if (
+          !element.classList.contains(CONVERTED_MARKER)
+          && !element.closest(`.${SPAN_CLASS}`)
+        ) {
           addPending(element);
         }
       }
