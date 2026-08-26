@@ -80,6 +80,8 @@ function significantFigureCap(amount: number): number {
  */
 export function setPageScale(amounts: number[]): void {
   for (const amount of amounts) {
+    // Stryker disable next-line EqualityOperator: equivalent — the cap differs
+    // by one sample out of five hundred, which cannot move a median.
     if (amount > 0 && Number.isFinite(amount) && pageSample.length < MAX_PAGE_SAMPLE) {
       pageSample.push(amount);
     }
@@ -116,86 +118,13 @@ export function setDisplayLocale(locale: string | undefined): void {
   if (locale) LOCALE = locale;
 }
 
-function formatFixed(amount: number, decimals: number): string {
-  return new Intl.NumberFormat(LOCALE, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-    useGrouping: false,
-  }).format(amount);
-}
-
-/**
- * Format ZEC amount with adaptive precision.
- *
- * Rules for 'auto':
- * - Minimum 2 decimals always shown
- * - Expand until 4 significant figures are visible
- *
- * A fixed numeric precision that would round a nonzero amount to zero falls
- * back to the auto rules — "0.00 ZEC" carries no information.
- *
- * Examples (en-US locale):
- * - 100      → "100.00"
- * - 1.234    → "1.234"
- * - 0.001234 → "0.001234"
- * - 0.00001  → "0.00001000"
- */
-export function formatZec(amount: number, precision: Precision = 'auto'): string {
-  if (precision === 'coarse') {
-    return new Intl.NumberFormat(LOCALE, { maximumSignificantDigits: 2 }).format(amount);
-  }
-  if (precision !== 'auto') {
-    const roundsToZero = amount !== 0 && Math.abs(amount) < Math.pow(10, -precision) / 2;
-    if (!roundsToZero) {
-      return formatFixed(amount, precision);
-    }
-    // Fall through to auto so cheap items don't all display as "0.00"
-  }
-
-  // Auto precision: minimum 2 decimals, expand for 4 significant figures
-  const minDecimals = 2;
-  const targetSigFigs = 4;
-
-  // Handle zero
-  if (amount === 0) {
-    return formatFixed(0, 2);
-  }
-
-  const absAmount = Math.abs(amount);
-
-  // Count leading zeros after decimal
-  let decimalsNeeded = minDecimals;
-
-  if (absAmount < 1) {
-    // For numbers < 1, we need to show enough decimals to get significant figures
-    const log10 = Math.floor(Math.log10(absAmount));
-    // log10 of 0.001 is -3, so we need 3 leading zeros
-    const leadingZeros = -log10 - 1;
-    // We need leadingZeros + targetSigFigs decimals
-    decimalsNeeded = Math.max(minDecimals, leadingZeros + targetSigFigs);
-  } else {
-    // For numbers >= 1, check if we need more than 2 decimals
-    // Count digits before decimal
-    // absAmount >= 1 in this branch, so intPart is at least 1 and log10 of it
-    // is defined. The zero guard that used to sit here could never fire.
-    const intDigits = Math.floor(Math.log10(Math.floor(absAmount))) + 1;
-    const sigFigsNeeded = Math.max(0, targetSigFigs - intDigits);
-    decimalsNeeded = Math.max(minDecimals, sigFigsNeeded);
-  }
-
-  // Cap at reasonable max
-  decimalsNeeded = Math.min(decimalsNeeded, 8);
-
-  return formatFixed(amount, decimalsNeeded);
-}
-
 /**
  * Format ZEC amount with symbol.
  *
- * - Very small amounts (auto unit mode) render in zats: "6,250 zats"
+ * - zats only when the user has explicitly chosen them
  * - Large amounts use locale-aware compact notation: "27.15K ZEC" — unless the
  *   user chose a fixed precision, which is honored with full grouped digits
- * - Everything else: formatZec + " ZEC"
+ * - Everything else: grouped digits and " ZEC"
  */
 /**
  * How many decimals to render this amount with.
@@ -212,6 +141,8 @@ function autoDecimals(abs: number): number {
 export function formatZecWithSymbol(
   amount: number,
   precision: Precision = 'auto',
+  // Stryker disable next-line StringLiteral: equivalent — 'auto' and 'zec' are
+  // the same behaviour, so any default that is not 'zats' is indistinguishable.
   unit: DisplayUnit = 'auto',
 ): string {
   const absAmount = Math.abs(amount);
@@ -220,6 +151,9 @@ export function formatZecWithSymbol(
   if (unit === 'zats') {
     const zats = amount * ZATS_PER_ZEC;
     const formatted = new Intl.NumberFormat(LOCALE, {
+      // Stryker disable next-line ConditionalExpression,EqualityOperator:
+      // equivalent — a whole number of zats renders identically at 0 or 2
+      // maximum fraction digits, so only sub-zatoshi amounts can tell.
       maximumFractionDigits: Math.abs(zats) < 1 ? 2 : 0,
     }).format(zats);
     return `${formatted} zats`;

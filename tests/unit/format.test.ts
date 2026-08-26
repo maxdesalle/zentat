@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   clearPageScale,
-  formatZec,
   formatZecWithSymbol,
   setDisplayLocale,
   setPageScale,
@@ -21,8 +20,18 @@ describe('the initial locale', () => {
 
   describe('given the browser states a language', () => {
     it('renders in that language', async () => {
-      const { formatZec } = await loadWithNavigator({ language: 'de-DE' });
-      expect(formatZec(1.234)).toBe('1,234');
+      const { formatZecWithSymbol } = await loadWithNavigator({ language: 'de-DE' });
+      expect(formatZecWithSymbol(1.234)).toBe('1,23 ZEC');
+    });
+  });
+
+  describe('given there is no navigator at all', () => {
+    it('falls back to US English', async () => {
+      // A service worker has no navigator object whatsoever. Reading
+      // .language off it would throw at module load, taking the worker down
+      // before it can fetch a single rate.
+      const { formatZecWithSymbol } = await loadWithNavigator(undefined);
+      expect(formatZecWithSymbol(1.234)).toBe('1.23 ZEC');
     });
   });
 
@@ -30,8 +39,8 @@ describe('the initial locale', () => {
     it('falls back to US English', async () => {
       // Service workers and offscreen documents have no navigator.language.
       // Formatting has to keep working there rather than throwing.
-      const { formatZec } = await loadWithNavigator({});
-      expect(formatZec(1.234)).toBe('1.234');
+      const { formatZecWithSymbol } = await loadWithNavigator({});
+      expect(formatZecWithSymbol(1.234)).toBe('1.23 ZEC');
     });
   });
 });
@@ -45,7 +54,7 @@ describe('setDisplayLocale', () => {
       // would then read the result under US ones — the meaning of "." flipping
       // mid-sentence.
       setDisplayLocale('de-DE');
-      expect(formatZec(1.234)).toBe('1,234');
+      expect(formatZecWithSymbol(1.234)).toBe('1,23 ZEC');
     });
   });
 
@@ -53,68 +62,7 @@ describe('setDisplayLocale', () => {
     it('keeps the one already in use', () => {
       setDisplayLocale('de-DE');
       setDisplayLocale(undefined);
-      expect(formatZec(1.234)).toBe('1,234');
-    });
-  });
-});
-
-describe('formatZec', () => {
-  describe('with auto precision', () => {
-    it('formats whole numbers with 2 decimals minimum', () => {
-      expect(formatZec(100)).toBe('100.00');
-      // 1 has 1 integer digit, needs 3 more decimal digits for 4 sig figs
-      expect(formatZec(1)).toBe('1.000');
-      expect(formatZec(0)).toBe('0.00');
-    });
-
-    it('formats numbers >= 1 with enough decimals for 4 sig figs', () => {
-      expect(formatZec(1.234)).toBe('1.234');
-      expect(formatZec(12.34)).toBe('12.34');
-      // 123.4 has 4 sig figs, but we always keep at least 2 decimals
-      expect(formatZec(123.4)).toBe('123.40');
-      expect(formatZec(1234)).toBe('1234.00');
-    });
-
-    it('formats small numbers with enough decimals for 4 sig figs', () => {
-      expect(formatZec(0.1234)).toBe('0.1234');
-      expect(formatZec(0.01234)).toBe('0.01234');
-      expect(formatZec(0.001234)).toBe('0.001234');
-      expect(formatZec(0.0001234)).toBe('0.0001234');
-    });
-
-    it('handles very small numbers', () => {
-      expect(formatZec(0.00001)).toBe('0.00001000');
-    });
-
-    it('caps the decimals it will show', () => {
-      // Past eight decimals there is nothing left to say: a zatoshi is the
-      // smallest unit that exists.
-      expect(formatZec(0.000000001234)).toBe('0.00000000');
-    });
-  });
-
-  describe('with fixed precision', () => {
-    it('uses exact decimal places', () => {
-      expect(formatZec(1.23456789, 2)).toBe('1.23');
-      expect(formatZec(1.23456789, 4)).toBe('1.2346');
-      expect(formatZec(1.23456789, 8)).toBe('1.23456789');
-    });
-
-    it('falls back to significant figures when fixed precision would show zero', () => {
-      // At ZEC ≈ $800, $0.99 ≈ 0.00124 ZEC — "0.00" carries no information
-      expect(formatZec(0.00124, 2)).toBe('0.001240');
-      expect(formatZec(0.00124, 0)).toBe('0.001240');
-      // But a genuine zero still renders as zero
-      expect(formatZec(0, 2)).toBe('0.00');
-    });
-  });
-
-  describe('with coarse precision', () => {
-    it('shows two significant figures', () => {
-      // Coarse says what the rate can actually support. More digits than that
-      // is a precision claim the feed cannot back.
-      expect(formatZec(0.1204, 'coarse')).toBe('0.12');
-      expect(formatZec(4.2314, 'coarse')).toBe('4.2');
+      expect(formatZecWithSymbol(1.234)).toBe('1,23 ZEC');
     });
   });
 });
@@ -177,6 +125,31 @@ describe('formatZecWithSymbol', () => {
     });
   });
 
+  describe('at a fixed precision', () => {
+    it('uses exactly that many decimals', () => {
+      expect(formatZecWithSymbol(1.23456789, 4)).toBe('1.2346 ZEC');
+    });
+
+    describe('given the amount would round to zero', () => {
+      it('expands rather than showing nothing', () => {
+        // At ZEC around $780, a $0.99 item is 0.00127 ZEC. "0.00 ZEC" is not
+        // a rounded price, it is a wrong one.
+        expect(formatZecWithSymbol(0.00127, 2)).not.toMatch(/^0\.00 ZEC$/);
+        expect(formatZecWithSymbol(0.00127, 2)).toContain('0.00127');
+      });
+    });
+
+    describe('given the amount sits exactly on the rounding boundary', () => {
+      it('keeps the fixed precision', () => {
+        // 0.005 at two decimals rounds to 0.01, not to zero, so the expansion
+        // must not fire. One comparison either side of this decides whether a
+        // half-cent item reads as a price or as six decimals of noise.
+        expect(formatZecWithSymbol(0.005, 2)).toBe('0.01 ZEC');
+        expect(formatZecWithSymbol(0.006, 2)).toBe('0.01 ZEC');
+      });
+    });
+  });
+
   describe('in coarse mode', () => {
     it('is honest about what the rate can support', () => {
       expect(formatZecWithSymbol(0.1204, 'coarse')).toBe('≈0.12 ZEC');
@@ -185,10 +158,12 @@ describe('formatZecWithSymbol', () => {
   });
 
   describe('given a zero amount', () => {
-    it('stays in ZEC', () => {
+    it('stays in ZEC at two decimals', () => {
       // Zero zats and zero ZEC are the same number; the ZEC reading is the one
-      // that matches every other price on the page.
-      expect(formatZecWithSymbol(0)).toContain('ZEC');
+      // that matches every other price on the page. Asserted exactly, because
+      // log10(0) is -Infinity and every decimal rule here would otherwise run
+      // away to the eight-decimal cap.
+      expect(formatZecWithSymbol(0)).toBe('0.00 ZEC');
     });
   });
 
@@ -201,6 +176,33 @@ describe('formatZecWithSymbol', () => {
       expect(formatZecWithSymbol(0.0240897)).toBe('0.0241 ZEC');
       expect(formatZecWithSymbol(0.0006002)).toBe('0.0006 ZEC');
       expect(formatZecWithSymbol(0.0401139)).toBe('0.0401 ZEC');
+    });
+
+    describe('given amounts that are not real prices', () => {
+      it('ignores zero and negative amounts', () => {
+        // A page can legitimately carry a "$0.00" or a "-$5.00" refund line,
+        // and neither says anything about the scale the page is priced at.
+        setPageScale([0, -1, 0.0240897]);
+        expect(formatZecWithSymbol(0.0240897)).toBe('0.0241 ZEC');
+      });
+
+      it('ignores amounts that are not finite', () => {
+        // A broken feed reaches this before the plausibility check does, and
+        // a NaN in the sample poisons the sort and therefore the whole page.
+        setPageScale([Number.NaN, Number.POSITIVE_INFINITY, 0.0240897]);
+        expect(formatZecWithSymbol(0.0240897)).toBe('0.0241 ZEC');
+      });
+    });
+
+    describe('given more prices than it will hold', () => {
+      it('stops sampling rather than growing without bound', () => {
+        // An infinite-scroll page never stops adding prices, and the median
+        // of a few hundred is the median of ten thousand.
+        setPageScale(Array.from({ length: 600 }, () => 0.0240897));
+        const grid = formatZecWithSymbol(0.0240897);
+        setPageScale(Array.from({ length: 600 }, () => 0.0000001));
+        expect(formatZecWithSymbol(0.0240897)).toBe(grid);
+      });
     });
 
     it('lets the typical price decide, not the per-unit noise', () => {
@@ -227,6 +229,14 @@ describe('formatZecWithSymbol', () => {
       // Rendering it as "0.00" would be a wrong price, not a rounded one.
       setPageScale([2.5, 5, 500]);
       expect(formatZecWithSymbol(0.0000045)).not.toMatch(/^0\.0+ ZEC$/);
+    });
+
+    it('holds that price to four significant figures', () => {
+      // Expanding past the page's grid must not turn into eight decimals of
+      // noise. The held rate is honest to about ten percent; a fifth figure
+      // is a precision claim nothing supports.
+      setPageScale([5]);
+      expect(formatZecWithSymbol(0.00123456)).toBe('0.001235 ZEC');
     });
 
     it('keeps the scale a later batch of prices cannot move', () => {

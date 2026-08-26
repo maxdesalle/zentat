@@ -37,3 +37,7 @@ playwright-report/
 # Coverage output. coverage-final.json is what scripts/uncovered-branches.mjs
 # reads, so it is generated locally rather than committed.
 coverage/
+
+# Mutation testing output
+reports/
+.stryker-tmp/

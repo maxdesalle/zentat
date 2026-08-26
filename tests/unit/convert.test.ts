@@ -39,34 +39,48 @@ const price = (amount: number, currency: string): ParsedPrice => ({
 describe('convertPrice', () => {
   describe('given a spot rate', () => {
     it('multiplies by the stored rate', () => {
-      expect(convertPrice(price(19.99, 'USD'), rates)!.zecAmount).toBeCloseTo(0.0249875, 12);
-      expect(convertPrice(price(800, 'USD'), rates)!.zecAmount).toBeCloseTo(1, 12);
-      expect(convertPrice(price(1000, 'EUR'), rates)!.zecAmount).toBeCloseTo(1.3, 12);
+      expect(convertPrice(price(19.99, 'USD'), rates, 'auto', 'auto')!.zecAmount).toBeCloseTo(
+        0.0249875,
+        12,
+      );
+      expect(convertPrice(price(800, 'USD'), rates, 'auto', 'auto')!.zecAmount).toBeCloseTo(1, 12);
+      expect(convertPrice(price(1000, 'EUR'), rates, 'auto', 'auto')!.zecAmount).toBeCloseTo(
+        1.3,
+        12,
+      );
     });
 
     it('is not the reciprocal', () => {
       // The failure mode this whole file exists for: 1/0.00125 = 800.
-      const result = convertPrice(price(1, 'USD'), rates)!;
+      const result = convertPrice(price(1, 'USD'), rates, 'auto', 'auto')!;
       expect(result.zecAmount).toBeCloseTo(0.00125, 12);
       expect(result.zecAmount).not.toBeCloseTo(800, 6);
     });
 
     it('scales linearly across magnitudes', () => {
-      const one = convertPrice(price(1, 'USD'), rates)!.zecAmount;
+      const one = convertPrice(price(1, 'USD'), rates, 'auto', 'auto')!.zecAmount;
       for (const factor of [10, 1_000, 1_000_000]) {
-        expect(convertPrice(price(factor, 'USD'), rates)!.zecAmount)
+        expect(convertPrice(price(factor, 'USD'), rates, 'auto', 'auto')!.zecAmount)
           .toBeCloseTo(one * factor, 9);
       }
     });
 
     it('handles a currency with a very small rate', () => {
-      expect(convertPrice(price(100_000, 'JPY'), rates)!.zecAmount).toBeCloseTo(0.85, 12);
+      expect(convertPrice(price(100_000, 'JPY'), rates, 'auto', 'auto')!.zecAmount).toBeCloseTo(
+        0.85,
+        12,
+      );
     });
 
     it('carries the original text through', () => {
       // The tooltip and the revert both need the exact text that was on the
       // page, not a re-rendering of the number.
-      const result = convertPrice({ ...price(19.99, 'USD'), original: '$19.99' }, rates)!;
+      const result = convertPrice(
+        { ...price(19.99, 'USD'), original: '$19.99' },
+        rates,
+        'auto',
+        'auto',
+      )!;
       expect(result.original).toBe('$19.99');
       expect(result.currency).toBe('USD');
       expect(result.formatted).toContain('ZEC');
@@ -95,9 +109,24 @@ describe('convertPrice', () => {
     });
   });
 
+  describe('when a precision is given', () => {
+    it('is carried into the rendering', () => {
+      // A caller passing a precision must have it reach the formatter, or the
+      // options page silently does nothing.
+      expect(convertPrice(price(19.99, 'USD'), rates, 'coarse', 'auto')!.formatted).toContain('≈');
+    });
+  });
+
+  describe('when a display unit is given', () => {
+    it('is carried into the rendering', () => {
+      expect(convertPrice(price(19.99, 'USD'), rates, 'auto', 'zats')!.formatted)
+        .toContain('zats');
+    });
+  });
+
   describe('given a currency it has no rate for', () => {
     it('refuses', () => {
-      expect(convertPrice(price(10, 'CHF'), rates)).toBeNull();
+      expect(convertPrice(price(10, 'CHF'), rates, 'auto', 'auto')).toBeNull();
     });
   });
 
@@ -109,14 +138,16 @@ describe('convertPrice', () => {
         ...rates,
         rateUpdatedAt: { USD: Date.now() - MAX_RATE_AGE_MS - 1 },
       };
-      expect(convertPrice(price(19.99, 'USD'), stale)).toBeNull();
+      expect(convertPrice(price(19.99, 'USD'), stale, 'auto', 'auto')).toBeNull();
     });
   });
 
   describe('given the arithmetic does not produce a usable amount', () => {
     it('never yields a non-finite amount', () => {
       for (const amount of [0, 0.0001, 1e12]) {
-        expect(Number.isFinite(convertPrice(price(amount, 'USD'), rates)!.zecAmount)).toBe(true);
+        expect(
+          Number.isFinite(convertPrice(price(amount, 'USD'), rates, 'auto', 'auto')!.zecAmount),
+        ).toBe(true);
       }
     });
 
@@ -125,14 +156,14 @@ describe('convertPrice', () => {
         // Nothing else stands between a garbage quote and every price on the
         // page.
         const broken: RatesData = { ...rates, rates: { USD: 1e308 } };
-        expect(convertPrice(price(1e308, 'USD'), broken)).toBeNull();
+        expect(convertPrice(price(1e308, 'USD'), broken, 'auto', 'auto')).toBeNull();
       });
     });
 
     describe('given the rate is negative', () => {
       it('refuses', () => {
         const broken: RatesData = { ...rates, rates: { USD: -0.00125 } };
-        expect(convertPrice(price(10, 'USD'), broken)).toBeNull();
+        expect(convertPrice(price(10, 'USD'), broken, 'auto', 'auto')).toBeNull();
       });
     });
   });

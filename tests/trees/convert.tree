@@ -13,9 +13,13 @@ ConvertTest
     │       └── it refuses rather than falling back to spot
     ├── given a currency it has no rate for
     │   └── it refuses
+    ├── when a precision is given
+    │   └── it is carried into the rendering
+    └── when a display unit is given
+        └── it is carried into the rendering
     ├── given the rate for that currency is past the hard cap
     │   └── it refuses rather than converting at a stale rate
-    └── given the arithmetic does not produce a usable amount
+    ├── given the arithmetic does not produce a usable amount
         ├── it never yields a non-finite amount
         ├── given the rate overflows
         │   └── it refuses

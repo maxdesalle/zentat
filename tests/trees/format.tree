@@ -2,25 +2,15 @@ FormatTest
 ├── the initial locale
 │   ├── given the browser states a language
 │   │   └── it renders in that language
-│   └── given the browser states none
+│   ├── given the browser states none
+│   │   └── it falls back to US English
+│   └── given there is no navigator at all
 │       └── it falls back to US English
 ├── setDisplayLocale
 │   ├── given a locale
 │   │   └── it renders in that locale
 │   └── given no locale
 │       └── it keeps the one already in use
-├── formatZec
-│   ├── with auto precision
-│   │   ├── it formats whole numbers with 2 decimals minimum
-│   │   ├── it formats numbers >= 1 with enough decimals for 4 sig figs
-│   │   ├── it formats small numbers with enough decimals for 4 sig figs
-│   │   ├── it handles very small numbers
-│   │   └── it caps the decimals it will show
-│   ├── with fixed precision
-│   │   ├── it uses exact decimal places
-│   │   └── it falls back to significant figures when fixed precision would show zero
-│   └── with coarse precision
-│       └── it shows two significant figures
 └── formatZecWithSymbol
     ├── in ZEC
     │   ├── it appends ZEC suffix for small amounts
@@ -36,12 +26,24 @@ FormatTest
     │       └── it keeps two decimals rather than rounding to nothing
     ├── in coarse mode
     │   └── it is honest about what the rate can support
+    ├── at a fixed precision
+    │   ├── it uses exactly that many decimals
+    │   ├── given the amount would round to zero
+    │   │   └── it expands rather than showing nothing
+    │   └── given the amount sits exactly on the rounding boundary
+    │       └── it keeps the fixed precision
     ├── given a zero amount
-    │   └── it stays in ZEC
+    │   └── it stays in ZEC at two decimals
     └── one scale per page
         ├── it gives every price on the page the same shape
+        ├── given amounts that are not real prices
+        │   ├── it ignores zero and negative amounts
+        │   └── it ignores amounts that are not finite
+        ├── given more prices than it will hold
+        │   └── it stops sampling rather than growing without bound
         ├── it lets the typical price decide, not the per-unit noise
         ├── it caps significant figures so a large price is not over-precise
         ├── it gives a price below the page scale its own decimals
+        ├── it holds that price to four significant figures
         ├── it keeps the scale a later batch of prices cannot move
         └── it scales to the amount itself outside a page
