@@ -4,8 +4,12 @@ import type { RatesData } from '../storage/rates';
 // reciprocal. Bounds are deliberately loose: they exist to catch a decimal
 // shift, a unit mix-up (cents, satoshis) or a wrong-asset mapping, never to
 // second-guess a real market move.
-const MIN_ZEC_PRICE = 1;
-const MAX_ZEC_PRICE = 100_000;
+//
+// They are written in the stored direction rather than as a ZEC price, because
+// taking 1 / value first rounds: no double divides into exactly 100_000, so
+// that ceiling could never be landed on, only stepped over.
+const MAX_ZEC_PER_UNIT = 1; // ZEC down at one unit of fiat
+const MIN_ZEC_PER_UNIT = 0.00001; // ZEC up at a hundred thousand
 
 // A single quote may not move more than this against the last known good one
 // within the freshness window. ZEC moves; it does not move 25% between two
@@ -25,9 +29,13 @@ export interface ValidationResult {
 }
 
 function plausible(zecPerUnit: number): boolean {
-  if (!Number.isFinite(zecPerUnit) || zecPerUnit <= 0) return false;
-  const fiatPerZec = 1 / zecPerUnit;
-  return fiatPerZec >= MIN_ZEC_PRICE && fiatPerZec <= MAX_ZEC_PRICE;
+  // Anything that is not a finite number is out before the bounds are read.
+  // The rates arrive as JSON: the type says number, the wire does not, and a
+  // numeric string compares against these bounds as though it were fine.
+  if (!Number.isFinite(zecPerUnit)) return false;
+  // Zero and negatives fail the lower bound, which holds as long as both
+  // bounds stay positive.
+  return zecPerUnit >= MIN_ZEC_PER_UNIT && zecPerUnit <= MAX_ZEC_PER_UNIT;
 }
 
 /**
@@ -45,9 +53,14 @@ export function validateRates(incoming: RatesData, previous: RatesData): Validat
     }
 
     const last = previous.rates[code];
-    const lastFresh = last !== undefined
-      && previous.updatedAt > 0
-      && Date.now() - (previous.rateUpdatedAt?.[code] ?? previous.updatedAt) <= 24 * 60 * 60 * 1000;
+    const lastFresh = previous.updatedAt > 0
+      && Date.now() - (previous.rateUpdatedAt?.[code] ?? previous.updatedAt) <= 24 * 60 * 60 * 1000
+      // A currency we have never quoted has nothing to compare against. The
+      // delta below reaches the same answer on its own, since subtracting an
+      // absent baseline gives NaN and NaN fails every comparison, but saying
+      // it beats making the next reader derive it.
+      // Stryker disable next-line ConditionalExpression: unobservable, see above.
+      && last !== undefined;
 
     if (lastFresh && Math.abs(value - last) / last > MAX_DELTA) {
       const count = (rejections.get(code) ?? 0) + 1;

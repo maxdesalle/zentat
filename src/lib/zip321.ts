@@ -36,8 +36,10 @@ export function isZcashAddress(address: string): boolean {
  * fraction digits, both an integer and a fraction part present.
  */
 export function serializeAmount(zec: number): string | null {
-  if (!Number.isFinite(zec) || zec <= 0 || zec > MAX_ZEC) return null;
+  if (!Number.isFinite(zec) || zec > MAX_ZEC) return null;
   const zats = Math.round(zec * ZATS_PER_ZEC);
+  // Everything non-positive rounds to nothing here, as does anything under a
+  // single zatoshi, and none of those is an amount a wallet could pay.
   if (zats <= 0) return null;
   const whole = Math.floor(zats / ZATS_PER_ZEC);
   const fraction = String(zats % ZATS_PER_ZEC).padStart(8, '0').replace(/0+$/, '');
@@ -59,7 +61,9 @@ export function encodeMemo(memo: string): string | null {
   if (bytes.length > MAX_MEMO_BYTES) return null;
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const base64url = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_');
+  // Stryker disable next-line Regex: btoa pads only at the end; the anchor cannot change that.
+  return base64url.replace(/=+$/, '');
 }
 
 export interface PaymentRequest {
@@ -109,8 +113,9 @@ export function findAddressesIn(text: string): string[] {
   const candidates = text.match(
     /\b(?:u1[0-9a-z]{40,}|zs1[0-9a-z]{60,}|t[13][1-9A-HJ-NP-Za-km-z]{25,34})\b/g,
   );
-  for (const candidate of candidates ?? []) {
-    if (isZcashAddress(candidate)) found.add(candidate);
-  }
+  // Every alternative in that pattern is also an alternative of isZcashAddress,
+  // so a match is already well formed; buildPaymentUri checks again before the
+  // address reaches a URI. Loosening the scan loosens what comes out of here.
+  for (const candidate of candidates ?? []) found.add(candidate);
   return [...found];
 }

@@ -2,19 +2,29 @@ Zip321Test
 ├── serializeAmount
 │   ├── it never emits grouping separators
 │   ├── it emits at most eight fraction digits and trims trailing zeros
+│   ├── it accepts the entire supply
 │   └── given an amount outside what the protocol can express
 │       ├── it refuses a non-positive amount
 │       ├── it refuses more than the supply
 │       ├── it refuses something that is not a number
 │       └── it refuses less than one zatoshi
+├── isZcashAddress
+│   ├── it accepts every mainnet address type
+│   ├── it accepts testnet addresses
+│   └── it refuses a string that merely contains an address
 ├── isShieldedAddress
 │   └── it knows which addresses can carry a memo
 ├── encodeMemo
 │   ├── it uses unpadded base64url for memos
-│   └── it refuses a memo over 512 bytes, counting bytes not characters
+│   ├── it refuses a memo over 512 bytes, counting bytes not characters
+│   ├── it accepts a memo of exactly 512 bytes
+│   ├── it rewrites the two characters plain base64 would leak into the URI
+│   └── it drops every padding character, not just the last
 ├── buildPaymentUri
 │   ├── it encodes a space as %20, never as +
 │   ├── it leaves the address unencoded
+│   ├── it carries only the parameters the request named
+│   ├── it separates the parameters it does carry
 │   ├── it never invents a req- parameter
 │   ├── when a label is given
 │   │   └── it includes the label

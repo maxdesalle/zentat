@@ -1,0 +1,41 @@
+PatternsTest
+├── CURRENCY_PATTERNS
+│   ├── it lists every currency it reads, and the sites where a bare number counts
+│   ├── when a symbol sits beside the number
+│   │   ├── it reads the amount from either side of the symbol
+│   │   └── it takes a currency code standing in front of the symbol with it
+│   ├── when only a currency code marks the price
+│   │   ├── it reads a code on either side of the number
+│   │   └── it ignores a code that the text before it runs straight into
+│   ├── given another letter claims the dollar sign
+│   │   └── it reads nothing rather than guessing US dollars
+│   ├── when the number is grouped
+│   │   ├── it reads Indian lakh grouping as one number
+│   │   ├── it reads the separators the rest of the world writes
+│   │   ├── it reads a number through to its last digit
+│   │   └── it never joins two numbers across a line break
+│   └── given a Dutch or Belgian price with no symbol
+│       ├── when the price ends in a dash
+│       │   ├── it reads every thousands group, not just the last one
+│       │   └── it reads a price the markup has spaced apart
+│       ├── when a VAT label follows the price
+│       │   ├── it reads the amount the label belongs to
+│       │   ├── it reads a label with no space before it
+│       │   └── it reads a label written without its full stop or its space
+│       ├── when the price is spelled out with the word euro
+│       │   ├── it reads a bare number followed by the word
+│       │   ├── it reads a grouped or fractional amount
+│       │   ├── it reads euros and cents as one price, quoted or not
+│       │   └── it reads them across the whitespace markup leaves behind
+│       └── when nothing but a decimal number is left
+│           ├── it reads both cents and thousands
+│           └── it reads every thousands group of a whole number
+└── QUICK_DETECT_PATTERN
+    ├── it sees a symbol whichever side of the number it falls, spaced or not
+    ├── it sees a price that ends in a dash
+    ├── it sees a VAT label however it is punctuated
+    ├── it sees a decimal price with no symbol at all
+    ├── it sees a spelled-out multiplier
+    ├── it sees a multiplier across the whitespace markup leaves behind
+    └── given a number with a single digit after the comma
+        └── it passes it over

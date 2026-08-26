@@ -327,10 +327,16 @@ describe('convertPricesInNode', () => {
       it('is still left alone', () => {
         // The element-level check cannot see this: the paragraph is
         // convertible, and only the text walk knows what it contains.
-        document.body.innerHTML = '<p>$800 <b contenteditable="true">note</b></p>';
+        document.body.innerHTML = '<p>$800 <b contenteditable="true">$1,600</b></p>';
         convertPricesInNode(document.body, freshRates(), settings());
-        expect(document.querySelector('b')!.textContent).toBe('note');
-        expect(document.querySelector(`.${SPAN_CLASS}`)).not.toBeNull();
+        expect(document.querySelector('b')!.textContent).toBe('$1,600');
+      });
+
+      it('does not stop the rest of the element converting', () => {
+        // Rejecting one text node must skip that node, not abandon the walk.
+        document.body.innerHTML = '<p>$800 <b contenteditable="true">$1,600</b></p>';
+        convertPricesInNode(document.body, freshRates(), settings());
+        expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('1.00 ZEC');
       });
     });
   });
@@ -364,10 +370,15 @@ describe('convertPricesInNode', () => {
       it('is still left alone', () => {
         // Storefronts use role="button" on a div far more often than the
         // element itself, and <button> is already a skipped tag.
-        document.body.innerHTML = '<p>$800 <span role="button">Add</span></p>';
+        document.body.innerHTML = '<p>$800 <span role="button">Pay $1,600</span></p>';
         convertPricesInNode(document.body, freshRates(), settings());
-        expect(document.querySelector('[role="button"]')!.textContent).toBe('Add');
-        expect(document.querySelector(`.${SPAN_CLASS}`)).not.toBeNull();
+        expect(document.querySelector('[role="button"]')!.textContent).toBe('Pay $1,600');
+      });
+
+      it('does not stop the rest of the element converting', () => {
+        document.body.innerHTML = '<p>$800 <span role="button">Pay $1,600</span></p>';
+        convertPricesInNode(document.body, freshRates(), settings());
+        expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('1.00 ZEC');
       });
     });
   });
