@@ -44,7 +44,9 @@ WalkerTest
 │       └── it is not a control
 ├── looksConcatenated
 │   ├── given a single child
-│   │   └── it is not concatenated
+│   │   ├── it is not concatenated
+│   │   └── given that child carries the cents
+│   │       └── it is concatenated
 │   ├── given several children and a long unbroken digit run
 │   │   └── it is concatenated
 │   └── given several children and an ordinary price
@@ -99,6 +101,8 @@ WalkerTest
     │   └── it is collected
     ├── given an element holding a plain price
     │   └── it is collected
+    ├── given a price beside one that already converted
+    │   └── it is still collected
     ├── given the accessibility layer holds the canonical price
     │   ├── it prefers that text
     │   └── it does not collect the hidden copy separately

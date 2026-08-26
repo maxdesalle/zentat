@@ -19,7 +19,8 @@
     "verify:vendored": "node scripts/verify-vendored.mjs",
     "test:coverage": "vitest run --coverage",
     "test:trees": "node scripts/check-trees.mjs",
-    "uncovered": "node scripts/uncovered-branches.mjs"
+    "uncovered": "node scripts/uncovered-branches.mjs",
+    "test:mutants": "node scripts/mutants.mjs"
   },
   "dependencies": {
     "@nymproject/mix-fetch": "1.4.4",

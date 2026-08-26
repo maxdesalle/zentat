@@ -197,6 +197,16 @@ describe('looksConcatenated', () => {
       render('<div id="p"><span>$19.99</span></div>');
       expect(looksConcatenated(document.getElementById('p')!, '$19.99')).toBe(false);
     });
+
+    describe('given that child carries the cents', () => {
+      it('is concatenated', () => {
+        // `$18<sup>79</sup>` is ONE child and reads as "$1879". Requiring two
+        // walked the commonest superscript-cents markup on the web straight
+        // past a guard written to stop hundredfold errors.
+        render('<div id="p">$18<sup>79</sup></div>');
+        expect(looksConcatenated(document.getElementById('p')!, '$1879')).toBe(true);
+      });
+    });
   });
 
   describe('given several children and a long unbroken digit run', () => {
@@ -440,6 +450,19 @@ describe('walkPriceElements', () => {
   describe('given an element holding a plain price', () => {
     it('is collected', () => {
       expect(textsFrom('<span>$19.99</span>')).toEqual(['$19.99']);
+    });
+  });
+
+  describe('given a price beside one that already converted', () => {
+    it('is still collected', () => {
+      // The non-price rule rejects anything saying "ZEC" so we never re-read
+      // our own output. Applied to raw text it also rejected the element's
+      // PAGE-written price: once the $8 in "<p>$10 - <span>$8</span></p>"
+      // converted, the $10 beside it could never convert on any later pass.
+      const results = walkPriceElements(render(
+        `<p>$10 <span class="${SPAN_CLASS}">0.0125 ZEC</span></p>`,
+      ));
+      expect(results.map((r) => r.text)).toContain('$10');
     });
   });
 

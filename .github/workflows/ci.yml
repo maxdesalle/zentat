@@ -40,6 +40,13 @@ jobs:
       # suite has caught in shipped code lived on untested branches.
       # `npm run uncovered` names the missing arm when this fails.
       - run: npm run test:coverage
+
+      # Coverage says a line RAN. It cannot say the assertion was right, and
+      # that gap shipped real bugs: three defects in v1.1.1 had tests asserting
+      # the broken behaviour as correct, at 100% coverage, each with a tree.
+      # This puts every bug we have shipped back, one at a time, and fails if
+      # the suite does not notice. Slower than the rest of CI and worth it.
+      - run: npm run test:mutants
       - run: npm run build
       - run: npm run build:firefox
 
