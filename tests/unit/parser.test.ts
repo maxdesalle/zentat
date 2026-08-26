@@ -85,6 +85,16 @@ describe('parseNumber', () => {
     });
   });
 
+  describe('given both separators appear more than once', () => {
+    it('reads dots as grouping when the comma is the decimal', () => {
+      expect(parseNumber('1.234.567,89')).toBe(1234567.89);
+    });
+
+    it('reads commas as grouping when the dot is the decimal', () => {
+      expect(parseNumber('1,234,567.89')).toBe(1234567.89);
+    });
+  });
+
   describe('given a magnitude suffix', () => {
     it('reads it case-insensitively', () => {
       expect(parseNumber('69k')).toBe(69000);
@@ -109,6 +119,13 @@ describe('parseNumber', () => {
       // "miljoen" used to be captured as its prefix "mil": x1000, not x1M.
       expect(parseNumber('5 miljoen')).toBe(5_000_000);
       expect(parseNumber('5 mil')).toBe(5_000);
+    });
+
+    it('multiplies rather than divides', () => {
+      // The direction is not self-evident from a passing test that only
+      // checks the digits: 5 divided by a million is also "not 5".
+      expect(parseNumber('5 million')).toBeGreaterThan(5);
+      expect(parseNumber('2,000 million')).toBe(2_000_000_000);
     });
 
     it('handles compound multipliers', () => {
@@ -192,6 +209,22 @@ describe('overlaps', () => {
       expect(overlaps(span(2, 4), span(0, 2))).toBe(false);
     });
   });
+
+  describe('at the boundaries', () => {
+    // Each of these is one comparison away from swallowing the price next to
+    // it, and adjacent prices are the normal case on a pricing table.
+    it('treats a span starting exactly where the other ends as disjoint', () => {
+      expect(overlaps(span(5, 9), span(0, 5))).toBe(false);
+    });
+
+    it('treats a span ending exactly where the other starts as disjoint', () => {
+      expect(overlaps(span(0, 5), span(5, 9))).toBe(false);
+    });
+
+    it('treats identical spans as overlapping', () => {
+      expect(overlaps(span(2, 6), span(2, 6))).toBe(true);
+    });
+  });
 });
 
 describe('isBetterMatch', () => {
@@ -220,6 +253,15 @@ describe('isBetterMatch', () => {
         expect(isBetterMatch(span(0, 2), span(0, 9))).toBe(false);
         expect(isBetterMatch(span(0, 5), span(0, 5))).toBe(false);
       });
+    });
+  });
+
+  describe('given the candidate starts at the same offset as the other', () => {
+    it('compares lengths rather than positions', () => {
+      // Spans whose endpoints SUM the same but whose lengths differ: only a
+      // real length comparison separates them.
+      expect(isBetterMatch(span(4, 10), span(4, 6))).toBe(true);
+      expect(isBetterMatch(span(4, 6), span(4, 10))).toBe(false);
     });
   });
 });
@@ -255,6 +297,33 @@ describe('parsePrice', () => {
         // hand-list: es-ES uses a dot for thousands where es-AR uses a comma,
         // and a hand-list gets that wrong.
         expect(parsePrice('$3.499', ['USD'], 'shop.example.de', 'de-DE')[0]?.amount).toBe(3499);
+      });
+    });
+
+    describe('given the language uses a dot decimal', () => {
+      it('reads three digits as cents', () => {
+        // The separator convention is asked of Intl per language rather than
+        // kept in a hand-list, so the answer for a KNOWN dot-decimal locale
+        // has to be pinned as tightly as the comma case.
+        expect(parsePrice('$3.499', ['USD'], 'shop.example.com', 'en-US')[0]?.amount)
+          .toBe(3.499);
+      });
+    });
+
+    describe('given the page declares no language', () => {
+      it('assumes a dot decimal', () => {
+        expect(parsePrice('$3.499', ['USD'], 'shop.example.com', undefined)[0]?.amount)
+          .toBe(3.499);
+      });
+    });
+
+    describe('given the same language twice', () => {
+      it('reads it the same way both times', () => {
+        // The lookup is cached, and a cache that returns something different
+        // on the second read is worse than no cache.
+        const first = parsePrice('$3.499', ['USD'], 'a.com', 'en-US')[0]?.amount;
+        const second = parsePrice('$3.499', ['USD'], 'a.com', 'en-US')[0]?.amount;
+        expect(second).toBe(first);
       });
     });
 
@@ -304,12 +373,41 @@ describe('parsePrice', () => {
       expect(parsePrice('Refund: -$5.99', ['USD'])).toHaveLength(0);
     });
 
+    it('treats every dash the web uses as a separator', () => {
+      // Hyphen, minus, en dash and em dash all appear in "label — price"
+      // layouts. Treating any of them as a sign drops the price entirely.
+      for (const dash of ['-', '\u2212', '\u2013', '\u2014']) {
+        const found = parsePrice(`Basic ${dash} $10`, ['USD']);
+        expect(found.map((p) => p.amount)).toEqual([10]);
+      }
+    });
+
+    describe('given the sign is attached to another number', () => {
+      it('is not treated as a minus', () => {
+        // "-40% $18.79" is a discount badge beside a price, and the price is
+        // not negative. This is the exact Amazon deal-block shape.
+        expect(parsePrice('-40% $18.79', ['USD'])[0]?.amount).toBe(18.79);
+      });
+    });
+
     it('still reads both ends of a range', () => {
       // A minus binds tightly to its number. Treating the nearest non-space
       // character as a sign swallowed every price in a "label — price" line.
       const range = parsePrice('£10-£20', ['GBP']);
       expect(range).toHaveLength(2);
       expect(range.map((r) => r.amount).sort((a, b) => a - b)).toEqual([10, 20]);
+    });
+  });
+
+  describe('given a currency that prices in cents', () => {
+    it('reads three digits after the dot as cents', () => {
+      // Every currency whose everyday prices carry cents needs the gas-price
+      // reading, not just the dollar. Dropping one from the list turns a
+      // £3.499 forecourt price into £3,499.
+      expect(parsePrice('£3.499', ['GBP'], 'shop.co.uk')[0]?.amount).toBe(3.499);
+      expect(parsePrice('C$3.499', ['CAD'], 'shop.ca')[0]?.amount).toBe(3.499);
+      expect(parsePrice('A$3.499', ['AUD'], 'shop.com.au')[0]?.amount).toBe(3.499);
+      expect(parsePrice('MX$3.499', ['MXN'], 'tienda.com.mx')[0]?.amount).toBe(3.499);
     });
   });
 
@@ -395,6 +493,17 @@ describe('parsePrice', () => {
       expect(onCoolblue[0].currency).toBe('EUR');
     });
 
+    it('applies on the bare domain as well as a subdomain', () => {
+      expect(parsePrice('339,-', ['EUR'], 'coolblue.nl')).toHaveLength(1);
+      expect(parsePrice('339,-', ['EUR'], 'shop.coolblue.nl')).toHaveLength(1);
+    });
+
+    it('does not apply to a host that merely ends in the same letters', () => {
+      // "notcoolblue.nl" is a different registrant, and a suffix match without
+      // the dot boundary hands them a Dutch price convention they never used.
+      expect(parsePrice('339,-', ['EUR'], 'notcoolblue.nl')).toHaveLength(0);
+    });
+
     it('does not apply elsewhere', () => {
       // "339,-" is a Dutch price convention. Reading it anywhere would turn
       // any comma-dash sequence on the web into a price.
@@ -456,9 +565,30 @@ describe('parsePrice', () => {
     });
   });
 
+  describe('given several prices out of source order', () => {
+    it('returns them left to right', () => {
+      // Patterns are tried per currency, so matches arrive grouped by
+      // currency rather than by position. The converter replaces them in the
+      // order given, and out of order it rebuilds the text wrongly.
+      const found = parsePrice('€5 then $10 then €15', ['USD', 'EUR']);
+      expect(found.map((p) => p.startIndex)).toEqual(
+        [...found.map((p) => p.startIndex)].sort((a, b) => a - b),
+      );
+      expect(found.map((p) => p.amount)).toEqual([5, 10, 15]);
+    });
+  });
+
   describe('given a currency is not enabled', () => {
     it('returns nothing for that currency', () => {
       expect(parsePrice('¥1000', ['USD'])).toHaveLength(0);
+    });
+
+    describe('given the symbol could mean an enabled one instead', () => {
+      it('uses the enabled reading', () => {
+        // "$" on a .mx site resolves to MXN. With only CAD enabled the price
+        // must fall through to a candidate the user actually converts.
+        expect(parsePrice('$100', ['CAD'], 'tienda.com.mx')[0]?.currency).toBe('CAD');
+      });
     });
   });
 

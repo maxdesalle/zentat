@@ -1,11 +1,16 @@
 LocaleTest
 ├── inferCurrencyFromHostname
 │   ├── given a single-part country TLD
-│   │   └── it maps single TLDs
-│   ├── given a two-part country TLD
-│   │   └── it maps two-part TLDs
-│   └── given a TLD it does not know
-│       └── it returns null for unknown TLDs
+│   │   └── it maps every supported country ending
+│   ├── given a multi-part hostname ending in a country TLD
+│   │   └── it reads the country from the final ending
+│   ├── given a TLD it does not know
+│   │   └── it returns null for unknown TLDs
+│   └── given a bare country ending
+│       └── it returns null
+├── AMBIGUOUS_SYMBOLS
+│   └── given symbols shared by several currencies
+│       └── it lists every fallback currency in order
 └── resolveAmbiguousSymbol
     ├── given a dollar sign
     │   └── it resolves $ by TLD

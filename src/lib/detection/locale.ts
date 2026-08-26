@@ -2,7 +2,6 @@
 const TLD_CURRENCY_MAP: Record<string, string> = {
   'ca': 'CAD',
   'uk': 'GBP',
-  'co.uk': 'GBP',
   'de': 'EUR',
   'fr': 'EUR',
   'it': 'EUR',
@@ -11,36 +10,21 @@ const TLD_CURRENCY_MAP: Record<string, string> = {
   'be': 'EUR',
   'at': 'EUR',
   'jp': 'JPY',
-  'co.jp': 'JPY',
   'cn': 'CNY',
-  'com.cn': 'CNY',
   'au': 'AUD',
-  'com.au': 'AUD',
   'in': 'INR',
-  'co.in': 'INR',
   'br': 'BRL',
-  'com.br': 'BRL',
   'mx': 'MXN',
-  'com.mx': 'MXN',
   'kr': 'KRW',
-  'co.kr': 'KRW',
   'ch': 'CHF',
 };
 
 export function inferCurrencyFromHostname(hostname: string): string | null {
-  // Extract TLD(s) from hostname
+  // Extract TLD from hostname
   // e.g., "www.amazon.ca" -> "ca"
-  // e.g., "www.amazon.co.uk" -> "co.uk"
   const parts = hostname.split('.');
 
   if (parts.length >= 2) {
-    // Try two-part TLD first (co.uk, com.au, etc.)
-    const twoPartTld = parts.slice(-2).join('.');
-    if (TLD_CURRENCY_MAP[twoPartTld]) {
-      return TLD_CURRENCY_MAP[twoPartTld];
-    }
-
-    // Try single TLD
     const singleTld = parts[parts.length - 1];
     if (TLD_CURRENCY_MAP[singleTld]) {
       return TLD_CURRENCY_MAP[singleTld];
@@ -69,6 +53,9 @@ export function resolveAmbiguousSymbol(
   documentLang?: string,
 ): string | null {
   const inferredCurrency = inferCurrencyFromHostname(hostname);
+  // Stryker disable next-line StringLiteral: equivalent — this fallback only
+  // ever feeds a startsWith('zh') test, and no replacement string passes it
+  // either, so nothing downstream can tell one empty default from another.
   const lang = (documentLang || '').toLowerCase();
 
   if (symbol === '$') {

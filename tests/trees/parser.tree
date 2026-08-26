@@ -21,11 +21,15 @@ ParserTest
 │   │   │   └── it reads them as a decimal
 │   │   └── given the caller does not
 │   │       └── it reads them as thousands
+│   ├── given both separators appear more than once
+│   │   ├── it reads dots as grouping when the comma is the decimal
+│   │   └── it reads commas as grouping when the dot is the decimal
 │   ├── given a magnitude suffix
 │   │   ├── it reads it case-insensitively
 │   │   └── it applies the right magnitude for each letter
 │   ├── given a spelled-out multiplier
 │   │   ├── it matches the whole word rather than a prefix
+│   │   ├── it multiplies rather than divides
 │   │   ├── it handles compound multipliers
 │   │   └── it handles non-English words
 │   └── given input that is not a number
@@ -45,18 +49,24 @@ ParserTest
 │   │   └── it reports an overlap
 │   ├── given the candidate contains the other
 │   │   └── it reports an overlap
-│   └── given the spans merely touch
-│       └── it reports no overlap
+│   ├── given the spans merely touch
+│   │   └── it reports no overlap
+│   └── at the boundaries
+│       ├── it treats a span starting exactly where the other ends as disjoint
+│       ├── it treats a span ending exactly where the other starts as disjoint
+│       └── it treats identical spans as overlapping
 ├── isBetterMatch
 │   ├── given the candidate starts earlier
 │   │   └── it wins
 │   ├── given the candidate starts later
 │   │   └── it loses
-│   └── given both start at the same offset
-│       ├── given the candidate is longer
-│       │   └── it wins
-│       └── given the candidate is no longer
-│           └── it loses
+│   ├── given both start at the same offset
+│   │   ├── given the candidate is longer
+│   │   │   └── it wins
+│   │   └── given the candidate is no longer
+│   │       └── it loses
+│   └── given the candidate starts at the same offset as the other
+│       └── it compares lengths rather than positions
 └── parsePrice
     ├── given a symbol before the amount
     │   ├── it reads a dollar sign
@@ -65,6 +75,12 @@ ParserTest
     ├── given the page declares a language
     │   ├── given the language uses a comma decimal
     │   │   └── it reads the number that way
+    │   ├── given the language uses a dot decimal
+    │   │   └── it reads three digits as cents
+    │   ├── given the page declares no language
+    │   │   └── it assumes a dot decimal
+    │   └── given the same language twice
+    │       └── it reads it the same way both times
     │   └── given the language tag is not one the browser knows
     │       └── it falls back to a dot decimal rather than failing
     ├── given a code after the amount
@@ -76,7 +92,12 @@ ParserTest
     │   └── it reads a spelled-out word
     ├── given a negative amount
     │   ├── it skips the negative price
-    │   └── it still reads both ends of a range
+    │   ├── it still reads both ends of a range
+    │   ├── it treats every dash the web uses as a separator
+    │   └── given the sign is attached to another number
+    │       └── it is not treated as a minus
+    ├── given a currency that prices in cents
+    │   └── it reads three digits after the dot as cents
     ├── given an ambiguous symbol
     │   ├── given the page states its own currency
     │   │   ├── it beats the guess from the hostname
@@ -97,6 +118,8 @@ ParserTest
     │       └── it reads nothing rather than guessing US dollars
     ├── given a hostname-restricted pattern
     │   ├── it applies on that site
+    │   ├── it applies on the bare domain as well as a subdomain
+    │   ├── it does not apply to a host that merely ends in the same letters
     │   ├── it does not apply elsewhere
     │   └── it reads a site's split euro-and-cent markup
     ├── given the same price appears twice in one string
@@ -107,7 +130,11 @@ ParserTest
     │   ├── it keeps the one that starts earlier
     │   ├── it discards the shorter one
     │   └── it keeps the reading whose symbol is actually in the text
+    ├── given several prices out of source order
+    │   └── it returns them left to right
     ├── given a currency is not enabled
-    │   └── it returns nothing for that currency
+    │   ├── it returns nothing for that currency
+    │   └── given the symbol could mean an enabled one instead
+    │       └── it uses the enabled reading
     └── given text with no price in it
         └── it returns nothing
