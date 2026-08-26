@@ -105,8 +105,12 @@ describe('textLengthOf', () => {
 
   describe('given a node with no text at all', () => {
     it('reports nothing', () => {
+      // textContent is typed `string | null` because a Document and a
+      // DocumentType really do answer null in a browser. happy-dom answers ''
+      // for both, so the null case is stated directly rather than staged.
       expect(textLengthOf(null)).toBe(0);
-      expect(textLengthOf(document)).toBe(0);
+      expect(textLengthOf(undefined)).toBe(0);
+      expect(textLengthOf({ textContent: null } as unknown as Node)).toBe(0);
     });
   });
 });
