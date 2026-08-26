@@ -73,3 +73,65 @@ describe('parseNumber', () => {
     expect(parseNumber('1.2345', true)).toBe(1.2345);
   });
 });
+
+describe('an abbreviated range converts both bounds or neither', () => {
+  // Rome2Rio writes "$210–360" in one text node. Converting only the lower
+  // bound left "360" bare against our own output, where it reads as ZEC: the
+  // range appeared to top out around 1,300 times its real value, on a page
+  // whose entire purpose is comparing travel by cost.
+  it.each([
+    ['$210–360', [210, 360]],
+    ['$45-85', [45, 85]],
+    ['£49 to 79', [49, 79]],
+    ['$210 – $360', [210, 360]],
+  ])('reads both bounds of %j', (text, expected) => {
+    expect(amounts(text)).toEqual(expected);
+  });
+
+  it('refuses the whole range when the upper bound carries a multiplier', () => {
+    // "$5-10 million" is not five dollars to ten dollars, and the magnitude
+    // cannot be read off the lower bound. Converting the lower bound alone is
+    // the one outcome that must never happen, so the range goes untouched.
+    expect(amounts('$5-10 million')).toEqual([]);
+  });
+
+  it('does not mistake a label dash for a range', () => {
+    expect(amounts('Basic – $10')).toEqual([10]);
+  });
+});
+
+describe('a currency code written after a price beats the symbol', () => {
+  // Airbnb quotes "$1,257 CAD". Taking the glyph and discarding the code
+  // converted at the USD rate and left the code beside the result, so the page
+  // read "1.61 ZEC CAD" — a label contradicting both the unit and the value.
+  it.each([
+    ['$1,257 CAD', 'CAD'],
+    ['$1,257 AUD', 'AUD'],
+    ['$1,257 USD', 'USD'],
+    ['£49 GBP', 'GBP'],
+  ])('reads %j as %s', (text, expected) => {
+    const [price] = parsePrice(text, ALL, 'www.example.com', 'en-US');
+    expect(price.currency).toBe(expected);
+  });
+
+  it('swallows the code so it cannot sit beside a value in ZEC', () => {
+    const [price] = parsePrice('$1,257 CAD', ALL, 'www.example.com', 'en-US');
+    expect(price.original).toBe('$1,257 CAD');
+  });
+
+  it.each([
+    '$50 TRY IT NOW',
+    '$50 OFF',
+    '$20 NET',
+  ])('ignores %j, where the letters are not a currency the symbol can mean', (text) => {
+    const [price] = parsePrice(text, ALL, 'www.example.com', 'en-US');
+    expect(price.currency).toBe('USD');
+    expect(price.original).toBe(text.match(/\$\d+/)![0]);
+  });
+
+  it('leaves the price alone when the stated currency is switched off', () => {
+    // Converting a CAD price at the USD rate because the user disabled CAD is
+    // a wrong price, and a wrong price is worse than none.
+    expect(parsePrice('$1,257 CAD', ['USD'], 'www.example.com', 'en-US')).toEqual([]);
+  });
+});

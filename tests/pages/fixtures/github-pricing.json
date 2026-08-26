@@ -5,11 +5,5 @@
   "lang": "en",
   "title": "Pricing · Plans for every developer · GitHub",
   "capturedAt": "2026-08-26",
-  "bytes": 466675,
-  "knownGaps": [
-    {
-      "invariant": "one shape per page",
-      "why": "DEFECT, not a limitation — same hardcoded zero shape as linear-pricing ($0 → \"0.00 ZEC\"). This page is the proof the grid itself works: its nine real prices span $0.07 to $21, two and a half orders of magnitude, and every one of them holds a single five-decimal shape. Only the two $0 free tiers break the column."
-    }
-  ]
+  "bytes": 466675
 }

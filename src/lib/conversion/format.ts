@@ -133,7 +133,13 @@ export function setDisplayLocale(locale: string | undefined): void {
  * significant figures. Outside a page, the amount scales itself.
  */
 function autoDecimals(abs: number): number {
-  if (abs === 0) return 2;
+  // Zero wears the page's shape but never sets it. setPageScale drops it from
+  // the sample because scaleFor(0) is 8 — log10(0) is -Infinity — and would
+  // drag the median; outside a page that same runaway is why the fallback here
+  // is a literal 2 rather than scaleFor. Returning 2 unconditionally made a $0
+  // free tier the one row in a column of "0.0128 ZEC" that a reader had to
+  // actually read, which is the opposite of what a shared grid is for.
+  if (abs === 0) return pageDecimals ?? 2;
   const grid = pageDecimals ?? scaleFor(abs);
   return Math.min(grid, significantFigureCap(abs));
 }

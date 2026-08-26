@@ -33,7 +33,9 @@ FormatTest
     │   └── given the amount sits exactly on the rounding boundary
     │       └── it keeps the fixed precision
     ├── given a zero amount
-    │   └── it stays in ZEC at two decimals
+    │   ├── it stays in ZEC at two decimals
+    │   └── given a page grid
+    │       └── it takes the page's decimals like every other price
     └── one scale per page
         ├── it gives every price on the page the same shape
         ├── given amounts that are not real prices

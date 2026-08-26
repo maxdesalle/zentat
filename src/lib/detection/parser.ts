@@ -145,15 +145,47 @@ export function parsePrice(
         // evidence at all, and "$" prices read as yen are off by 150x.
         const declared = candidates?.find((c) => c === pageCurrency);
         if (declared) currency = declared;
-        // If the locale-resolved currency for an ambiguous symbol is disabled,
-        // fall back to another enabled candidate for that symbol instead of
-        // silently dropping the price (e.g. "$" resolved to MXN on a .mx site
-        // while the user only enabled USD).
-        if (!enabledSet.has(currency)) {
-          currency = candidates?.find((c) => enabledSet.has(c)) ?? currency;
+
+        // A code written immediately after the price is the most specific
+        // claim on the page, and it was being thrown away. Airbnb quotes
+        // "$1,257 CAD"; we took the glyph, read it as USD, and left the code
+        // stranded beside the result, so the page read "1.61 ZEC CAD" — a
+        // label contradicting both the unit and the value, at 35% over the
+        // real price. Only a code the symbol could actually mean is believed,
+        // so "$50 TRY IT NOW" is not a Turkish lira price.
+        const trailing = trailingCurrencyCode(text, parsed.price.endIndex);
+        const stated = trailing
+            && (trailing.code === currency || candidates?.includes(trailing.code))
+          ? trailing
+          : null;
+
+        if (stated) {
+          // A code the user has not enabled is not licence to convert at some
+          // other currency. It is a reason to leave the price alone.
+          if (!enabledSet.has(stated.code)) continue;
+          currency = stated.code;
+        } else {
+          // If the locale-resolved currency for an ambiguous symbol is
+          // disabled, fall back to another enabled candidate for that symbol
+          // instead of silently dropping the price (e.g. "$" resolved to MXN
+          // on a .mx site while the user only enabled USD).
+          if (!enabledSet.has(currency)) {
+            currency = candidates?.find((c) => enabledSet.has(c)) ?? currency;
+          }
+          if (!enabledSet.has(currency)) continue;
         }
-        if (!enabledSet.has(currency)) continue;
-        const price = { ...parsed.price, currency };
+
+        // Swallowing the code is part of the fix, not tidying: left behind it
+        // sits against our output as a currency label for a value in ZEC.
+        const endIndex = parsed.price.endIndex + (stated?.length ?? 0);
+        const price = {
+          ...parsed.price,
+          currency,
+          endIndex,
+          original: stated
+            ? text.slice(parsed.price.startIndex, endIndex).trim()
+            : parsed.price.original,
+        };
 
         // Check for overlap with existing results
         const overlapIndex = results.findIndex((r) => overlaps(price, r));
@@ -171,6 +203,8 @@ export function parsePrice(
   // Sort by position
   results.sort((a, b) => a.startIndex - b.startIndex);
 
+  expandAbbreviatedRanges(results, text, documentLang);
+
   // No second dedup pass. There used to be one that collapsed matches sharing
   // the same ORIGINAL TEXT, which dropped legitimate repeats: "Buy 2 for
   // $19.99 or 1 for $19.99" converted only the first, leaving the second in
@@ -179,6 +213,74 @@ export function parsePrice(
   // wider rule — and its currency-preference half could only ever see matches
   // that loop had already collapsed.
   return results;
+}
+
+// An uppercase three-letter code standing on its own after a price. Case is
+// not folded: "cad" in running prose is a word, not a currency label.
+const TRAILING_CODE = /^[\s\u00a0]*([A-Z]{3})(?![A-Za-z])/;
+
+function trailingCurrencyCode(
+  text: string,
+  endIndex: number,
+): { code: string; length: number } | null {
+  const match = TRAILING_CODE.exec(text.slice(endIndex));
+  return match ? { code: match[1], length: match[0].length } : null;
+}
+
+// "$210–360": a range whose upper bound inherits the lower one's symbol. The
+// bound must be bare digits — "– $360" is two prices and both patterns already
+// find it.
+const ABBREVIATED_RANGE = /^([\s\u00a0]*(?:[–—−-]|to(?=[\s\u00a0]))[\s\u00a0]*)(\d[\d.,]*)/;
+
+// A bound followed by a multiplier belongs to a magnitude this cannot read off
+// the lower bound ("$5-10 million"), so the range is refused rather than guessed.
+const BOUND_MULTIPLIER =
+  /^[\s\u00a0]*(?:[kmbt](?![a-z])|million|billion|trillion|thousand|mil|mn|bn)\b/i;
+
+/**
+ * Give an abbreviated range's upper bound the currency of its lower one.
+ *
+ * Converting only the lower bound is the worst available outcome: the upper
+ * one is left bare, immediately beside our output, where it reads as ZEC.
+ * Rome2Rio's "$210–360" rendered "0.269 ZEC–360", a range whose top looked
+ * about 1,300 times its real value on a page that exists to compare costs.
+ *
+ * So both bounds convert or neither does. A bound this cannot read with the
+ * lower one's convention takes the lower bound down with it — silence beats a
+ * confident wrong number, and half a converted range is exactly that.
+ *
+ * Mutates in place: the caller owns the array and returns it.
+ */
+function expandAbbreviatedRanges(
+  prices: ParsedPrice[],
+  text: string,
+  documentLang: string | undefined,
+): void {
+  for (let index = prices.length - 1; index >= 0; index--) {
+    const price = prices[index];
+    const tail = ABBREVIATED_RANGE.exec(text.slice(price.endIndex));
+    if (!tail) continue;
+
+    const startIndex = price.endIndex + tail[1].length;
+    const endIndex = startIndex + tail[2].length;
+    const preferUsDecimal = US_DECIMAL_CURRENCIES.has(price.currency)
+      && usesDotDecimal(documentLang);
+    const amount = BOUND_MULTIPLIER.test(text.slice(endIndex))
+      ? null
+      : parseNumber(tail[2], preferUsDecimal);
+
+    if (amount === null) {
+      prices.splice(index, 1);
+      continue;
+    }
+    prices.splice(index + 1, 0, {
+      original: tail[2],
+      amount,
+      currency: price.currency,
+      startIndex,
+      endIndex,
+    });
+  }
 }
 
 // A minus sign binds tightly to its number: "-$5" is negative, "Basic – $10" is

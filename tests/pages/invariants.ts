@@ -130,6 +130,36 @@ export function noPageScaleElementIsAPrice(): Violation[] {
 }
 
 /** Run every invariant that applies to a converted page. */
+/**
+ * No converted price is immediately followed by a bare number.
+ *
+ * This is the general form of a defect found on Rome2Rio: "$210–360" is a
+ * range whose upper bound inherits the lower one's symbol, and converting only
+ * the lower bound left "360" sitting against our output, where a reader takes
+ * it for ZEC. The rendered range appeared to top out around 1,300 times its
+ * real value.
+ *
+ * The rule generalises past ranges. Whatever the markup, a bare number left
+ * touching a converted price is read in the converted unit, and every such
+ * reading is wrong.
+ */
+export function noBareNumberBesideConverted(): Violation[] {
+  const bad: Violation[] = [];
+  for (const el of converted()) {
+    const next = el.nextSibling;
+    if (next === null || next.nodeType !== 3) continue;
+    const text = next.textContent ?? '';
+    const match = /^[\s\u00a0]*(?:[–—−-]|to)[\s\u00a0]*\d[\d.,]*/.exec(text);
+    if (match) {
+      bad.push({
+        invariant: 'no bare number beside converted',
+        detail: `${shown(el)}${match[0]}`,
+      });
+    }
+  }
+  return bad.slice(0, 3);
+}
+
 export function checkConverted(): Violation[] {
   return [
     ...oneUnitPerPage(),
@@ -138,6 +168,7 @@ export function checkConverted(): Violation[] {
     ...tooltipMatchesOriginal(),
     ...controlsStayFiat(),
     ...noPageScaleElementIsAPrice(),
+    ...noBareNumberBesideConverted(),
   ];
 }
 

@@ -165,6 +165,15 @@ describe('formatZecWithSymbol', () => {
       // away to the eight-decimal cap.
       expect(formatZecWithSymbol(0)).toBe('0.00 ZEC');
     });
+
+    describe('given a page grid', () => {
+      it("takes the page's decimals like every other price", () => {
+        // github-pricing and linear-pricing recorded this as a defect: a free
+        // tier in a column of "0.0128 ZEC" rendered "0.00 ZEC".
+        setPageScale([0.0128, 0.0205, 0.0269]);
+        expect(formatZecWithSymbol(0)).toBe('0.0000 ZEC');
+      });
+    });
   });
 
   describe('one scale per page', () => {
