@@ -202,6 +202,14 @@ describe('validateRates', () => {
     });
   });
 
+  describe('given a currency has never been quoted before', () => {
+    it('accepts the first quote for it', () => {
+      // Adding a currency to the fetch list must not leave it held out: there
+      // is no baseline to measure it against, however fresh the rest is.
+      expect(validateRates(incoming({ GBP: 0.0016 }), previous).rates.GBP).toBe(0.0016);
+    });
+  });
+
   describe('given there is no baseline', () => {
     it('accepts anything on a first run', () => {
       expect(validateRates(incoming({ USD: 0.00125 }), noBaseline).rates.USD).toBe(0.00125);

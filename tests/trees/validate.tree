@@ -1,15 +1,37 @@
 ValidateTest
-└── validateRates
-    ├── given a quote inside the plausible range
-    │   └── it accepts a normal quote
-    ├── given a quote outside the plausible range
-    │   ├── it rejects values outside any plausible ZEC price
-    │   └── it rejects a decimal shift
-    ├── given one currency is bad
-    │   └── it keeps the good currencies
-    ├── given the same rejection keeps arriving
-    │   └── it gives in after three consecutive rejections so a real crash is not locked out
-    ├── given the baseline is stale
-    │   └── it does not apply a delta guard against it
-    └── given there is no baseline
-        └── it accepts anything on a first run
+├── validateRates
+│   ├── given a quote inside the plausible range
+│   │   ├── it accepts a normal quote
+│   │   ├── it accepts a quote at the cheap end of the range
+│   │   └── it accepts a quote at the dear end of the range
+│   ├── given a quote outside the plausible range
+│   │   ├── it rejects values outside any plausible ZEC price
+│   │   ├── it rejects a decimal shift
+│   │   ├── it rejects a quote that puts ZEC under a single fiat unit
+│   │   ├── it rejects a quote that puts ZEC over a hundred thousand
+│   │   └── it rejects a quote that is not a number
+│   ├── given one currency is bad
+│   │   └── it keeps the good currencies
+│   ├── given the same rejection keeps arriving
+│   │   └── it gives in after three consecutive rejections so a real crash is not locked out
+│   ├── given a good quote arrives between outliers
+│   │   └── it starts the count of rejections again
+│   ├── given a move of exactly the largest allowed size
+│   │   └── it accepts it
+│   ├── given the baseline is stale
+│   │   └── it does not apply a delta guard against it
+│   ├── given the baseline is exactly a day old
+│   │   └── it still holds a big move against it
+│   ├── given the store has never been written
+│   │   └── it holds nothing against the rates it carries
+│   ├── given the currency carries no timestamp of its own
+│   │   └── it falls back to when the store was last written
+│   ├── given the last fetch did not refresh this currency
+│   │   └── it ages the currency by its own timestamp
+│   ├── given a currency has never been quoted before
+│   │   └── it accepts the first quote for it
+│   └── given there is no baseline
+│       └── it accepts anything on a first run
+└── resetRateValidation
+    └── given outliers have been held twice
+        └── it forgets the run so the next one is held again

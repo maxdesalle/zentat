@@ -6,6 +6,10 @@ AnchorsTest
 │   │   └── it cannot price it
 │   ├── given the amount is not positive
 │   │   └── it cannot price it
+│   ├── given a stored amount and rate that are both negative
+│   │   └── it cannot price it
+│   ├── given the rate is zero
+│   │   └── it cannot price it
 │   └── given the arithmetic does not produce a usable number
 │       └── it cannot price it
 ├── compareToAnchors
@@ -16,6 +20,9 @@ AnchorsTest
 │   ├── given a comparison nobody can picture
 │   │   ├── it drops one that is too small
 │   │   └── it drops one that is too large
+│   ├── given a comparison sitting exactly on the edge of the useful range
+│   │   ├── it keeps the smallest countable multiple
+│   │   └── it keeps the largest countable multiple
 │   ├── given an anchor in a currency with no rate
 │   │   └── it ignores that anchor
 │   ├── given the amount is not positive
@@ -41,6 +48,8 @@ AnchorsTest
 │   ├── it flags an anchor once it moves past the threshold
 │   ├── it stays quiet inside the threshold
 │   ├── it reports the biggest mover first
+│   ├── given an anchor sitting exactly on the threshold
+│   │   └── it flags it
 │   ├── given the anchor can no longer be priced
 │   │   └── it is skipped
 │   └── given the anchor was never priced
@@ -48,6 +57,7 @@ AnchorsTest
 └── createAnchor
     ├── it records the ZEC cost at the moment it was set
     ├── it gives each anchor its own id
+    ├── it gives the id a compact, opaque shape
     ├── it upper-cases the currency
     ├── given a label longer than the field allows
     │   └── it truncates the label

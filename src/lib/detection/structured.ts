@@ -44,20 +44,22 @@ function isCurrency(value: unknown): value is string {
 
 /** Walk an arbitrary JSON-LD tree collecting every offer-shaped node. */
 function collectFromJsonLd(node: unknown, into: StructuredPrice[], depth = 0): void {
-  if (depth > 12 || node === null || typeof node !== 'object') return;
+  if (depth > 12 || node === null) return;
+  // Everything here came out of JSON.parse, so a non-object is a string, a
+  // number or a boolean — none of which can hold a key naming a currency.
+  // Stryker disable next-line ConditionalExpression: walking a primitive finds no price
+  if (typeof node !== 'object') return;
 
-  if (Array.isArray(node)) {
-    for (const item of node) collectFromJsonLd(item, into, depth + 1);
-    return;
-  }
-
+  // Arrays are walked through their values like anything else, so @graph and
+  // offer lists need no case of their own.
   const record = node as Record<string, unknown>;
   const currency = record.priceCurrency;
 
   if (isCurrency(currency)) {
     for (const key of ['price', 'lowPrice', 'highPrice'] as const) {
-      const amount = toAmount(record[key]);
-      if (amount !== null && amount > 0) {
+      // An unreadable amount counts as zero, and zero is never a price.
+      const amount = toAmount(record[key]) ?? 0;
+      if (amount > 0) {
         into.push({ amount, currency: currency.toUpperCase(), source: 'jsonld' });
       }
     }
@@ -72,7 +74,8 @@ export function readStructuredPrices(root: ParentNode = document): StructuredPri
   for (const script of root.querySelectorAll('script[type="application/ld+json"]')) {
     const text = textOf(script);
     // Malformed ld+json is common in the wild; parse defensively, never eval.
-    if (!text || text.length > MAX_JSONLD_BYTES) continue;
+    // An empty block is malformed too, and lands in the same catch.
+    if (text.length > MAX_JSONLD_BYTES) continue;
     try {
       collectFromJsonLd(JSON.parse(text), prices);
     } catch {
@@ -83,25 +86,25 @@ export function readStructuredPrices(root: ParentNode = document): StructuredPri
   // Microdata is uniquely valuable: the attribute sits ON the element about to
   // be rewritten, so it answers detection and targeting at once.
   for (const el of root.querySelectorAll('[itemprop="price"]')) {
-    const amount = toAmount(el.getAttribute('content') ?? textOf(el));
-    if (amount === null || amount <= 0) continue;
-    const scope = el.closest('[itemscope]') ?? root;
-    const currencyEl = (scope as ParentNode).querySelector?.('[itemprop="priceCurrency"]');
+    const amount = toAmount(el.getAttribute('content') ?? textOf(el)) ?? 0;
+    if (amount <= 0) continue;
+    const scope: ParentNode = el.closest('[itemscope]') ?? root;
+    const currencyEl = scope.querySelector('[itemprop="priceCurrency"]');
     const currency = currencyEl?.getAttribute('content') ?? textOf(currencyEl);
     if (isCurrency(currency)) {
       prices.push({ amount, currency: currency.toUpperCase(), source: 'microdata' });
     }
   }
 
-  const ogAmount = root.querySelector?.(
+  const ogAmount = root.querySelector(
     'meta[property="product:price:amount"], meta[property="og:price:amount"]',
   );
-  const ogCurrency = root.querySelector?.(
+  const ogCurrency = root.querySelector(
     'meta[property="product:price:currency"], meta[property="og:price:currency"]',
   );
-  const amount = toAmount(ogAmount?.getAttribute('content'));
-  const currency = ogCurrency?.getAttribute('content') ?? '';
-  if (amount !== null && amount > 0 && isCurrency(currency)) {
+  const amount = toAmount(ogAmount?.getAttribute('content')) ?? 0;
+  const currency = ogCurrency?.getAttribute('content');
+  if (amount > 0 && isCurrency(currency)) {
     prices.push({ amount, currency: currency.toUpperCase(), source: 'meta' });
   }
 
@@ -128,14 +131,15 @@ export function digitProjection(text: string): string {
  * Plausible on-screen renderings of a structured amount, as digit projections.
  * "$49.99" may be rendered "$49.99", "49,99 $", or split into "$49" + "99",
  * all of which project to "4999" or "49".
+ *
+ * An amount that renders no digits contributes nothing: an empty projection
+ * would match every element on the page that shows no price at all.
  */
 export function projectionsFor(amount: number): string[] {
   const out = new Set<string>();
-  const fixed = amount.toFixed(2);
-  out.add(digitProjection(fixed));
+  out.add(digitProjection(amount.toFixed(2)));
   out.add(digitProjection(String(amount)));
   out.add(digitProjection(String(Math.round(amount))));
-  if (Number.isInteger(amount)) out.add(digitProjection(amount.toFixed(2)));
   return [...out].filter(Boolean);
 }
 
@@ -151,15 +155,13 @@ export interface Located {
  * says what that node MEANS. Independently useless, jointly decisive.
  */
 export function locatePrices(root: ParentNode, prices: StructuredPrice[]): Located[] {
-  if (prices.length === 0) return [];
-
-  const candidates = Array.from(root.querySelectorAll('*'))
-    .filter((el) => el.children.length > 0 || textOf(el).length > 0);
-
   const located: Located[] = [];
   const claimed = new Set<Element>();
+  // Most pages state no price in markup at all; do not walk them for nothing.
+  let candidates: Element[] | null = null;
 
   for (const price of prices) {
+    candidates ??= Array.from(root.querySelectorAll('*'));
     const targets = new Set(projectionsFor(price.amount));
     // Shopify themes leak cents-integers into JSON-LD ("15900" for $159.00).
     // Note the two readings project to the SAME digits, so the projection alone
@@ -167,36 +169,25 @@ export function locatePrices(root: ParentNode, prices: StructuredPrice[]): Locat
     const centsCandidate = Number.isInteger(price.amount) && price.amount >= 1000
       ? price.amount / 100
       : null;
-    const centsTargets = centsCandidate === null
-      ? null
-      : new Set(projectionsFor(centsCandidate));
 
-    let best: Element | null = null;
-    let bestSize = Infinity;
-    let bestText = '';
+    let best: { element: Element; text: string; size: number } | null = null;
 
     for (const el of candidates) {
       if (claimed.has(el)) continue;
       const text = textOf(el);
-      const projection = digitProjection(text);
-      if (!projection) continue;
-      if (!targets.has(projection) && centsTargets?.has(projection) !== true) continue;
+      if (!targets.has(digitProjection(text))) continue;
 
       const size = el.getElementsByTagName('*').length;
-      if (size < bestSize) {
-        best = el;
-        bestSize = size;
-        bestText = text;
-      }
+      if (best === null || size < best.size) best = { element: el, text, size };
     }
 
     if (best) {
-      claimed.add(best);
+      claimed.add(best.element);
       // A visible two-decimal rendering means the on-screen value already has
       // its cents; an integer claim of the same digits was cents all along.
-      const showsCents = /\d[.,]\d{2}(?!\d)/.test(bestText);
+      const showsCents = /\d[.,]\d{2}(?!\d)/.test(best.text);
       const amount = centsCandidate !== null && showsCents ? centsCandidate : price.amount;
-      located.push({ element: best, price: { ...price, amount } });
+      located.push({ element: best.element, price: { ...price, amount } });
     }
   }
 

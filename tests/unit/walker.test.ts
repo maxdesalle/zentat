@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SPAN_CLASS } from '../../src/entrypoints/content/markers';
 import {
+  accessibleCopyCovers,
   accessiblePriceText,
   isConvertible,
   isInteractiveControl,
@@ -352,6 +353,42 @@ describe('accessiblePriceText', () => {
   });
 });
 
+describe('accessibleCopyCovers', () => {
+  describe('given the copy accounts for every price inside', () => {
+    it('may stand in for the element', () => {
+      // "-40% $18.79" covers a child reading "$18.79": same digits, so the
+      // copy really is describing this element and nothing else.
+      render('<div id="p"><span>-40%</span><span>$18.79</span></div>');
+      expect(accessibleCopyCovers(document.getElementById('p')!, '-40% $18.79'))
+        .toBe('-40% $18.79');
+    });
+  });
+
+  describe('given a child holds a price the copy does not mention', () => {
+    it('may not', () => {
+      // This is the guard that stops <body> adopting the first hidden price
+      // on the page as its own whole text — which marked the body converted
+      // and silently dropped every other price for the rest of the visit.
+      render('<div id="p"><span>$18.79</span><span>$0.47 / ounce</span></div>');
+      expect(accessibleCopyCovers(document.getElementById('p')!, '$18.79')).toBeNull();
+    });
+  });
+
+  describe('given a child holds no price at all', () => {
+    it('is not counted against the copy', () => {
+      render('<div id="p"><span>Deal of the day</span><span>$18.79</span></div>');
+      expect(accessibleCopyCovers(document.getElementById('p')!, '$18.79')).toBe('$18.79');
+    });
+  });
+
+  describe('given there is no copy', () => {
+    it('reports nothing', () => {
+      render('<div id="p">$18.79</div>');
+      expect(accessibleCopyCovers(document.getElementById('p')!, null)).toBeNull();
+    });
+  });
+});
+
 describe('isConvertible', () => {
   describe('given a skipped tag', () => {
     it('is not convertible', () => {
@@ -394,6 +431,55 @@ describe('walkPriceElements', () => {
   describe('given a root that is not an element or document', () => {
     it('returns nothing', () => {
       expect(walkPriceElements(document.createTextNode('$19.99'))).toEqual([]);
+    });
+  });
+
+  describe('given an element whose text is far too long to be a price', () => {
+    it('is skipped before its text is examined', () => {
+      // The cheap length check runs first so a page-sized element never gets
+      // cloned or pattern-matched. A whole article is not a price.
+      const long = `$19.99 ${'word '.repeat(3000)}`;
+      const results = walkPriceElements(render(`<p>${long}</p>`));
+      expect(results.filter((r) => r.node.tagName === 'P')).toHaveLength(0);
+    });
+  });
+
+  describe('given an element that is only whitespace', () => {
+    it('is skipped', () => {
+      expect(textsFrom('<span>   </span>')).toEqual([]);
+    });
+  });
+
+  describe('given a parent whose direct text spans several nodes', () => {
+    it('keeps them separated', () => {
+      // Joined with nothing between them, "$10" and "$8" become "$10$8" and
+      // parse as one number.
+      const results = walkPriceElements(render(
+        '<p>$10<span>x</span>$8<span><em>$5</em></span></p>',
+      ));
+      const parent = results.find((r) => r.node.tagName === 'P');
+      expect(parent?.text).toContain('$10 ');
+    });
+  });
+
+  describe('given a parent whose direct text is too long', () => {
+    it('is left alone', () => {
+      const filler = 'word '.repeat(300);
+      const results = walkPriceElements(render(
+        `<p>$10 ${filler}<span>$8</span></p>`,
+      ));
+      expect(results.filter((r) => r.directTextOnly)).toHaveLength(0);
+    });
+  });
+
+  describe('given a page that exhausts the pass budget', () => {
+    it('stops rather than freezing the tab', () => {
+      // The per-element cap bounds one string, not the pass. The number
+      // patterns are quadratic on long digit runs, so an unbounded pass is
+      // seconds of frozen main thread.
+      const filler = '1'.repeat(900);
+      const cells = Array.from({ length: 400 }, () => `<p>$19.99 ${filler}</p>`).join('');
+      expect(walkPriceElements(render(cells)).length).toBeLessThan(400);
     });
   });
 

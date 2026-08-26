@@ -62,6 +62,15 @@ WalkerTest
 │   │   └── it is not concatenated
 │   └── given the symbol is spaced away from the digits
 │       └── it is still concatenated
+├── accessibleCopyCovers
+│   ├── given the copy accounts for every price inside
+│   │   └── it may stand in for the element
+│   ├── given a child holds a price the copy does not mention
+│   │   └── it may not
+│   ├── given a child holds no price at all
+│   │   └── it is not counted against the copy
+│   └── given there is no copy
+│       └── it reports nothing
 ├── accessiblePriceText
 │   ├── given an aria-label holding a price
 │   │   └── it uses the label
@@ -89,6 +98,16 @@ WalkerTest
 └── walkPriceElements
     ├── given a root that is not an element or document
     │   └── it returns nothing
+    ├── given an element whose text is far too long to be a price
+    │   └── it is skipped before its text is examined
+    ├── given an element that is only whitespace
+    │   └── it is skipped
+    ├── given a parent whose direct text spans several nodes
+    │   └── it keeps them separated
+    ├── given a parent whose direct text is too long
+    │   └── it is left alone
+    ├── given a page that exhausts the pass budget
+    │   └── it stops rather than freezing the tab
     ├── given a site adapter declares price containers
     │   ├── it collects the container as a whole
     │   ├── it marks it as a price container

@@ -18,6 +18,13 @@ beforeEach(() => {
 
 const jsonLd = (data: unknown) => rawJsonLd(JSON.stringify(data));
 
+/** A price buried `depth` levels down, the way a real @graph nests it. */
+function nest(depth: number, leaf: unknown): unknown {
+  let node = leaf;
+  for (let i = 0; i < depth; i++) node = { isPartOf: node };
+  return node;
+}
+
 function rawJsonLd(text: string) {
   const script = document.createElement('script');
   script.type = 'application/ld+json';
@@ -109,10 +116,23 @@ describe('readStructuredPrices', () => {
     describe('given a block is larger than the parse cap', () => {
       it('skips that block', () => {
         // Some CMSes emit a whole catalogue. Parsing half a megabyte of JSON
-        // on the main thread is a visible freeze for one price.
-        rawJsonLd(`{"padding":"${'x'.repeat(600 * 1024)}"}`);
+        // on the main thread is a visible freeze for one price. The prices it
+        // holds go unread with it, or the cap buys nothing.
+        rawJsonLd(`{"priceCurrency":"USD","price":"1.00","padding":"${'x'.repeat(600 * 1024)}"}`);
         jsonLd({ offers: { price: '7.50', priceCurrency: 'USD' } });
-        expect(readStructuredPrices()).toHaveLength(1);
+        expect(readStructuredPrices()).toEqual([
+          { amount: 7.5, currency: 'USD', source: 'jsonld' },
+        ]);
+      });
+    });
+
+    describe('given a block is exactly the size of the parse cap', () => {
+      it('reads that block', () => {
+        // The cap is the largest block we will parse, not the first we refuse.
+        const head = '{"priceCurrency":"USD","price":"3.25","pad":"';
+        const tail = '"}';
+        rawJsonLd(head + 'x'.repeat(512 * 1024 - head.length - tail.length) + tail);
+        expect(readStructuredPrices()[0]?.amount).toBe(3.25);
       });
     });
 
@@ -145,9 +165,64 @@ describe('readStructuredPrices', () => {
       });
     });
 
+    describe('given the price is zero', () => {
+      it('ignores the block', () => {
+        // A zero is "not for sale" far more often than "free", and a 0 ZEC
+        // price on screen reads as a bug either way.
+        jsonLd({ offers: { price: 0, priceCurrency: 'USD' } });
+        expect(readStructuredPrices()).toEqual([]);
+      });
+    });
+
     describe('given there is no currency', () => {
       it('ignores the block — an amount alone is not a price', () => {
         jsonLd({ offers: { price: '49.99' } });
+        expect(readStructuredPrices()).toEqual([]);
+      });
+    });
+
+    describe('given one offer states no currency', () => {
+      it('still reads the offers that do', () => {
+        // A currency-less offer is a gap in one entry, not a reason to drop
+        // the priced entries that share the block with it.
+        jsonLd({ offers: [{ price: '1.00' }, { price: '2.00', priceCurrency: 'USD' }] });
+        expect(readStructuredPrices()).toEqual([
+          { amount: 2, currency: 'USD', source: 'jsonld' },
+        ]);
+      });
+    });
+
+    describe('given the currency is not a bare three-letter code', () => {
+      it('ignores the block', () => {
+        // Anything but an exact ISO code is a guess, and a guessed currency is
+        // a wrong price: USDT is not USD, and "$USD" names nothing at all.
+        jsonLd({ offers: { price: '49.99', priceCurrency: 'USDT' } });
+        jsonLd({ offers: { price: '49.99', priceCurrency: '$USD' } });
+        expect(readStructuredPrices()).toEqual([]);
+      });
+    });
+
+    describe('given a null sits in the tree', () => {
+      it('keeps reading past it', () => {
+        // Null-valued properties are everywhere in generated JSON-LD, and they
+        // sit in front of the price often enough to hide it.
+        jsonLd({ brand: null, offers: { price: '7.50', priceCurrency: 'USD' } });
+        expect(readStructuredPrices()).toHaveLength(1);
+      });
+    });
+
+    describe('given the price sits at the deepest level the walker follows', () => {
+      it('reads it', () => {
+        jsonLd(nest(12, { price: '7.50', priceCurrency: 'USD' }));
+        expect(readStructuredPrices()[0]?.amount).toBe(7.5);
+      });
+    });
+
+    describe('given the price sits deeper than that', () => {
+      it('leaves it unread', () => {
+        // The walk is bounded because the tree is someone else's: a page can
+        // nest as deep as it likes, and this runs on the main thread.
+        jsonLd(nest(13, { price: '7.50', priceCurrency: 'USD' }));
         expect(readStructuredPrices()).toEqual([]);
       });
     });
@@ -295,6 +370,22 @@ describe('projectionsFor', () => {
       // "$10" is very often written "$10.00" on the page it came from.
       expect(projectionsFor(10)).toContain('1000');
       expect(projectionsFor(10)).toContain('10');
+    });
+  });
+
+  describe('given more decimals than a currency shows', () => {
+    it('covers the amount exactly as written', () => {
+      // Fuel is quoted "$3.499" on the sign and in the markup, so rounding to
+      // two places is not enough to find it.
+      expect(projectionsFor(3.499)).toContain('3499');
+    });
+  });
+
+  describe('given an amount that is not a real number', () => {
+    it('offers nothing to match', () => {
+      // An empty projection is a wildcard: it equals the digits of every
+      // element that shows no price, so it must never reach the target set.
+      expect(projectionsFor(Number.NaN)).toEqual([]);
     });
   });
 });

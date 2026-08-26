@@ -54,14 +54,11 @@ export function validateRates(incoming: RatesData, previous: RatesData): Validat
 
     const last = previous.rates[code];
     const lastFresh = previous.updatedAt > 0
-      && Date.now() - (previous.rateUpdatedAt?.[code] ?? previous.updatedAt) <= 24 * 60 * 60 * 1000
-      // A currency we have never quoted has nothing to compare against. The
-      // delta below reaches the same answer on its own, since subtracting an
-      // absent baseline gives NaN and NaN fails every comparison, but saying
-      // it beats making the next reader derive it.
-      // Stryker disable next-line ConditionalExpression: unobservable, see above.
-      && last !== undefined;
+      && Date.now() - (previous.rateUpdatedAt?.[code] ?? previous.updatedAt) <= 24 * 60 * 60 * 1000;
 
+    // A currency we have never quoted has nothing to be held to: `last` is
+    // undefined, the delta below comes out NaN, and NaN fails the comparison,
+    // so its first quote stands.
     if (lastFresh && Math.abs(value - last) / last > MAX_DELTA) {
       const count = (rejections.get(code) ?? 0) + 1;
       if (count < MAX_CONSECUTIVE_REJECTIONS) {

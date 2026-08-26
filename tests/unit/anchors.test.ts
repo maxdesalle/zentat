@@ -45,6 +45,22 @@ describe('anchorZecValue', () => {
     });
   });
 
+  describe('given a stored amount and rate that are both negative', () => {
+    it('cannot price it', () => {
+      // Two sign errors multiply into a plausible-looking positive price, which
+      // is exactly the shape of wrong price the user cannot spot.
+      expect(anchorZecValue({ ...coffee, amount: -5 }, { ...rates, rates: { USD: -0.00125 } }))
+        .toBeNull();
+    });
+  });
+
+  describe('given the rate is zero', () => {
+    it('cannot price it', () => {
+      // A free anchor divides into every price on the page as "Infinity coffees".
+      expect(anchorZecValue(coffee, { ...rates, rates: { USD: 0 } })).toBeNull();
+    });
+  });
+
   describe('given the arithmetic does not produce a usable number', () => {
     it('cannot price it', () => {
       // An anchor stored from a corrupted record, or a rate that overflowed.
@@ -93,6 +109,20 @@ describe('compareToAnchors', () => {
 
     it('drops one that is too large', () => {
       expect(compareToAnchors(100_000, [coffee], rates)).toEqual([]);
+    });
+  });
+
+  describe('given a comparison sitting exactly on the edge of the useful range', () => {
+    // One anchor priced at exactly 0.5 ZEC, so the counts below are exact.
+    const edgeRates: RatesData = { ...rates, rates: { USD: 0.5 } };
+    const unit = createAnchor('units', 1, 'USD', edgeRates)!;
+
+    it('keeps the smallest countable multiple', () => {
+      expect(compareToAnchors(0.1, [unit], edgeRates)[0].count).toBe(0.2);
+    });
+
+    it('keeps the largest countable multiple', () => {
+      expect(compareToAnchors(2500, [unit], edgeRates)[0].count).toBe(5000);
     });
   });
 
@@ -185,6 +215,15 @@ describe('driftedAnchors', () => {
     expect(driftedAnchors([coffee, euro], moved)[0].anchor.label).toBe('dinners');
   });
 
+  describe('given an anchor sitting exactly on the threshold', () => {
+    it('flags it', () => {
+      // Set at 5 ZEC, now 6: a re-look is due at the threshold, not past it.
+      const onTheLine = { ...coffee, amount: 1, zecWhenSet: 5 };
+      const moved: RatesData = { ...rates, rates: { USD: 6 } };
+      expect(driftedAnchors([onTheLine], moved)[0].change).toBe(0.2);
+    });
+  });
+
   describe('given the anchor can no longer be priced', () => {
     it('is skipped', () => {
       expect(driftedAnchors([{ ...coffee, currency: 'JPY' }], rates)).toEqual([]);
@@ -207,6 +246,12 @@ describe('createAnchor', () => {
 
   it('gives each anchor its own id', () => {
     expect(anchor('coffees', 5).id).not.toBe(anchor('coffees', 5).id);
+  });
+
+  it('gives the id a compact, opaque shape', () => {
+    // The id is persisted in settings and is the key used to remove an anchor,
+    // so it stays a short token rather than the digits of a raw float.
+    expect(anchor('coffees', 5).id).toMatch(/^[0-9a-z]+-[0-9a-z]{6}$/);
   });
 
   it('upper-cases the currency', () => {

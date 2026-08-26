@@ -28,7 +28,10 @@ export const DRIFT_THRESHOLD = 0.2;
 /** An anchor's cost in ZEC at the current rate, or null if we can't price it. */
 export function anchorZecValue(anchor: Anchor, rates: RatesData): number | null {
   const rate = rates.rates[anchor.currency.toUpperCase()];
-  if (rate === undefined || !(anchor.amount > 0)) return null;
+  // Stryker disable next-line ConditionalExpression: this narrows the type for the multiply below; an undefined rate would otherwise propagate as NaN and be rejected there anyway.
+  if (rate === undefined) return null;
+  // Stryker disable next-line EqualityOperator: only amount === 0 separates > from >=, and 0 times any rate still fails the value > 0 check below.
+  if (!(anchor.amount > 0)) return null;
   const value = anchor.amount * rate;
   return Number.isFinite(value) && value > 0 ? value : null;
 }
@@ -55,11 +58,13 @@ export function compareToAnchors(
   rates: RatesData,
   limit = 2,
 ): Comparison[] {
+  // Stryker disable next-line EqualityOperator: only zecAmount === 0 separates > from >=, and a count of 0 sits below MIN_USEFUL_COUNT, so every anchor drops out either way.
   if (!(zecAmount > 0)) return [];
 
   const scored: Array<Comparison & { distance: number }> = [];
   for (const anchor of anchors) {
     const value = anchorZecValue(anchor, rates);
+    // Stryker disable next-line ConditionalExpression: null coerces to 0, so without this guard the count is Infinity and the range check below drops the anchor anyway.
     if (value === null) continue;
     const count = zecAmount / value;
     if (count < MIN_USEFUL_COUNT || count > MAX_USEFUL_COUNT) continue;
@@ -74,7 +79,8 @@ export function compareToAnchors(
 
 /** Round a multiple to something speakable: "14 coffees", not "13.87 coffees". */
 export function formatCount(count: number, locale?: string): string {
-  const digits = count >= 100 ? 0 : count >= 10 ? 0 : count >= 1 ? 1 : 2;
+  // Stryker disable next-line EqualityOperator: both boundaries are integers, and an integer reads the same at 0, 1 or 2 decimals, so > and >= are indistinguishable.
+  const digits = count >= 10 ? 0 : count >= 1 ? 1 : 2;
   return new Intl.NumberFormat(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: digits,
