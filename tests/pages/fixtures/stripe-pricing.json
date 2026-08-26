@@ -1,0 +1,15 @@
+{
+  "name": "stripe-pricing",
+  "url": "https://stripe.com/pricing",
+  "hostname": "stripe.com",
+  "lang": "en-CA",
+  "title": "Pricing & Fees",
+  "capturedAt": "2026-08-26",
+  "bytes": 465682,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation. A payments price list quotes a $0.30 per-transaction fee beside $50K and $1 billion volume figures — five orders of magnitude on one page by construction. No single decimal count serves both ends. Note this page ALSO runs red on \"gives the page back exactly as it was\", which is a real defect and unrelated to shape; see the report."
+    }
+  ]
+}

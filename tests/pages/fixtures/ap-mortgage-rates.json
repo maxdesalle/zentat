@@ -1,0 +1,15 @@
+{
+  "name": "ap-mortgage-rates",
+  "url": "https://apnews.com/article/interest-rates-home-sales-mortgage-rates-housing-173e9fb5ed07cb5f2f739ea67e0412d8",
+  "hostname": "apnews.com",
+  "lang": "en",
+  "title": "Average 30-year US mortgage rate climbs to 6.58%, highest level in nearly a year | AP News",
+  "capturedAt": "2026-08-26",
+  "bytes": 543065,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Editorial prose is not a price column. A single finance article names a GBP5 monthly bill and a GBP7bn debt in the same paragraph, and no page-wide decimal count can render both: the bill needs three decimals to be nonzero, the debt needs none. The rule is right for a shop shelf and structurally unreachable for a news article."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "aws-s3-pricing",
+  "url": "https://aws.amazon.com/s3/pricing/",
+  "hostname": "aws.amazon.com",
+  "lang": "en-US",
+  "title": "S3 Pricing",
+  "capturedAt": "2026-08-26",
+  "bytes": 410016,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation, the same shape as openai-pricing. A cost page quotes $0.0000167 per 1,000 requests beside $1,045.88 monthly totals. The page grid is set from the median, and the per-amount significant-figure cap plus the round-to-zero escape hatch then pull the extremes apart in both directions."
+    },
+    {
+      "invariant": "no unreadable magnitudes",
+      "why": "Genuine limitation. $0.00001953 per request is 0.00000002504 ZEC. The rule that a nonzero price must never render as 0.00 expands it to eleven decimals. Whether a price this small should convert at all is the open question openai-pricing already raised."
+    }
+  ]
+}

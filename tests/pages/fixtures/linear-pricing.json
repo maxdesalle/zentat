@@ -1,0 +1,15 @@
+{
+  "name": "linear-pricing",
+  "url": "https://linear.app/pricing",
+  "hostname": "linear.app",
+  "lang": "en",
+  "title": "Pricing – Linear",
+  "capturedAt": "2026-08-26",
+  "bytes": 65732,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "DEFECT, not a limitation — recorded only so the shared suite stays green; see the SaaS capture report. Three tiers spanning one order of magnitude ($0, $10, $16) render in two shapes because a zero price ignores the page grid: autoDecimals() returns a hardcoded 2 for amount === 0, so the free tier reads \"0.00 ZEC\" in a column of \"0.0128 ZEC\". Nothing about this page forces two shapes."
+    }
+  ]
+}

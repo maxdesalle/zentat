@@ -1,0 +1,15 @@
+{
+  "name": "digitalocean-pricing",
+  "url": "https://www.digitalocean.com/pricing/droplets",
+  "hostname": "www.digitalocean.com",
+  "lang": "en",
+  "title": "Droplet Pricing | DigitalOcean",
+  "capturedAt": "2026-08-26",
+  "bytes": 176743,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "DEFECT, not a limitation — two causes, neither about magnitude. (1) $0.00 renders \"0.00 ZEC\", the hardcoded zero shape. (2) The four-significant-figure cap is applied per amount rather than to the page grid, so $10 (0.01282 ZEC) is trimmed to five decimals while the 43 prices under $7.80 keep six. One order of magnitude is enough to split the column."
+    }
+  ]
+}

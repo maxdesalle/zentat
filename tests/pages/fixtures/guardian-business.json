@@ -1,0 +1,15 @@
+{
+  "name": "guardian-business",
+  "url": "https://www.theguardian.com/uk/business",
+  "hostname": "www.theguardian.com",
+  "lang": "en",
+  "title": "Latest financial, market & economic news and analysis | Business | The Guardian",
+  "capturedAt": "2026-08-26",
+  "bytes": 215651,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Editorial prose is not a price column. A single finance article names a GBP5 monthly bill and a GBP7bn debt in the same paragraph, and no page-wide decimal count can render both: the bill needs three decimals to be nonzero, the debt needs none. The rule is right for a shop shelf and structurally unreachable for a news article."
+    }
+  ]
+}

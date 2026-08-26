@@ -1,0 +1,19 @@
+{
+  "name": "ap-corporate-settlements",
+  "url": "https://apnews.com/article/meta-settlement-bp-enron-jpmorgan-b3fdba01935ee4ff16a08fad1bb61cab",
+  "hostname": "apnews.com",
+  "lang": "en",
+  "title": "Meta joins a list of corporations that have settled cases for billions of dollars | AP News",
+  "capturedAt": "2026-08-26",
+  "bytes": 595983,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Editorial prose is not a price column. A single finance article names a GBP5 monthly bill and a GBP7bn debt in the same paragraph, and no page-wide decimal count can render both: the bill needs three decimals to be nonzero, the debt needs none. The rule is right for a shop shelf and structurally unreachable for a news article."
+    },
+    {
+      "invariant": "no unreadable magnitudes",
+      "why": "A settlement or a valuation genuinely is billions of fiat, which is tens or hundreds of millions of ZEC. The digits are not a formatting mistake, they are the number. The open question is whether a figure at this scale should convert at all rather than how to shorten it."
+    }
+  ]
+}

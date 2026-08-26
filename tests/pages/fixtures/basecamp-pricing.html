@@ -1,0 +1,786 @@
+
+
+<div class="tracking tracking--hidden" aria-hidden="true" data-tracking-target="permissionDialog">
+  <div class="tracking__container">
+    <div class="tracking__content">
+      <p>We’d like to use cookies to help understand if our ads are working or not.</p>
+    </div>
+    <div class="tracking__buttons buttons">
+      <button class="button button--small button--deny" data-action="tracking#deny">
+        <span>No, thanks</span>
+      </button>
+      <button class="button button--small button--grant" data-action="tracking#grant">
+        <span>Yes, that’s fine</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+
+    <main class="main">
+
+      <div class="layout">
+        <div class="layout__headline">
+
+<a class="logo logo--left" href="/" aria-label="Basecamp">
+  <div>
+    
+  </div>
+</a>
+
+
+          <div class="headline headline--full">
+            <header>
+              <h1>No per-user fees, everyone’s included.<br> Simple fixed prices — another Basecamp exclusive.</h1>
+            </header>
+            <article>
+              <p class="data-display data-display--ready">
+                <span class="data-display__value">
+                  
+                  <strong class="data-display__signups">2,381</strong>
+                </span>
+                <span class="data-display__copy">organizations signed up last week. You’re in good company.</span>
+              </p>
+            </article>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="pricing space-top--x-large">
+        <div class="pricing__container">
+          <div class="pricing__chooser" role="group" aria-label="Choose a package">
+
+            <input type="radio" name="pricing" id="pricing-free">
+            <input type="radio" name="pricing" id="pricing-freelancer">
+            <input type="radio" name="pricing" id="pricing-studio" checked="">
+            <input type="radio" name="pricing" id="pricing-pro">
+            <input type="radio" name="pricing" id="pricing-unlimited">
+
+            
+
+            <div class="pricing__labels">
+              <label for="pricing-free">
+                <span class="pricing__label-name">Free</span>
+                <span class="pricing__label-limits">1 project</span>
+              </label>
+              <label for="pricing-freelancer">
+                <span class="pricing__label-name">Freelancer</span>
+                <span class="pricing__label-limits">3 projects, 5 GB</span>
+              </label>
+              <label for="pricing-studio">
+                <span class="pricing__label-name">Studio <span class="flag flag--dim">Not sure? Start here</span></span>
+                <span class="pricing__label-limits">10 projects, 25 GB</span>
+              </label>
+              <label for="pricing-pro">
+                <span class="pricing__label-name">Pro <span class="flag">The sweet spot</span></span>
+                <span class="pricing__label-limits">25 projects, 100 GB</span>
+              </label>
+              <label for="pricing-unlimited">
+                <span class="pricing__label-name">Unlimited Edition</span>
+                <span class="pricing__label-limits">Unlimited projects, 1 TB</span>
+              </label>
+            </div>
+
+            <div class="pricing__packages">
+
+              <div class="pricing__package pricing__package--free">
+                <header>
+                  <h2>Free</h2>
+                  <p>One free project for personal use.</p>
+                </header>
+                <a class="button trk-package" id="package-free" href="https://app.basecamp.com/signup/account/new?plan=free_v3" data-pricing-plan="Free" data-controller="signup" data-action="signup#track">
+                  <span>Sign up free</span>
+                </a>
+                <ul>
+                  <li>1 project
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about the project limit">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>The free plan is limited to one project. You can always upgrade for more.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>1 GB storage space
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about storage space">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>You can upgrade if you ever need more file storage.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>5 users max</li>
+                  <li>Bring your own AI agents
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about AI agents">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>CLI access and skills for AI agents you run on your computer.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>ChatGPT and Claude AI connectors
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about AI connectors">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Official Basecamp support for ChatGPT, Claude, and AI agents with full MCP support (coming soon).</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li class="x">Project templates</li>
+                  <li class="x">Multiple tools per project</li>
+                  <li class="x">Time tracking</li>
+                  <li class="x">Enhanced admin features</li>
+                </ul>
+              </div>
+
+              <div class="pricing__package pricing__package--freelancer">
+                <header>
+                  <h2>Freelancer, <span>$25</span><small>/mo</small></h2>
+                  <p>Get organized, impress your clients.</p>
+                </header>
+                <a class="button trk-package" id="package-freelancer" href="https://app.basecamp.com/signup/account/new?plan=freelancer_v1" data-pricing-plan="Freelancer" data-controller="signup" data-action="signup#track">
+                  <span>Start a 30-day free trial</span>
+                </a>
+                <ul>
+                  <li><strong>Up to 3 active projects</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about active projects">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Archived or deleted projects don’t count against your total. You could have dozens of projects, but only 3 can be active at once.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>5 GB</strong> storage space
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about storage space">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>You can upgrade if you ever need more file storage.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>20 users max, no per-user fees
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about user limits">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Add up to 20 people to your account. If you want to invite more than 20 people, you’ll need to upgrade to a higher package. STUDIO and higher include unlimited people.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>Bring your own AI agents
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about AI agents">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>CLI access and skills for AI agents you run on your computer.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>ChatGPT and Claude AI connectors
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about AI connectors">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Official Basecamp support for ChatGPT, Claude, and AI agents with full MCP support (coming soon).</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>24/7/365 support</li>
+                  <li class="x">Project templates</li>
+                  <li class="x">Multiple tools per project</li>
+                  <li class="x">Time tracking</li>
+                  <li class="x">Enhanced admin features</li>
+                  <li class="x">Annual billing</li>
+                </ul>
+              </div>
+
+              <div class="pricing__package pricing__package--studio">
+                <header>
+                  <h2>Studio, <span>$59</span><small>/mo</small></h2>
+                  <p>A great place to start with room to grow.</p>
+                </header>
+                <a class="button trk-package" id="package-studio" href="https://app.basecamp.com/signup/account/new?plan=studio_v1" data-pricing-plan="Studio" data-controller="signup" data-action="signup#track">
+                  <span>Start a 30-day free trial</span>
+                </a>
+                <ul>
+                  <li><strong>Up to 10 active projects</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about active projects">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Archived or deleted projects don’t count against your total. You could have dozens of projects, but only 10 can be active at once.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>25 GB</strong> storage space
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about storage space">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>You can upgrade if you ever need more file storage.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>UNLIMITED users, no per-user fees</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about user limits">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Add as many people as you want at no additional cost.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>UNLIMITED tools per project</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about project tools">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Add multiple message boards, chat rooms, card tables, or other tools to a single project.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>Project templates</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about project templates">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Create reusable project and to-do list templates with the same structure, workflows, and setup across projects.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>Bring your own AI agents
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about AI agents">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>CLI access and skills for AI agents you run on your computer.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>ChatGPT and Claude AI connectors
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about AI connectors">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Official Basecamp support for ChatGPT, Claude, and AI agents with full MCP support (coming soon).</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>24/7/365 support</li>
+                  <li class="x">Time tracking</li>
+                  <li class="x">Enhanced admin features</li>
+                  <li class="x">Annual billing</li>
+                </ul>
+              </div>
+
+              <div class="pricing__package pricing__package--pro">
+                <header>
+                  <h2>Pro, <span>$99</span><small>/mo</small></h2>
+                  <p>Just about everything for just about everyone.</p>
+                </header>
+                <a class="button trk-package" id="package-pro" href="https://app.basecamp.com/signup/account/new?plan=pro_v1" data-pricing-plan="Pro" data-controller="signup" data-action="signup#track">
+                  <span>Start a 30-day free trial</span>
+                </a>
+                <ul>
+                  <li><strong>Up to 25 active projects</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about active projects">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Archived or deleted projects don’t count against your total. For example, you could have a hundred projects, but only 25 can be active at once.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>100 GB</strong> storage space
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about storage space">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>You can upgrade if you ever need more file storage.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>UNLIMITED users, no per-user fees</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about user limits">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Add as many people as you want at no additional cost.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>UNLIMITED tools per project</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about project tools">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Add multiple message boards, chat rooms, card tables, or other tools to a single project.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>Project templates</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about project templates">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Create reusable project and to-do list templates with the same structure, workflows, and setup across projects.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>Time tracking</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about Timesheet upgrade">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Track hours/time spent working on projects.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>Bring your own AI agents
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about AI agents">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>CLI access and skills for AI agents you run on your computer.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>ChatGPT and Claude AI connectors
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about AI connectors">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Official Basecamp support for ChatGPT, Claude, and AI agents with full MCP support (coming soon).</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li>24/7/365 support</li>
+                  <li class="x">Enhanced admin features</li>
+                  <li class="x">Annual billing</li>
+                </ul>
+              </div>
+
+              <div class="pricing__package pricing__package--unlimited">
+                <header>
+                  <h2>Unlimited, <span>$299</span><small>/mo, billed annually</small></h2>
+                  <p>Top-of-the-line for those who want the best.</p>
+                </header>
+                <a class="button trk-package" id="package-unlimited" href="https://app.basecamp.com/signup/account/new?plan=unlimited_v1" data-pricing-plan="Unlimited" data-controller="signup" data-action="signup#track">
+                  <span>Start a 45-day free trial</span>
+                </a>
+                <ul>
+                  <li><strong>UNLIMITED projects</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about unlimited projects">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Run as many projects as you’d like. There are no limits on the Unlimited Edition.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>1000 GB</strong> storage space
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about storage space">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>You can buy 5 TB of additional space if you ever need it.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>UNLIMITED users, no per-user fees</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about user limits">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Add as many people as you want at no additional cost.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>UNLIMITED tools per project</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about project tools">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Add multiple message boards, chat rooms, card tables, or other tools to a single project.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>Project templates</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about project templates">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Create reusable project and to-do list templates with the same structure, workflows, and setup across projects.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>Time tracking</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about Timesheet upgrade">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Track hours/time spent working on projects.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>Enhanced admin features</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about Admin Pro Pack">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Gives account owners and admins greater control over access, permissions, and more.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>Bring your own AI agents</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about AI agents">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>CLI access and skills for AI agents you run on your computer.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>ChatGPT and Claude AI connectors</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about AI connectors">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Official Basecamp support for ChatGPT, Claude, and AI agents with full MCP support (coming soon).</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>Priority 24/7/365 support</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about priority support">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Jump to the front of the queue when you contact support.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>Personalized onboarding</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about personalized onboarding">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>One of our experts is happy to walk your team through Basecamp to get you up to speed.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>Annual billing + extra payment options</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about billing and payment options">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Annual billing by check, ACH, wire, or credit card.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                  <li><strong>Extended 45-day free trial</strong>
+                    <details class="pricing__helper" name="pricing-helper">
+                      <summary aria-label="More about extended free trial">
+                        <span aria-hidden="true">?</span>
+                        <small>
+                          <span>Other levels include a 30-day free trial, UNLIMITED includes 45 days.</span>
+                        </small>
+                      </summary>
+                    </details>
+                  </li>
+                </ul>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+        <div class="pricing__demo">
+          <p><strong>Want a walkthrough?</strong> Live Q&amp;A session? <a href="https://calendly.com/basecamp/demo" target="_blank" rel="noopener noreferrer">Book a personal demo</a> with our team.</p>
+        </div>
+        <blockquote class="pricing__quote">
+          <q>Basecamp is beautiful software that has resisted every wrong trend and stayed true to the things that mattered most. Highly recommended.</q>
+          <cite>
+            <strong>Tobi Lutke</strong>
+            <span>Shopify Co-Founder &amp; CEO</span>
+          </cite>
+        </blockquote>
+      </div>
+
+      <div class="layout layout--pricing layout--left space-top--xx-large">
+
+        <div class="layout__headline">
+          <div class="headline">
+            <header>
+              <h2>The same core features are included with every package.</h2>
+            </header>
+          </div>
+        </div>
+
+        <div class="layout__content">
+          <div class="content">
+            <article>
+              <p>From Free to The Unlimited Edition, you get <strong>all the essentials built in.</strong></p>
+              <ul class="list list--checks">
+                <li><strong>Message Boards</strong> for internal announcements</li>
+                <li><strong>To-dos</strong> for tracking work and accountability</li>
+                <li><strong>Card Tables</strong> is our take on Kanban for process tracking</li>
+                <li><strong>Campfires &amp; Pings</strong> for group chat and direct messaging</li>
+                <li><strong>Scheduling</strong> for deadlines, milestones, and events</li>
+                <li><strong>Docs &amp; Files</strong> for storing assets</li>
+                <li><strong>Reports &amp; Automatic Check-ins</strong> for staying up on things</li>
+                <li><strong><a href="/reliable">Rock-solid reliability</a></strong> and a record you can trust</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+
+        <div class="layout__headline">
+          <div class="headline">
+            <header>
+              <h2>A stable, well-run company is part of the deal, too.</h2>
+            </header>
+          </div>
+        </div>
+
+        <div class="layout__content">
+          <div class="content">
+            <article>
+              <p>We’ve been running an upstanding, trustworthy, sustainable business for nearly three decades. <strong>You can’t build reliable software unless you build a reliable company.</strong></p>
+              <ul class="list list--checks">
+                <li>27 profitable, financially responsible years in business</li>
+                <li>Zero debt, privately held, and built to stay, not exit</li>
+                <li>99.99% historical uptime, with full transparency</li>
+                <li>Gold standard, famously great customer service</li>
+                <li>Extensive learning library free for all customers</li>
+                <li>Direct access to our CEO via email</li>
+              </ul>
+              <h3>Risk-free, cancel anytime, no long-term lock-in</h3>
+              <p>With Basecamp, cancellation is entirely self-serve, no questions asked, no retention specialists trying to talk you out of it. Cancel any time, no long-term contracts to lock you in. Simple, straightforward, and fair, just as it should be.</p>
+              <h3>A big boost for bootstrappers &amp; small businesses</h3>
+              <p>We started our business without outside funding, and you probably did too. We know your money’s precious, and we want to help. That’s why Basecamp is intentionally affordable for start-ups, freelancers, and small businesses just getting started.</p>
+              <h3>Basecamp eliminates the Hassle Tax</h3>
+              <p>There’s no more paying separate bills, onboarding people in multiple places, training people how to use different tools, managing expenses across vendors, etc… the benefits of Basecamp go beyond price.</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="layout__headline">
+          <div class="headline">
+            <header>
+              <h2>I have pricing questions…</h2>
+            </header>
+          </div>
+        </div>
+
+        <div class="layout__content">
+          <div class="details">
+            <details id="package-changes">
+              <summary>
+                <p>Can we upgrade, downgrade, switch packages, or cancel whenever we want?</p>
+              </summary>
+              <article>
+                <p><strong>Yes, you can upgrade</strong> whenever you’d like.</p>
+                <p><strong>Yes, you can downgrade</strong> from one paid package to another paid package as long as your usage fits on the lower package. For example, if you still had 5 projects, you couldn’t downgrade to the Freelancer package which only allows 3 projects. Or if you used 145 GB of storage you couldn’t downgrade to a package that only allowed 25 GB of storage. We do not allow downgrading from a paid package to the free package. If you want to go back to free you’ll need to sign up for another free account.</p>
+                <p><strong>Yes, you can cancel any time</strong>, no questions asked, no forms to fill out, no person to talk to. If you cancel an annual package, the difference will be prorated back to your credit card.</p>
+              </article>
+            </details>
+            <details id="discounts">
+              <summary>
+                <p>Do you offer non-profit or educational discounts?</p>
+              </summary>
+              <article>
+                <p><strong>Absolutely.</strong> Basecamp is 10% off for registered 501(c)(3) non-profits, and 100% free for K-12, homeschoolers, or Universities as long as it’s used for class work only.</p>
+                <p><strong>For non-profits:</strong> <a href="mailto:nonprofits@basecamp.com">Email us</a> a copy of your 501(c)(3) paperwork right after you sign up. We’ll apply the discount once we verify your status.</p>
+                <p><strong>For teachers and homeschool parents:</strong> Right after you sign up, <a href="mailto:teachers@basecamp.com">email us</a> from your school account with the name of your school, the class you teach, and proof you’re a teacher. We’ll apply the discount after we verify everything.</p>
+                <p><strong>For students:</strong> Right after you sign up, <a href="mailto:students@basecamp.com">email us</a> from your school account with the name of your school, what you’re studying, and when you expect to graduate. We’ll apply the discount after we verify everything.</p>
+                <p><strong>Note:</strong> We can only discount one account. If you need to support multiple groups, one account will give you everything you need to support them. If you’ve been paying for Basecamp, we can’t refund or discount payments made before your discount started. We reserve the right to end the discount program due to chronic abuse of the free accounts or other circumstances. If we do, anyone who is already participating will continue to have their discounts applied. We just won’t offer up new free or discounted accounts.</p>
+              </article>
+            </details>
+            <details id="users">
+              <summary>
+                <p>Could we really add 500 users and run unlimited projects and still just pay $300/month total on the Unlimited Edition?</p>
+              </summary>
+              <article>
+                <p><strong>Yes.</strong> Basecamp is one of the few products in the entire industry with an all-inclusive, unlimited users package for one fixed, capped price. We pioneered this all-in package, and have been offering it for over a decade.</p>
+              </article>
+            </details>
+            <details id="clients">
+              <summary>
+                <p>Are clients or contractors or guests included in the user count?</p>
+              </summary>
+              <article>
+                <p>Yes, every person you add is counted, but all plans STUDIO and above include unlimited users. So you can invite as many people as you’d like to those accounts.</p>
+              </article>
+            </details>
+            <details id="credit-card">
+              <summary>
+                <p>Do I need a credit card to try Basecamp?</p>
+              </summary>
+              <article>
+                <p><strong>Nope.</strong> We don’t require a credit card on the Free account, or for any of the free trials. If you choose a pay package with a free trial, you’ll be asked to enter your credit card at the end of your trial if you want to continue. It’s entirely up to you.</p>
+              </article>
+            </details>
+            <details id="free-trial">
+              <summary>
+                <p>Will I automatically be charged when my free trial is up?</p>
+              </summary>
+              <article>
+                <p><strong>No.</strong> We don’t ask for a credit card to try Basecamp, so we couldn’t charge you even if we wanted to. If you want to continue once your trial is up, then you’d enter your credit card. You’re in complete control.</p>
+              </article>
+            </details>
+            <details id="storage">
+              <summary>
+                <p>Can we buy more storage if we need it? How much is it?</p>
+              </summary>
+              <article>
+                <p><strong>Yes.</strong> Each package includes more storage than the last. So if you need more you can upgrade to the next package. The Unlimited package includes 1 TB of data. If you ever need more than that you can add an additional 5 terabytes (that’s 5000 gigabytes) of storage for an extra $100/month. The storage can be used by all users across your entire account.</p>
+              </article>
+            </details>
+            <details id="free-package">
+              <summary>
+                <p>On the free one project package, can I delete the project and start another one?</p>
+              </summary>
+              <article>
+                <p><strong>Yes.</strong> You can only run one project at time on the Free package, but if you complete a project, or just want to get rid of the one you’re currently running, you can delete it and free up the slot to start a new one. You can’t, however, keep more than one around. So in order to start a new one, you must delete the current one.</p>
+              </article>
+            </details>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+<footer class="footer">
+  <div class="footer__content content content--full">
+    <article>
+      <h2>And there’s more…</h2>
+      <ul class="list list--more">
+        <li><a href="/5" aria-label="Basecamp 5 is here">Basecamp 5 is here</a></li>
+        <li><a href="/features" aria-label="Features and benefits">Features and benefits</a></li>
+        <li><a href="/paths" aria-label="The people’s path to Basecamp">The people’s path to Basecamp</a></li>
+        <li><a href="/agents" aria-label="Bring your AI agents to Basecamp">Bring your AI agents to Basecamp</a></li>
+        <li><a href="/reliable" aria-label="Reliable to the core">Reliable to the core</a></li>
+        <li><a href="/apps" aria-label="Apps for every platform">Apps for every platform</a></li>
+        <li><a href="/integrations" aria-label="Integrations">Integrations</a></li>
+        <li><a href="/live" data-controller="active-count" data-active-count-src-value="https://dash.37signals.com/statistics/bc5/live_usage_total.json"><span data-active-count-target="count"><number-flow></number-flow> people</span> are working in Basecamp now</a></li>
+        <li><a href="/books" aria-label="Books we’ve written">Books we’ve written</a></li>
+        <li><a href="/about" aria-label="Where we came from">Where we came from</a></li>
+        <li><a href="/small" aria-label="Come small, come all">Come small, come all</a></li>
+        <li><a href="/underdogs" aria-label="We stand with the underdogs">We stand with the underdogs</a></li>
+        <li><a href="/overkill" aria-label="Kill overkill">Kill overkill</a></li>
+        <li><a href="/guides/how-we-communicate" aria-label="How we communicate">How we communicate</a></li>
+        <li><a href="/guides/how-we-make-decisions" aria-label="How we make decisions">How we make decisions</a></li>
+        <li><a href="/guides/group-chat-problems" aria-label="Group chat problems">Group chat problems</a></li>
+        <li><a href="/guides/seven-shipping-principles" aria-label="Seven shipping principles">Seven shipping principles</a></li>
+        <li><a href="/guides/why-we-choose-profit" aria-label="Why we choose profit">Why we choose profit</a></li>
+        <li><a href="/customers" aria-label="What changed for the better?">What changed for the better?</a></li>
+        <li><a href="/hill-charts" aria-label="See where projects really stand">See where projects really stand</a></li>
+        <li><a href="/cloud-exit" aria-label="Leaving the Cloud">Leaving the Cloud</a></li>
+        <li><a href="/before-and-after" aria-label="Night &amp; day">Night &amp; day</a></li>
+        <li><a href="/learn" aria-label="Learn Basecamp">Learn Basecamp</a></li>
+        <li><a href="/accessibility" aria-label="Basecamp accessibility">Basecamp accessibility</a></li>
+        <li><a href="/community" aria-label="Basecamp community">Basecamp community</a></li>
+        <li><a href="/keyboard" aria-label="Keyboard shortcuts">Keyboard shortcuts</a></li>
+        <li><a href="/support" aria-label="Friendly folks, standing by">Friendly folks, standing by</a></li>
+        <li><a href="/bootstrapped" aria-label="Bootstrapped, profitable, &amp; proud">Bootstrapped, profitable, &amp; proud</a></li>
+        <li><a href="/newsletter" aria-label="Can we stay in touch?">Can we stay in touch?</a></li>
+        <li><a href="/managers" aria-label="Manager Playbook">Manager Playbook</a></li>
+        <li><a href="/handbook" aria-label="Employee Handbook">Employee Handbook</a></li>
+      </ul>
+    </article>
+  </div>
+  <div class="footer__legal">
+    <p>
+      <a href="/" class="icon icon--basecamp" target="_blank" rel="noopener noreferrer" aria-label="Basecamp">
+        
+        <strong>Basecamp</strong><sup>™</sup>
+      </a>
+      <span>is designed, built, and backed by</span>
+      <a href="https://37signals.com" class="icon icon--37signals" target="_blank" rel="noopener noreferrer" aria-label="37signals">
+        
+        <strong>37signals</strong><sup>™</sup>
+      </a>,
+      <span>the people behind</span>
+      <a href="https://www.hey.com" class="icon icon--hey" target="_blank" rel="noopener noreferrer" aria-label="HEY">
+        
+        <strong>HEY</strong><sup>™</sup>
+      </a>
+      <span>and</span>
+      <a href="https://www.fizzy.do" class="icon icon--fizzy" aria-label="Fizzy">
+        
+        <strong>Fizzy</strong><sup>™</sup>
+      </a>
+    </p>
+    <ul>
+      <li><a href="https://www.37status.com" target="_blank" rel="noopener noreferrer" aria-label="Status"><span aria-hidden="true"></span>Status</a></li>
+      <li><a href="/support" aria-label="Support">Support</a></li>
+      <li><a href="https://37signals.com/policies" target="_blank" rel="noopener noreferrer" aria-label="Policies">Policies</a></li>
+      <li><a href="/privacy" target="_blank" rel="noopener noreferrer" aria-label="Privacy">Privacy</a></li>
+      <li><a href="/security" target="_blank" rel="noopener noreferrer" aria-label="Security">Security</a></li>
+      <li><a href="/reliable" aria-label="Reliability">Reliability</a></li>
+      <li><a href="https://launchpad.37signals.com/signin" target="_blank" rel="noopener noreferrer" data-controller="signup" data-action="signup#trackLogin" aria-label="Sign in">Sign in</a></li>
+      <li>© 37signals LLC</li>
+    </ul>
+  </div>
+</footer>
+
+
+<div class="theme">
+  <button type="button" aria-label="Choose a color theme">
+    
+  </button>
+</div>
+
+
+<dialog class="modal">
+  <div class="modal__backdrop"></div>
+  <div class="modal__container"></div>
+</dialog>
+
+
+  
+
+

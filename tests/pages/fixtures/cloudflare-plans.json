@@ -1,0 +1,19 @@
+{
+  "name": "cloudflare-plans",
+  "url": "https://www.cloudflare.com/plans/",
+  "hostname": "www.cloudflare.com",
+  "lang": "en",
+  "title": "Pricing",
+  "capturedAt": "2026-08-26",
+  "bytes": 525517,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation. Plan prices ($250/mo) sit in the same table as metered rates down to $0.00000007 per request — nine orders of magnitude. Note this page ALSO runs red on \"converts the same way twice\", which is a real defect and unrelated to shape; see the report."
+    },
+    {
+      "invariant": "no unreadable magnitudes",
+      "why": "Genuine limitation. $0.00000007 per request is 0.00000000008974 ZEC, fourteen decimals. Same root question as openai-pricing and aws-s3-pricing: a per-request price below a zatoshi has no honest ZEC rendering."
+    }
+  ]
+}
