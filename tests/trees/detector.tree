@@ -16,5 +16,12 @@ DetectorTest
     │   └── it lets bare-number patterns run there
     ├── given a parent whose direct text holds its own price
     │   └── it carries that through
+    ├── given a leaf element the structured claim disagrees with
+    │   └── it reads what the element shows instead
+    ├── given a leaf element whose text is not a price at all
+    │   └── it leaves it alone
+    ├── given the claim lands on our own output
+    │   ├── it does not read the span back as a price
+    │   └── it does not read an element holding one back either
     └── given a page with no prices
         └── it reports nothing

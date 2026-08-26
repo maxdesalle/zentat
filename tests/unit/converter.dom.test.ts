@@ -1302,6 +1302,28 @@ describe('reverting', () => {
     });
   });
 
+  describe('given the page wrote its class attribute unusually', () => {
+    it('puts the attribute back exactly as it was', () => {
+      // classList normalises. Stripe ships class=" Price" with a leading
+      // space; marking and unmarking it returned class="Price", leaving a
+      // one-character difference on every element we touched — a signature a
+      // page can read back with CSS.
+      document.body.innerHTML = '<p id="p" class=" Price">$800</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      revertConversions();
+      expect(document.getElementById('p')!.getAttribute('class')).toBe(' Price');
+    });
+  });
+
+  describe('given the page wrote no class attribute at all', () => {
+    it('leaves none behind', () => {
+      document.body.innerHTML = '<p id="p">$800</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      revertConversions();
+      expect(document.getElementById('p')!.hasAttribute('class')).toBe(false);
+    });
+  });
+
   describe('given a container that had no title before', () => {
     it('the title is removed rather than emptied', () => {
       onHost('www.bol.com');

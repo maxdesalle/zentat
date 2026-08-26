@@ -130,18 +130,29 @@ export function digitProjection(text: string): string {
 /**
  * Plausible on-screen renderings of a structured amount, as digit projections.
  * "$49.99" may be rendered "$49.99", "49,99 $", or split into "$49" + "99",
- * all of which project to "4999" or "49".
+ * all of which project to "4999".
  *
  * An amount that renders no digits contributes nothing: an empty projection
  * would match every element on the page that shows no price at all.
+ *
+ * A rounded projection used to be included too, for a page that states 49.99
+ * and prints "$50". It cost far more than it bought: Math.round collapses
+ * EVERY sub-dollar amount onto "0", so a 0.00002 claim on Cloudflare's pricing
+ * page matched a div reading "$0/month" and took the whole tier with it. And
+ * on the pages it did hit, it made us print a number the page does not show.
+ * Reading what is on screen is the regex path's job, and it is better at it.
  */
 export function projectionsFor(amount: number): string[] {
   const out = new Set<string>();
-  out.add(digitProjection(amount.toFixed(2)));
   out.add(digitProjection(String(amount)));
-  out.add(digitProjection(String(Math.round(amount))));
+  // An amount below half a cent pads to "0.00", whose digits match any element
+  // showing nothing but zeros — the same collapse, one decimal place along.
+  if (Math.abs(amount) >= 0.005) out.add(digitProjection(amount.toFixed(2)));
   return [...out].filter(Boolean);
 }
+
+/** A decimal separator standing between digits, as a price renders one. */
+const SHOWS_SEPARATOR = /\d[.,]\d/;
 
 export interface Located {
   element: Element;
@@ -170,12 +181,23 @@ export function locatePrices(root: ParentNode, prices: StructuredPrice[]): Locat
       ? price.amount / 100
       : null;
 
+    // The digits the amount renders as-is, before any zero-padding.
+    const exact = digitProjection(String(price.amount));
+
     let best: { element: Element; text: string; size: number } | null = null;
 
     for (const el of candidates) {
       if (claimed.has(el)) continue;
       const text = textOf(el);
-      if (!targets.has(digitProjection(text))) continue;
+      const projection = digitProjection(text);
+      if (!targets.has(projection)) continue;
+      // "$2.00" and "$200" are the same three digits, so the projection alone
+      // cannot say which one the page is showing — and reading the second as
+      // the first is a hundredfold error on a price someone is about to pay.
+      // A claim therefore reaches text that renders its own digits, or text
+      // that shows the separator a zero-padded reading requires. Same evidence
+      // as the cents-integer rule below, pointed the other way.
+      if (projection !== exact && !SHOWS_SEPARATOR.test(text)) continue;
 
       const size = el.getElementsByTagName('*').length;
       if (best === null || size < best.size) best = { element: el, text, size };

@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { detectPrices } from '../../src/entrypoints/content/detector';
+import { SPAN_CLASS } from '../../src/entrypoints/content/markers';
 
 // Spec: tests/trees/detector.tree
 
@@ -116,6 +117,45 @@ describe('detectPrices', () => {
         .find((r) => r.node.tagName === 'P')!;
       expect(parent.directTextOnly).toBe(true);
       expect(parent.prices[0].amount).toBe(10);
+    });
+  });
+
+  describe('given a leaf element the structured claim disagrees with', () => {
+    it('reads what the element shows instead', () => {
+      // "$1.00" and a claim of 100 are the same three digits. An element with
+      // no children holds exactly what the site wrote, so there is no split
+      // price for the claim to reassemble — and the number on screen is the
+      // one the user is about to spend.
+      render('<p>$1.00</p>');
+      jsonLd({ offers: { price: '100', priceCurrency: 'USD' } });
+      const [found] = detectPrices(document.body, ['USD'], 'shop.example.com');
+      expect(found.prices[0].amount).toBe(1);
+    });
+  });
+
+  describe('given a leaf element whose text is not a price at all', () => {
+    it('leaves it alone', () => {
+      // "1x" carries the digits of a claim of 1. It is not a price, and no
+      // claim about the page makes it one.
+      render('<p>1x</p>');
+      jsonLd({ offers: { price: '1', priceCurrency: 'USD' } });
+      expect(detectPrices(document.body, ['USD'], 'shop.example.com')).toEqual([]);
+    });
+  });
+
+  describe('given the claim lands on our own output', () => {
+    it('does not read the span back as a price', () => {
+      render(`<p><span class="${SPAN_CLASS}">0.01</span></p>`);
+      jsonLd({ offers: { price: '0.01', priceCurrency: 'USD' } });
+      expect(detectPrices(document.body, ['USD'], 'shop.example.com')).toEqual([]);
+    });
+
+    it('does not read an element holding one back either', () => {
+      // The second pass over a page we already converted. Nothing stood
+      // between a claim and our own text, and the conversion compounded.
+      render(`<p>0.01<span class="${SPAN_CLASS}"> ZEC</span></p>`);
+      jsonLd({ offers: { price: '0.01', priceCurrency: 'USD' } });
+      expect(detectPrices(document.body, ['USD'], 'shop.example.com')).toEqual([]);
     });
   });
 

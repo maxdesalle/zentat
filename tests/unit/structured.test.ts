@@ -361,8 +361,18 @@ describe('digitProjection', () => {
 describe('projectionsFor', () => {
   it('covers the renderings a price actually takes', () => {
     expect(projectionsFor(49.99)).toContain('4999');
-    expect(projectionsFor(49.99)).toContain('50');
     expect(projectionsFor(1000)).toContain('1000');
+  });
+
+  describe('given an amount below a dollar', () => {
+    it('never projects onto a bare zero', () => {
+      // A rounded projection made every sub-dollar amount match any element
+      // showing a zero. On Cloudflare's pricing page a 0.00002 claim bound to
+      // a div reading "$0/month" and replaced the whole free tier with it.
+      for (const amount of [0.3, 0.00002, 0.049]) {
+        expect(projectionsFor(amount)).not.toContain('0');
+      }
+    });
   });
 
   describe('given a whole number', () => {
@@ -477,6 +487,31 @@ describe('locatePrices', () => {
         { amount: 49.99, currency: 'USD', source: 'jsonld' },
       ]);
       expect(located.element.id).toBe('a');
+    });
+  });
+
+  describe('given digits that could be a padded reading or a larger number', () => {
+    it('binds only where the page shows a decimal separator', () => {
+      // "$2.00" and "$200" are the same three digits. Reading the second as
+      // the first is a hundredfold error on a price someone is about to pay,
+      // and it is what rendered Cloudflare's $200 tier as $2 worth of ZEC.
+      const price = { amount: 2, currency: 'USD', source: 'jsonld' as const };
+
+      document.body.innerHTML = '<p>$200</p>';
+      expect(locatePrices(document.body, [price])).toEqual([]);
+
+      document.body.innerHTML = '<p>$2.00</p>';
+      const found = locatePrices(document.body, [price]);
+      expect(found).toHaveLength(1);
+      expect(found[0].element.textContent).toBe('$2.00');
+    });
+  });
+
+  describe('given a claim far below anything the page shows', () => {
+    it('binds to nothing', () => {
+      document.body.innerHTML = '<div><p>$0</p><p>/month</p></div>';
+      const price = { amount: 0.00002, currency: 'USD', source: 'jsonld' as const };
+      expect(locatePrices(document.body, [price])).toEqual([]);
     });
   });
 

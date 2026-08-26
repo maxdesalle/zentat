@@ -77,6 +77,8 @@ StructuredTest
 │       └── it returns nothing
 ├── projectionsFor
 │   ├── it covers the renderings a price actually takes
+│   ├── given an amount below a dollar
+│   │   └── it never projects onto a bare zero
 │   ├── given a whole number
 │   │   └── it covers the two-decimal rendering as well
 │   ├── given more decimals than a currency shows
@@ -100,6 +102,10 @@ StructuredTest
 │   │   └── it is not chosen
 │   ├── given two elements show the same price
 │   │   └── it takes the first
+│   ├── given digits that could be a padded reading or a larger number
+│   │   └── it binds only where the page shows a decimal separator
+│   ├── given a claim far below anything the page shows
+│   │   └── it binds to nothing
 │   └── given a Shopify cents-integer
 │       ├── given the screen shows two decimals
 │       │   └── it reads the value as cents

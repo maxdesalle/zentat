@@ -29,8 +29,18 @@ interface Replacement {
   zecAmount: number;
 }
 
-/** Elements that had no class attribute until we marked them. */
-const markedWithoutClass = new WeakSet<Element>();
+/**
+ * Each marked element's class attribute exactly as its author wrote it, or
+ * null where there was none.
+ *
+ * classList normalises: adding a marker to `class=" Price"` and removing it
+ * again yields `class="Price"`, and to an element with no class attribute at
+ * all it leaves `class=""` behind. Either is a difference the page's author
+ * did not write, on every element we touched — a CSS-detectable signature of
+ * the extension, which is the one thing a privacy tool cannot leave.
+ * Restoring the string verbatim is the only form of this that has no residue.
+ */
+const originalClassAttr = new WeakMap<Element, string | null>();
 
 export function convertPricesInDocument(
   rates: RatesData,
@@ -143,7 +153,12 @@ export function convertPricesInNode(
       }
 
       if (converted) {
-        if (!node.hasAttribute('class')) markedWithoutClass.add(node);
+        // Only the FIRST mark records the page's own attribute; a later pass
+        // adding a second marker must not record our own first one as if the
+        // author had written it.
+        if (!originalClassAttr.has(node)) {
+          originalClassAttr.set(node, node.getAttribute('class'));
+        }
         node.classList.add(directTextOnly ? PARTIAL_MARKER : CONVERTED_MARKER);
         convertedCount++;
       }
@@ -514,16 +529,17 @@ function revertContainer(el: Element): void {
       el.removeAttribute('title');
     }
   }
+  // Put back the author's own attribute rather than unpicking ours from it.
+  if (originalClassAttr.has(el)) {
+    const original = originalClassAttr.get(el) ?? null;
+    if (original === null) {
+      el.removeAttribute('class');
+    } else {
+      el.setAttribute('class', original);
+    }
+    originalClassAttr.delete(el);
+    return;
+  }
   el.classList.remove(CONVERTED_MARKER);
   el.classList.remove(PARTIAL_MARKER);
-  // Only an attribute WE created. Adding a class to an element that had none
-  // leaves an empty one behind when it is removed, so every page we converted
-  // would carry a scatter of elements with `class=""` their author never
-  // wrote — the same CSS-detectable signature Zentat already removed once,
-  // arriving by another route. Plenty of real markup ships `class=""` of its
-  // own, though, so this cannot simply strip every empty one it finds.
-  if (markedWithoutClass.has(el) && el.getAttribute('class') === '') {
-    el.removeAttribute('class');
-    markedWithoutClass.delete(el);
-  }
 }

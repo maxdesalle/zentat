@@ -154,6 +154,10 @@ ConverterDomTest
 │   │   └── they are handed back when a single element is reverted too
 │   ├── given a span the page created
 │   │   └── it is left alone
+│   ├── given the page wrote its class attribute unusually
+│   │   └── it puts the attribute back exactly as it was
+│   ├── given the page wrote no class attribute at all
+│   │   └── it leaves none behind
 │   ├── given a container that had no title before
 │   │   └── the title is removed rather than emptied
 │   └── given a container that had its own title
