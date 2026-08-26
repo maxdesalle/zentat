@@ -338,6 +338,17 @@ describe('convertPricesInNode', () => {
         convertPricesInNode(document.body, freshRates(), settings());
         expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('1.00 ZEC');
       });
+
+      describe('given the region holds no price of its own', () => {
+        it('its text is still skipped', () => {
+          // With no price inside it, the region's text is walked along with
+          // the paragraph's — so the walk itself has to refuse it.
+          document.body.innerHTML = '<p>$800 <b contenteditable="true">note</b></p>';
+          convertPricesInNode(document.body, freshRates(), settings());
+          expect(document.querySelector('b')!.textContent).toBe('note');
+          expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('1.00 ZEC');
+        });
+      });
     });
   });
 
@@ -379,6 +390,15 @@ describe('convertPricesInNode', () => {
         document.body.innerHTML = '<p>$800 <span role="button">Pay $1,600</span></p>';
         convertPricesInNode(document.body, freshRates(), settings());
         expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('1.00 ZEC');
+      });
+
+      describe('given the control holds no price of its own', () => {
+        it('its text is still skipped', () => {
+          document.body.innerHTML = '<p>$800 <span role="button">Add</span></p>';
+          convertPricesInNode(document.body, freshRates(), settings());
+          expect(document.querySelector('[role="button"]')!.textContent).toBe('Add');
+          expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('1.00 ZEC');
+        });
       });
     });
   });

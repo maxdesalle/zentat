@@ -5,7 +5,8 @@ SiteFilterTest
 │   │   ├── it blocks sites in blocklist
 │   │   ├── it blocks subdomains of a plain-domain pattern
 │   │   ├── it matches case-insensitively
-│   │   └── it supports wildcard patterns
+│   │   ├── it supports wildcard patterns
+│   │   └── it blocks a site that matches only one of several entries
 │   └── allowlist mode
 │       ├── it blocks sites not in allowlist
 │       ├── it allows sites in allowlist
@@ -26,6 +27,12 @@ SiteFilterTest
 │   │   └── it strips the prefix
 │   ├── given a deep subdomain
 │   │   └── it keeps the registrable domain
+│   ├── given www sits inside a label rather than in front of it
+│   │   └── it leaves the label whole
+│   ├── given a domain name that merely ends in a suffix word
+│   │   └── it keeps the registrable domain
+│   ├── given a suffix word in front of a long top-level domain
+│   │   └── it treats it as an ordinary domain
 │   ├── given a compound public suffix
 │   │   └── it keeps three parts
 │   ├── given a subdomain of a compound public suffix

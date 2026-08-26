@@ -22,6 +22,10 @@ vi.mock('@nymproject/mix-fetch', () => ({
   disconnectMixFetch: () => disconnectMixFetch(),
 }));
 
+// debug() captures console.log when lib/log is evaluated, so the spy has to be
+// in place before the module under test pulls it in.
+const consoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
+
 const client = await import('../../src/lib/nym/client');
 
 const ok = (body: unknown = { zec: 1 }) => ({
@@ -81,6 +85,13 @@ describe('setup', () => {
       };
       expect(opts.clientOverride?.traffic?.disableMainPoissonPacketDistribution).toBe(true);
     });
+
+    it('records that the tunnel came up', async () => {
+      // Setup is the slowest and least observable thing this module does. A
+      // run with no line for it is indistinguishable from one that hung.
+      await client.nymFetch('https://api.coingecko.com/x', 1000);
+      expect(consoleLog).toHaveBeenCalledWith('Zentat:', 'Nym connected');
+    });
   });
 
   describe('given a client already exists', () => {
@@ -126,6 +137,17 @@ describe('setup', () => {
       expect((await client.nymFetch('https://api.coingecko.com/x', 1000)).success).toBe(true);
       expect(createMixFetch).toHaveBeenCalledTimes(2);
     });
+
+    it('records why', async () => {
+      // Gateway exhaustion and a dead worker both surface here as "setup
+      // failed"; only the underlying message tells them apart.
+      createMixFetch.mockRejectedValueOnce(new Error('no gateways on network'));
+      await client.nymFetch('https://api.coingecko.com/x', 1000);
+      expect(consoleLog).toHaveBeenCalledWith(
+        'Zentat:',
+        'Nym init failed: no gateways on network',
+      );
+    });
   });
 });
 
@@ -160,6 +182,20 @@ describe('fetching', () => {
       // tunnel and a merely rate-limited API.
       const result = await client.nymFetch('https://api.coingecko.com/x', 1000);
       expect(result.fatal).toBeFalsy();
+    });
+
+    it('does not pass the error page off as data', async () => {
+      // 'the transport worked' is not 'here is a price'. A rate-limit body
+      // handed on as a result puts a wrong number in front of someone who is
+      // about to spend money on it.
+      const result = await client.nymFetch('https://api.coingecko.com/x', 1000);
+      expect(result.success).toBe(false);
+      expect(result.data).toBeUndefined();
+    });
+
+    it('carries the status as the error', async () => {
+      const result = await client.nymFetch('https://api.coingecko.com/x', 1000);
+      expect(result.error).toBe('HTTP 429');
     });
   });
 
@@ -224,6 +260,18 @@ describe('fetching', () => {
       const init = mixFetch.mock.calls[0]?.[1] as { headers?: Record<string, string> };
       expect(init.headers?.['User-Agent']).toContain('Mozilla/5.0');
     });
+
+    it('sends a complete one', async () => {
+      // Bot management scores the whole string against known browsers. A
+      // fragment reads as an automated client and earns a 403 rather than a
+      // rate, which is exactly the failure the header was added to avoid.
+      await client.nymFetch('https://api.coingecko.com/x', 1000);
+      const init = mixFetch.mock.calls[0]?.[1] as { headers?: Record<string, string> };
+      expect(init.headers?.['User-Agent']).toBe(
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
+          + '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      );
+    });
   });
 });
 
@@ -234,6 +282,9 @@ describe('deadlines', () => {
       const result = await client.nymFetch('https://api.coingecko.com/x', 10);
       expect(result.success).toBe(false);
       expect(result.error).toContain('timeout');
+      // Which step ran out of time decides what to do about it: a stuck setup
+      // is a gateway problem, a stuck request is not.
+      expect(result.error).toBe('Nym fetch timeout (connect)');
     });
   });
 
@@ -243,6 +294,18 @@ describe('deadlines', () => {
       const result = await client.nymFetch('https://api.coingecko.com/x', 20);
       expect(result.success).toBe(false);
       expect(result.error).toContain('timeout');
+      expect(result.error).toBe('Nym fetch timeout (request)');
+    });
+  });
+
+  describe('given the deadline expires while reading the response', () => {
+    it('fails rather than hanging', async () => {
+      // A body that never finishes arriving hangs just as hard as a gateway
+      // that never answers, and the same deadline has to cover it.
+      mixFetch.mockResolvedValue({ ok: true, status: 200, json: () => new Promise(() => {}) });
+      const result = await client.nymFetch('https://api.coingecko.com/x', 20);
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Nym fetch timeout (response read)');
     });
   });
 
@@ -281,10 +344,50 @@ describe('deadlines', () => {
       });
     });
 
+    describe('given the deadline is exactly now', () => {
+      it('rejects rather than starting the work', async () => {
+        // A deadline that has just run out has no time left in it. Racing the
+        // work against a zero-length timer instead lets a step begin that the
+        // caller has already given up waiting for.
+        const frozen = Date.now();
+        const now = vi.spyOn(Date, 'now').mockReturnValue(frozen);
+        try {
+          await expect(client.withDeadline(Promise.resolve('ok'), frozen, 'connect'))
+            .rejects.toThrow('connect');
+        } finally {
+          now.mockRestore();
+        }
+      });
+    });
+
     describe('given the promise settles first', () => {
       it('resolves with the value', async () => {
         await expect(client.withDeadline(Promise.resolve('ok'), Date.now() + 1000, 'x'))
           .resolves.toBe('ok');
+      });
+
+      it('leaves no timer behind', async () => {
+        // The deadline here is two minutes. A pending timer that long keeps an
+        // MV3 service worker awake well after the work it guarded finished.
+        vi.useFakeTimers();
+        try {
+          await client.withDeadline(Promise.resolve('ok'), Date.now() + 120_000, 'x');
+          expect(vi.getTimerCount()).toBe(0);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('leaves no timer behind when it rejects', async () => {
+        vi.useFakeTimers();
+        try {
+          await expect(
+            client.withDeadline(Promise.reject(new Error('boom')), Date.now() + 120_000, 'x'),
+          ).rejects.toThrow('boom');
+          expect(vi.getTimerCount()).toBe(0);
+        } finally {
+          vi.useRealTimers();
+        }
       });
 
       it('propagates a rejection unchanged', async () => {
@@ -304,6 +407,13 @@ describe('deadlines', () => {
       it('rejects with the labelled step', async () => {
         await expect(client.withDeadline(new Promise(() => {}), Date.now() + 5, 'request'))
           .rejects.toThrow('request');
+      });
+
+      it('identifies itself as a deadline failure', async () => {
+        // An unhandled rejection in a service worker is logged by name. A bare
+        // 'Error' says nothing about which of the two failure modes happened.
+        await expect(client.withDeadline(new Promise(() => {}), Date.now() + 5, 'request'))
+          .rejects.toMatchObject({ name: 'DeadlineError' });
       });
     });
   });
@@ -327,6 +437,12 @@ describe('teardown', () => {
       await client.nymFetch('https://api.coingecko.com/x', 1000);
       await client.destroyNymClient();
       expect(disconnectMixFetch).toHaveBeenCalled();
+    });
+
+    it('records the teardown', async () => {
+      await client.nymFetch('https://api.coingecko.com/x', 1000);
+      await client.destroyNymClient();
+      expect(consoleLog).toHaveBeenCalledWith('Zentat:', 'Destroying Nym client...');
     });
 
     it('leaves the stored identity alone', async () => {

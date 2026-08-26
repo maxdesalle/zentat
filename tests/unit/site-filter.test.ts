@@ -48,6 +48,13 @@ describe('isSiteAllowed', () => {
       expect(isSiteAllowed('example.com', settings)).toBe(false);
       expect(isSiteAllowed('other.com', settings)).toBe(true);
     });
+
+    it('blocks a site that matches only one of several entries', () => {
+      // One entry has to be enough. Requiring every entry to match would leave
+      // the block list working only for users who blocked exactly one site.
+      const settings = { ...baseSettings, blockedSites: ['blocked.com', 'other.com'] };
+      expect(isSiteAllowed('blocked.com', settings)).toBe(false);
+    });
   });
 
   describe('allowlist mode', () => {
@@ -155,7 +162,35 @@ describe('siteToggleKey', () => {
 
   describe('given a deep subdomain', () => {
     it('keeps the registrable domain', () => {
+      expect(siteToggleKey('shop.example.com')).toBe('example.com');
       expect(siteToggleKey('a.b.example.com')).toBe('example.com');
+    });
+  });
+
+  describe('given www sits inside a label rather than in front of it', () => {
+    it('leaves the label whole', () => {
+      // Cutting 'www.' out of the middle glues two labels together, and the
+      // toggle then writes a domain that matches nothing — the button looks
+      // dead while the site keeps converting.
+      expect(siteToggleKey('secure-www.bank.com')).toBe('bank.com');
+    });
+  });
+
+  describe('given a domain name that merely ends in a suffix word', () => {
+    it('keeps the registrable domain', () => {
+      // 'banco.es' is the registrant, not a public suffix. Reading the 'co.es'
+      // inside it as one would write a per-subdomain entry and leave the rest
+      // of the bank's site converting.
+      expect(siteToggleKey('shop.banco.es')).toBe('banco.es');
+    });
+  });
+
+  describe('given a suffix word in front of a long top-level domain', () => {
+    it('treats it as an ordinary domain', () => {
+      // The compound-suffix rule covers two-letter country codes (co.uk,
+      // com.au). Anything longer is an ordinary domain, so the toggle covers
+      // the whole of it rather than the one host the user happened to be on.
+      expect(siteToggleKey('news.gov.scot')).toBe('gov.scot');
     });
   });
 

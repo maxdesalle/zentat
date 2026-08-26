@@ -57,7 +57,11 @@ describe('updateHeldRate', () => {
     it('ignores a garbage quote rather than pegging to it', () => {
       const first = updateHeldRate(null, spot({ USD: 0.00125 })).held;
       for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
-        expect(updateHeldRate(first, spot({ USD: bad }, 2_000)).held!.peg).toBe(0.00125);
+        const { held, repegged } = updateHeldRate(first, spot({ USD: bad }, 2_000));
+        expect(held!.peg).toBe(0.00125);
+        // Nothing moved, so the re-peg notice must stay quiet: a notice that
+        // fires on a bad quote teaches the user to ignore the real ones.
+        expect(repegged).toBe(false);
       }
     });
   });
@@ -72,6 +76,22 @@ describe('updateHeldRate', () => {
       );
       expect(held).toEqual({ peg: 0.00125, pegged: 2_000 });
       expect(repegged).toBe(false);
+    });
+  });
+
+  describe('given spot sits exactly one band away', () => {
+    it('holds the current peg', () => {
+      // The bound we publish is "never more than the band from spot", so a move
+      // of exactly the band is still inside what was promised. The peg is a
+      // power of two and the band a binary fraction, so this really is the
+      // boundary rather than a hair to one side of it.
+      const band = 0.125;
+      const peg = 0.0009765625;
+      const onTheBand = spot({ USD: peg * (1 + band) }, 2_000);
+      expect(updateHeldRate({ peg, pegged: 1_000 }, onTheBand, band).repegged).toBe(false);
+
+      const justPast = spot({ USD: peg * (1 + band) * 1.000001 }, 2_000);
+      expect(updateHeldRate({ peg, pegged: 1_000 }, justPast, band).repegged).toBe(true);
     });
   });
 
@@ -135,6 +155,33 @@ describe('heldRateFor', () => {
       expect(heldRateFor({ peg: 0.00125, pegged: 1 }, spot({ EUR: 0.0013 }), 'EUR')).toBeNull();
     });
   });
+
+  describe('given the numeraire is quoted at zero', () => {
+    it('returns null', () => {
+      // A zero numeraire makes the cross a division by zero, which arrives as
+      // an infinite rate rather than an obviously broken one.
+      const rates = spot({ USD: 0, EUR: 0.0013 });
+      expect(heldRateFor({ peg: 0.00125, pegged: 1 }, rates, 'EUR')).toBeNull();
+    });
+  });
+
+  describe('given the currency is quoted at zero', () => {
+    it('returns null', () => {
+      // Zero would price everything on the page at nothing.
+      const rates = spot({ USD: 0.00125, EUR: 0 });
+      expect(heldRateFor({ peg: 0.00125, pegged: 1 }, rates, 'EUR')).toBeNull();
+    });
+  });
+
+  describe('given a nonsense numeraire quote', () => {
+    it('still answers with the peg itself', () => {
+      // The displayed rate is the peg; it does not depend on the current quote.
+      // Carrying it across a cross computed from garbage would replace a good
+      // rate with a meaningless one.
+      const rates = spot({ USD: Number.POSITIVE_INFINITY });
+      expect(heldRateFor({ peg: 0.00125, pegged: 1 }, rates, 'USD')).toBe(0.00125);
+    });
+  });
 });
 
 describe('divergence', () => {
@@ -153,6 +200,13 @@ describe('divergence', () => {
   describe('given spot has no rate for the numeraire', () => {
     it('returns null', () => {
       expect(divergence({ peg: 0.001, pegged: 1 }, spot({ EUR: 0.0013 }))).toBeNull();
+    });
+  });
+
+  describe('given the numeraire is quoted at zero', () => {
+    it('returns null', () => {
+      // Reported as -100% otherwise, which would read as a real collapse.
+      expect(divergence({ peg: 0.001, pegged: 1 }, spot({ USD: 0 }))).toBeNull();
     });
   });
 });

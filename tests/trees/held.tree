@@ -12,6 +12,8 @@ HeldTest
 │   │   └── it ignores a garbage quote rather than pegging to it
 │   ├── given the stored peg is itself unusable
 │   │   └── it pegs afresh
+│   ├── given spot sits exactly one band away
+│   │   └── it holds the current peg
 │   └── when a band is given
 │       └── it uses that band instead of the default
 ├── heldRateFor
@@ -22,11 +24,19 @@ HeldTest
 │   │   └── it returns null
 │   ├── given the peg is unusable
 │   │   └── it returns null
-│   └── given spot has no rate for the numeraire
-│       └── it returns null
+│   ├── given spot has no rate for the numeraire
+│   │   └── it returns null
+│   ├── given the numeraire is quoted at zero
+│   │   └── it returns null
+│   ├── given the currency is quoted at zero
+│   │   └── it returns null
+│   └── given a nonsense numeraire quote
+│       └── it still answers with the peg itself
 └── divergence
     ├── it reports the signed gap from spot
     ├── given the peg is unusable
     │   └── it returns null
-    └── given spot has no rate for the numeraire
+    ├── given spot has no rate for the numeraire
+    │   └── it returns null
+    └── given the numeraire is quoted at zero
         └── it returns null

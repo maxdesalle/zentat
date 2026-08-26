@@ -5,21 +5,25 @@ NymClientTest
 │   │   ├── it forces tls
 │   │   ├── it sets a real per-request timeout
 │   │   ├── it pins the client id
-│   │   └── it disables the poisson stream
+│   │   ├── it disables the poisson stream
+│   │   └── it records that the tunnel came up
 │   ├── given a client already exists
 │   │   └── it reuses it
 │   ├── given setup is already in flight
 │   │   └── it joins the in-flight attempt
 │   └── given setup itself fails
 │       ├── it reports the failure
-│       └── it lets the next call try again
+│       ├── it lets the next call try again
+│       └── it records why
 ├── fetching
 │   ├── given the request succeeds
 │   │   ├── it returns the parsed body
 │   │   └── it reports the status
 │   ├── given the origin answers with an http error
 │   │   ├── it reports transport success
-│   │   └── it does not treat the tunnel as broken
+│   │   ├── it does not treat the tunnel as broken
+│   │   ├── it does not pass the error page off as data
+│   │   └── it carries the status as the error
 │   ├── given the transport throws a recoverable error
 │   │   ├── it reports failure without asking for a teardown
 │   │   └── it describes a thrown non-error too
@@ -33,11 +37,14 @@ NymClientTest
 │   ├── given the request ignores its cors mode
 │   │   └── it passes the unsafe-ignore-cors escape hatch
 │   └── given a browser user agent is required
-│       └── it sends one
+│       ├── it sends one
+│       └── it sends a complete one
 ├── deadlines
 │   ├── given the deadline expires during setup
 │   │   └── it fails rather than hanging
 │   ├── given the deadline expires during the request
+│   │   └── it fails rather than hanging
+│   ├── given the deadline expires while reading the response
 │   │   └── it fails rather than hanging
 │   ├── given a timeout is not a usable number
 │   │   └── it falls back to the default
@@ -46,16 +53,22 @@ NymClientTest
 │   ├── withDeadline
 │   │   ├── given the deadline is already in the past
 │   │   │   └── it rejects without waiting
+│   │   ├── given the deadline is exactly now
+│   │   │   └── it rejects rather than starting the work
 │   │   ├── given the promise settles first
 │   │   │   ├── it resolves with the value
+│   │   │   ├── it leaves no timer behind
+│   │   │   ├── it leaves no timer behind when it rejects
 │   │   │   └── it propagates a rejection unchanged
 │   │   └── given the deadline passes first
-│   │       └── it rejects with the labelled step
+│   │       ├── it rejects with the labelled step
+│   │       └── it identifies itself as a deadline failure
 │   └── given any failure at all
 │       └── it returns a result rather than throwing
 └── teardown
     ├── given a client exists
     │   ├── it disconnects
+    │   ├── it records the teardown
     │   └── it leaves the stored identity alone
     ├── given disconnecting throws
     │   └── it still clears local state

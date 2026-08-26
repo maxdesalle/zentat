@@ -1,10 +1,16 @@
 RatesTest
+├── MAX_RATE_AGE_MS
+│   └── it caps a rate at twenty-four hours
 ├── isRatesStale
 │   ├── given the cache has never been written
 │   │   └── it is stale
 │   ├── given the cache was written inside the window
 │   │   └── it is fresh
 │   ├── given the cache was written outside the window
+│   │   └── it is stale
+│   ├── given the cache was written exactly one window ago
+│   │   └── it is fresh
+│   ├── given the cache carries no timestamp
 │   │   └── it is stale
 │   └── when a custom window is given
 │       └── it uses that window instead of the default
@@ -22,8 +28,10 @@ RatesTest
 │   │   └── it is not usable
 │   ├── given the currency is younger than the hard cap
 │   │   └── it is usable
-│   └── given the currency is older than the hard cap
-│       └── it is not usable
+│   ├── given the currency is older than the hard cap
+│   │   └── it is not usable
+│   └── given the currency is exactly at the hard cap
+│       └── it is usable
 ├── isRatesUsable
 │   ├── given every currency is past the hard cap
 │   │   └── it is not usable
@@ -38,12 +46,18 @@ RatesTest
 │   │   └── it leaves the untouched currencies at their real age
 │   ├── given an existing currency has no per-currency timestamp
 │   │   └── it backfills from the map-wide timestamp
+│   ├── given a currency was last refreshed long before the map-wide stamp
+│   │   └── it carries that currency forward at its own age
 │   └── it takes the source and map-wide timestamp from the incoming fetch
 └── stored values
     ├── given nothing has been stored
     │   ├── it reports empty rates
     │   ├── it reports no held rate
-    │   └── it reports an idle fetch status
+    │   ├── it reports an idle fetch status
+    │   └── it reports no source
+    ├── given a value already sits under the storage key
+    │   ├── it reads the held rate back from its own key
+    │   └── it reads the fetch status back from its own key
     ├── when rates are written
     │   ├── it reads them back
     │   └── it notifies watchers

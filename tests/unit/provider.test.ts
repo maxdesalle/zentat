@@ -33,7 +33,8 @@ afterEach(() => {
 describe('rotate', () => {
   describe('given a single item', () => {
     it('returns it unchanged', () => {
-      expect(rotate(['only'])).toEqual(['only']);
+      const only = ['only'];
+      expect(rotate(only)).toBe(only);
     });
   });
 
@@ -62,6 +63,14 @@ describe('fetchRates', () => {
       const result = await fetchRates(fetcher, 'kraken');
       expect(result.data?.source).toBe('kraken');
       expect(fetchFromCoinGecko).not.toHaveBeenCalled();
+    });
+
+    it('honours either name', async () => {
+      // Each name has to reach its provider. A name that matches nothing leaves
+      // the user pinned to a source that never answers, with no rates at all.
+      const result = await fetchRates(fetcher, 'coingecko');
+      expect(result.data?.source).toBe('coingecko');
+      expect(fetchFromKraken).not.toHaveBeenCalled();
     });
 
     describe('given that provider fails', () => {
@@ -226,6 +235,17 @@ describe('fetchRatesWithRetry', () => {
       fetchFromKraken.mockRejectedValue(new Error('b'));
       await withDelays(() => fetchRatesWithRetry(fetcher, { isNym: true, maxRetries: 0 }));
       expect(fetchFromCoinGecko).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('given a retry count below zero', () => {
+    it('reports failure without asking any provider', async () => {
+      // Claiming success here would hand the caller a result with no rates in
+      // it, and a cache entry of nothing reads the same as a fresh one.
+      const result = await fetchRatesWithRetry(fetcher, { maxRetries: -1 });
+      expect(result).toEqual({ success: false, errors: [] });
+      expect(fetchFromCoinGecko).not.toHaveBeenCalled();
+      expect(fetchFromKraken).not.toHaveBeenCalled();
     });
   });
 

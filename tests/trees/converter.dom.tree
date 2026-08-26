@@ -49,7 +49,9 @@ ConverterDomTest
 │   │   ├── it is left alone
 │   │   └── given it sits under a convertible element
 │   │       ├── it is still left alone
-│   │       └── it does not stop the rest of the element converting
+│   │       ├── it does not stop the rest of the element converting
+│   │       └── given the region holds no price of its own
+│   │           └── its text is still skipped
 │   ├── given text inside a skipped tag
 │   │   ├── it is left alone
 │   │   └── given it sits under a convertible element
@@ -58,7 +60,9 @@ ConverterDomTest
 │       ├── it is left alone
 │       └── given it sits under a convertible element
 │           ├── it is still left alone
-│           └── it does not stop the rest of the element converting
+│           ├── it does not stop the rest of the element converting
+│           └── given the control holds no price of its own
+│               └── its text is still skipped
 │   ├── given its own output
 │   │   ├── it never re-processes it
 │   │   ├── given a second pass over an already-converted element

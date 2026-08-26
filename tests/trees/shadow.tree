@@ -20,8 +20,10 @@ ShadowTest
 │   │   └── it finds its shadow root
 │   ├── given a shadow root nested in another
 │   │   └── it finds both
-│   └── given more roots than the limit
-│       └── it stops at the limit
+│   ├── given more roots than the limit
+│   │   └── it stops at the limit
+│   └── given the limit runs out before a nested root is reached
+│       └── it stops without descending into it
 └── hasShadowDom
     ├── given a page with no shadow root
     │   └── it reports none

@@ -8,15 +8,31 @@ AdaptersTest
 │   ├── it returns null for everything else, so the generic path runs
 │   ├── it claims no host twice
 │   └── it declares a currency wherever it reads bare numbers
+├── the sites it knows
+│   ├── it routes every Amazon marketplace to the Amazon adapter
+│   ├── it routes bol.com to the bol adapter
+│   ├── it routes both Coolblue storefronts to the Coolblue adapter
+│   ├── it routes both MediaMarkt storefronts to the MediaMarkt adapter
+│   └── it routes digitalocean.com to the DigitalOcean adapter
+├── the markup each site is scanned for
+│   ├── it finds Amazon's price blocks and replaces them whole
+│   ├── it finds bol.com's price blocks and replaces them whole
+│   ├── it finds both of the price markups Coolblue uses
+│   └── it finds DigitalOcean's pricing tables and replaces them whole
 ├── whole-element replacement
 │   ├── it recognises an element the adapter treats as a whole price
 │   └── it leaves ordinary elements alone
 ├── exclusions
 │   ├── it keeps checkout controls fiat
-│   └── it does not exclude a price outside those controls
+│   ├── it does not exclude a price outside those controls
+│   └── given a site with no adapter
+│       └── it excludes nothing rather than failing the page
 └── extraction
     ├── it reads Amazon's canonical price rather than the split rendering
     ├── it reads bol.com's accessible copy
+    ├── given the markup is pretty-printed
+    │   ├── it strips the whitespace around Amazon's price
+    │   └── it strips the whitespace around bol.com's sentence
     └── given the accessible copy is absent
         ├── it returns null so the caller falls back to the visible text
         └── it returns null for a bol container with no positioned span

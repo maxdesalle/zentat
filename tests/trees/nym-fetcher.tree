@@ -14,15 +14,19 @@ NymFetcherTest
 │   ├── when a watcher unsubscribes
 │   │   └── it stops being called
 │   ├── when the status changes
-│   │   └── it is mirrored to storage for the popup
+│   │   ├── it is mirrored to storage for the popup
+│   │   └── it is stored under the key the popup reads
 │   └── when another context watches the stored status
 │       └── it is called on every change
 ├── on Chrome
 │   ├── given no offscreen document exists
 │   │   ├── it creates one
-│   │   └── it reports connecting rather than connected
+│   │   ├── it reports connecting rather than connected
+│   │   ├── it asks only about offscreen contexts
+│   │   └── it asks for a worker-hosting document at the offscreen page
 │   ├── given an offscreen document already exists
-│   │   └── it does not create a second one
+│   │   ├── it does not create a second one
+│   │   └── it does not ask the platform again
 │   ├── given this context already created the document
 │   │   └── it reuses it without asking the platform again
 │   ├── given the platform cannot report existing contexts
@@ -30,14 +34,18 @@ NymFetcherTest
 │   ├── given two fetches race the first creation
 │   │   └── it creates exactly one document
 │   ├── given the platform reports a document already exists
-│   │   └── it treats the creation as successful
+│   │   ├── it treats the creation as successful
+│   │   └── it stops trying to create one
 │   ├── given creating the document fails
 │   │   ├── it reports an error status
-│   │   └── it rethrows
+│   │   ├── it rethrows
+│   │   └── it names the extension in the console
 │   ├── given the fetch succeeds
 │   │   ├── it reports connected
 │   │   ├── it returns the payload
 │   │   └── it defaults a missing status to 200
+│   ├── given a second fetch on a live connection
+│   │   └── it does not report connecting again
 │   ├── given the message channel closes mid-flight
 │   │   ├── it forgets the document so the next fetch recreates it
 │   │   └── it rethrows as an Error
@@ -48,10 +56,13 @@ NymFetcherTest
 │   │   └── it keeps the document
 │   ├── given the fetch fails fatally
 │   │   ├── it tears the document down
-│   │   └── it reports an error status
+│   │   ├── it reports an error status
+│   │   └── it records why the document was torn down
 │   ├── destroyNymConnection
 │   │   ├── it closes the document
-│   │   └── it reports disconnected
+│   │   ├── it reports disconnected
+│   │   ├── it forgets the document so the next fetch recreates it
+│   │   └── it records the teardown
 │   ├── resetNymConnection
 │   │   └── it forgets the document without closing it
 │   └── resetNymIdentity
@@ -60,13 +71,17 @@ NymFetcherTest
 └── on Firefox
     ├── given the fetch succeeds
     │   ├── it reports connected
-    │   └── it returns the payload
+    │   ├── it returns the payload
+    │   └── it reports connecting before it reports connected
+    ├── given a second fetch on a live connection
+    │   └── it does not report connecting again
     ├── given the fetch fails but the transport is fine
     │   ├── it throws the reported error
     │   └── it keeps the client
     ├── given the fetch fails fatally
     │   ├── it destroys the client
-    │   └── it reports an error status
+    │   ├── it reports an error status
+    │   └── it records why the client was destroyed
     ├── given the build flag disagrees with the selected transport
     │   └── it refuses to load the direct client
     ├── given the error carries no message

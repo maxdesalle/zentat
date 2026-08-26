@@ -59,6 +59,14 @@ function installChrome(over: Partial<Record<string, unknown>> = {}) {
   return { createDocument, closeDocument, getContexts, sendMessage };
 }
 
+/**
+ * debug() captures console.log when lib/log is evaluated, so the spy has to be
+ * in place before the module under test pulls it in.
+ */
+function captureDebug() {
+  return vi.spyOn(console, 'log').mockImplementation(() => {});
+}
+
 async function load(firefox: boolean) {
   vi.stubEnv('FIREFOX', firefox ? 'true' : '');
   vi.resetModules();
@@ -165,6 +173,16 @@ describe('status', () => {
       expect(await getStoredNymStatus()).toBe('connected');
       expect(seen).toContain('connecting');
     });
+
+    it('is stored under the key the popup reads', async () => {
+      // The popup and the options page read 'local:nymStatus' by name. A key
+      // that drifts leaves both of them showing 'disconnected' over a live
+      // tunnel, which is the one thing the indicator exists to rule out.
+      const { createNymFetcher } = await load(false);
+      installChrome();
+      await createNymFetcher().fetch(RATE_URL);
+      expect([...store.keys()]).toEqual(['local:nymStatus']);
+    });
   });
 
   describe('when another context watches the stored status', () => {
@@ -206,6 +224,29 @@ describe('on Chrome', () => {
       expect(seen.indexOf('connecting')).toBeLessThan(seen.indexOf('created'));
       expect(seen.indexOf('connected')).toBeGreaterThan(seen.indexOf('created'));
     });
+
+    it('asks only about offscreen contexts', async () => {
+      // An unfiltered query counts the popup and every open tab, so the
+      // "one already exists" check would always pass and the document that
+      // actually hosts the client would never be created.
+      const { createNymFetcher } = await load(false);
+      const { getContexts } = installChrome();
+      await createNymFetcher().fetch(RATE_URL);
+      expect(getContexts).toHaveBeenCalledWith({ contextTypes: ['OFFSCREEN_DOCUMENT'] });
+    });
+
+    it('asks for a worker-hosting document at the offscreen page', async () => {
+      // Chrome refuses a creation that states no reason, and the url decides
+      // which page runs the Nym client at all.
+      const { createNymFetcher } = await load(false);
+      const { createDocument } = installChrome();
+      await createNymFetcher().fetch(RATE_URL);
+      expect(createDocument).toHaveBeenCalledWith({
+        url: 'offscreen.html',
+        reasons: ['WORKERS'],
+        justification: 'Run Nym mixnet SDK which requires window object',
+      });
+    });
   });
 
   describe('given an offscreen document already exists', () => {
@@ -215,6 +256,16 @@ describe('on Chrome', () => {
       getContexts.mockResolvedValue([{ contextType: 'OFFSCREEN_DOCUMENT' }]);
       await createNymFetcher().fetch(RATE_URL);
       expect(createDocument).not.toHaveBeenCalled();
+    });
+
+    it('does not ask the platform again', async () => {
+      const { createNymFetcher } = await load(false);
+      const { getContexts } = installChrome();
+      getContexts.mockResolvedValue([{ contextType: 'OFFSCREEN_DOCUMENT' }]);
+      const fetcher = createNymFetcher();
+      await fetcher.fetch(RATE_URL);
+      await fetcher.fetch(RATE_URL);
+      expect(getContexts).toHaveBeenCalledOnce();
     });
   });
 
@@ -275,6 +326,20 @@ describe('on Chrome', () => {
       await createNymFetcher().fetch(RATE_URL);
       expect(getNymStatus()).toBe('connected');
     });
+
+    it('stops trying to create one', async () => {
+      // Chrome answers every further attempt with the same rejection, so a
+      // fetcher that keeps asking never gets past the first message.
+      const { createNymFetcher } = await load(false);
+      const { createDocument } = installChrome();
+      createDocument.mockRejectedValueOnce(
+        new Error('Only a single offscreen document may be created'),
+      );
+      const fetcher = createNymFetcher();
+      await fetcher.fetch(RATE_URL);
+      await fetcher.fetch(RATE_URL);
+      expect(createDocument).toHaveBeenCalledOnce();
+    });
   });
 
   describe('given creating the document fails', () => {
@@ -293,6 +358,21 @@ describe('on Chrome', () => {
       createDocument.mockRejectedValue('no can do');
       vi.spyOn(console, 'error').mockImplementation(() => {});
       await expect(createNymFetcher().fetch(RATE_URL)).rejects.toBeTruthy();
+    });
+
+    it('names the extension in the console', async () => {
+      // This lands in a console shared with whatever the host page logs.
+      // Unattributed, it is noise nobody can act on.
+      const { createNymFetcher } = await load(false);
+      const { createDocument } = installChrome();
+      const failure = new Error('no can do');
+      createDocument.mockRejectedValue(failure);
+      const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+      await createNymFetcher().fetch(RATE_URL).catch(() => {});
+      expect(error).toHaveBeenCalledWith(
+        'Zentat: Failed to create offscreen document:',
+        failure,
+      );
     });
   });
 
@@ -317,6 +397,28 @@ describe('on Chrome', () => {
       const { sendMessage } = installChrome();
       sendMessage.mockResolvedValue({ success: true, data: {} } as never);
       expect((await createNymFetcher().fetch(RATE_URL)).status).toBe(200);
+    });
+  });
+
+  describe('given a second fetch on a live connection', () => {
+    it('does not report connecting again', async () => {
+      // The popup mirrors this status verbatim. Dropping back to
+      // 'connecting' on a healthy tunnel reads as a transport that keeps
+      // falling over, and invites the user to turn Nym off.
+      const { createNymFetcher, watchNymStatus } = await load(false);
+      installChrome();
+      const seen: string[] = [];
+      watchNymStatus((s) => seen.push(s));
+      const fetcher = createNymFetcher();
+      await fetcher.fetch(RATE_URL);
+      await fetcher.fetch(RATE_URL);
+      expect(seen).toEqual([
+        'disconnected',
+        'connecting',
+        'connecting',
+        'connected',
+        'connected',
+      ]);
     });
   });
 
@@ -394,6 +496,20 @@ describe('on Chrome', () => {
       await expect(createNymFetcher().fetch(RATE_URL)).rejects.toThrow('Nym fetch failed');
       expect(getNymStatus()).toBe('error');
     });
+
+    it('records why the document was torn down', async () => {
+      // A teardown that leaves no trace is indistinguishable, after the fact,
+      // from a tunnel that simply never came up.
+      const log = captureDebug();
+      const { createNymFetcher } = await load(false);
+      const { sendMessage } = installChrome();
+      sendMessage.mockResolvedValue({ success: false, fatal: true } as never);
+      await createNymFetcher().fetch(RATE_URL).catch(() => {});
+      expect(log).toHaveBeenCalledWith(
+        'Zentat:',
+        'Fatal Nym error, destroying offscreen document',
+      );
+    });
   });
 
   describe('destroyNymConnection', () => {
@@ -410,6 +526,26 @@ describe('on Chrome', () => {
       await createNymFetcher().fetch(RATE_URL);
       await destroyNymConnection();
       expect(getNymStatus()).toBe('disconnected');
+    });
+
+    it('forgets the document so the next fetch recreates it', async () => {
+      // The document is gone; a fetcher that still believes in it messages
+      // into a dead context and the rate refresh stalls until a restart.
+      const { createNymFetcher, destroyNymConnection } = await load(false);
+      const { createDocument } = installChrome();
+      const fetcher = createNymFetcher();
+      await fetcher.fetch(RATE_URL);
+      await destroyNymConnection();
+      await fetcher.fetch(RATE_URL);
+      expect(createDocument).toHaveBeenCalledTimes(2);
+    });
+
+    it('records the teardown', async () => {
+      const log = captureDebug();
+      const { destroyNymConnection } = await load(false);
+      installChrome();
+      await destroyNymConnection();
+      expect(log).toHaveBeenCalledWith('Zentat:', 'Offscreen document closed for full reset');
     });
   });
 
@@ -459,8 +595,32 @@ describe('on Firefox', () => {
       const { createNymFetcher } = await load(true);
       nymFetch.mockResolvedValue({ success: true, data: { ok: 2 } });
       const response = await createNymFetcher().fetch(RATE_URL);
+      expect(response.ok).toBe(true);
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({ ok: 2 });
+    });
+
+    it('reports connecting before it reports connected', async () => {
+      // The popup claims privacy from this status. Jumping straight to
+      // 'connected' says the tunnel is carrying traffic while it is still
+      // being built.
+      const { createNymFetcher, watchNymStatus } = await load(true);
+      const seen: string[] = [];
+      watchNymStatus((s) => seen.push(s));
+      await createNymFetcher().fetch(RATE_URL);
+      expect(seen).toEqual(['disconnected', 'connecting', 'connected']);
+    });
+  });
+
+  describe('given a second fetch on a live connection', () => {
+    it('does not report connecting again', async () => {
+      const { createNymFetcher, watchNymStatus } = await load(true);
+      const seen: string[] = [];
+      watchNymStatus((s) => seen.push(s));
+      const fetcher = createNymFetcher();
+      await fetcher.fetch(RATE_URL);
+      await fetcher.fetch(RATE_URL);
+      expect(seen).toEqual(['disconnected', 'connecting', 'connected', 'connected']);
     });
   });
 
@@ -492,6 +652,14 @@ describe('on Firefox', () => {
       nymFetch.mockResolvedValue({ success: false, error: 'exit code 2', fatal: true });
       await createNymFetcher().fetch(RATE_URL).catch(() => {});
       expect(getNymStatus()).toBe('error');
+    });
+
+    it('records why the client was destroyed', async () => {
+      const log = captureDebug();
+      const { createNymFetcher } = await load(true);
+      nymFetch.mockResolvedValue({ success: false, error: 'exit code 2', fatal: true });
+      await createNymFetcher().fetch(RATE_URL).catch(() => {});
+      expect(log).toHaveBeenCalledWith('Zentat:', 'Fatal Nym error, destroying client');
     });
   });
 

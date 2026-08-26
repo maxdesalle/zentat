@@ -10,6 +10,7 @@ ProviderTest
 ├── fetchRates
 │   ├── given the source is a specific provider
 │   │   ├── it uses only that provider
+│   │   ├── it honours either name
 │   │   └── given that provider fails
 │   │       └── it does not fall back to the other one
 │   ├── given the source is auto
@@ -38,6 +39,8 @@ ProviderTest
     │   └── it uses a flat backoff
     ├── when a retry count is given
     │   └── it overrides the transport default
+    ├── given a retry count below zero
+    │   └── it reports failure without asking any provider
     ├── given every attempt fails
     │   └── it returns the last result
     └── given a specific source

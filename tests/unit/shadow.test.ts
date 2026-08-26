@@ -115,6 +115,20 @@ describe('collectShadowRoots', () => {
       expect(collectShadowRoots(document.body, 4)).toHaveLength(4);
     });
   });
+
+  describe('given the limit runs out before a nested root is reached', () => {
+    it('stops without descending into it', () => {
+      // The bound has to hold across the whole walk, not just within one level
+      // of it. A deeply nested component tree is the case where an unbounded
+      // walk would stall the tab, so the queue has to be abandoned too.
+      const { shadow: outer } = host('outer');
+      const { shadow: sibling } = host('sibling');
+      const nested = document.createElement('div');
+      outer.appendChild(nested);
+      nested.attachShadow({ mode: 'open' });
+      expect(collectShadowRoots(document.body, 2)).toEqual([outer, sibling]);
+    });
+  });
 });
 
 describe('hasShadowDom', () => {

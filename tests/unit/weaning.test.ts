@@ -60,14 +60,33 @@ describe('daysToNextStage', () => {
   describe('given weaning was never started', () => {
     it('says nothing', () => {
       expect(daysToNextStage(0)).toBeNull();
+      // A device whose clock has not synced yet sits near the epoch, which is
+      // only days away from a countdown for weaning that never began.
+      expect(daysToNextStage(0, 3 * DAY)).toBeNull();
+    });
+  });
+
+  describe('given the start is still ahead', () => {
+    it('counts down to the day weaning begins', () => {
+      expect(daysToNextStage(after(10), start)).toBe(10);
     });
   });
 });
 
+const STAGES = ['always', 'delayed', 'on-demand', 'hidden'] as const;
+
 describe('describeStage', () => {
   it('describes every stage', () => {
-    for (const stage of ['always', 'delayed', 'on-demand', 'hidden'] as const) {
+    for (const stage of STAGES) {
       expect(describeStage(stage).length).toBeGreaterThan(0);
     }
+  });
+
+  it('gives each stage its own wording', () => {
+    // This line is the only thing telling the user how to reach the fiat price,
+    // and it changes at every stage. Repeating a neighbour's wording tells them
+    // to reach for a crutch that is no longer there.
+    const wordings = STAGES.map(describeStage);
+    expect(new Set(wordings).size).toBe(STAGES.length);
   });
 });

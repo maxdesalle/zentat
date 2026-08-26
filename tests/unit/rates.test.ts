@@ -59,6 +59,15 @@ function data(over: Partial<Parameters<typeof mergeRates>[0]> = {}) {
   return { rates: {}, updatedAt: NOW, source: 'coingecko', ...over };
 }
 
+describe('MAX_RATE_AGE_MS', () => {
+  it('caps a rate at twenty-four hours', () => {
+    // The cap is what stops a dead provider from quietly pricing a checkout
+    // page off a week-old number, so its length is a product decision, not an
+    // arithmetic detail.
+    expect(MAX_RATE_AGE_MS).toBe(86_400_000);
+  });
+});
+
 describe('isRatesStale', () => {
   describe('given the cache has never been written', () => {
     it('is stale', () => {
@@ -75,6 +84,21 @@ describe('isRatesStale', () => {
   describe('given the cache was written outside the window', () => {
     it('is stale', () => {
       expect(isRatesStale(data({ updatedAt: NOW - REFRESH_TTL_MS - 1 }))).toBe(true);
+    });
+  });
+
+  describe('given the cache was written exactly one window ago', () => {
+    it('is fresh', () => {
+      expect(isRatesStale(data({ updatedAt: NOW - REFRESH_TTL_MS }))).toBe(false);
+    });
+  });
+
+  describe('given the cache carries no timestamp', () => {
+    it('is stale', () => {
+      // Subtracting a missing timestamp gives NaN, and every comparison against
+      // NaN is false. Reported fresh, the cache is never refetched and the page
+      // keeps being priced off whatever number is already in the map.
+      expect(isRatesStale(data({ updatedAt: undefined }))).toBe(true);
     });
   });
 
@@ -135,6 +159,13 @@ describe('isCurrencyUsable', () => {
       // checkout page. The cap is the whole point of the per-currency stamp.
       const d = data({ rates: { USD: 0.025 }, rateUpdatedAt: { USD: NOW - MAX_RATE_AGE_MS - 1 } });
       expect(isCurrencyUsable(d, 'USD')).toBe(false);
+    });
+  });
+
+  describe('given the currency is exactly at the hard cap', () => {
+    it('is usable', () => {
+      const d = data({ rates: { USD: 0.025 }, rateUpdatedAt: { USD: NOW - MAX_RATE_AGE_MS } });
+      expect(isCurrencyUsable(d, 'USD')).toBe(true);
     });
   });
 });
@@ -204,6 +235,21 @@ describe('mergeRates', () => {
     });
   });
 
+  describe('given a currency was last refreshed long before the map-wide stamp', () => {
+    it('carries that currency forward at its own age', () => {
+      // After a Kraken-only fetch the map-wide stamp is minutes old while JPY
+      // is hours old. Re-stamping JPY from the map is how eleven currencies
+      // outlive the 24h cap while every one of them reports as fresh.
+      const current = data({
+        rates: { USD: 0.025, JPY: 3.5 },
+        rateUpdatedAt: { USD: NOW - 60_000, JPY: NOW - 3_600_000 },
+        updatedAt: NOW - 60_000,
+      });
+      const merged = mergeRates(current, data({ rates: { USD: 0.026 }, updatedAt: NOW }));
+      expect(merged.rateUpdatedAt?.JPY).toBe(NOW - 3_600_000);
+    });
+  });
+
   it('takes the source and map-wide timestamp from the incoming fetch', () => {
     const merged = mergeRates(
       data({ rates: { USD: 0.025 }, updatedAt: NOW - 60_000 }),
@@ -226,6 +272,26 @@ describe('stored values', () => {
 
     it('reports an idle fetch status', async () => {
       expect((await getFetchStatus()).state).toBe('idle');
+    });
+
+    it('reports no source', async () => {
+      // The popup shows this string; a placeholder here would name a provider
+      // that never answered.
+      expect((await getRates()).source).toBe('');
+    });
+  });
+
+  describe('given a value already sits under the storage key', () => {
+    // The key is the address on disk. Renaming one abandons every user's cached
+    // value, and pointing two items at the same key lets one overwrite another.
+    it('reads the held rate back from its own key', async () => {
+      store.set('local:heldRate', { peg: 0.03, pegged: NOW });
+      expect(await getHeldRate()).toEqual({ peg: 0.03, pegged: NOW });
+    });
+
+    it('reads the fetch status back from its own key', async () => {
+      store.set('local:rateFetchStatus', { state: 'error', changedAt: NOW });
+      expect((await getFetchStatus()).state).toBe('error');
     });
   });
 

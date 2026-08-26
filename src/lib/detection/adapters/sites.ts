@@ -1,6 +1,22 @@
 import type { SiteAdapter } from './types';
 
 /**
+ * The trimmed text of the first `selector` inside `container`, or null when the
+ * site did not render one.
+ *
+ * Null and empty string are not interchangeable here: null tells the walker to
+ * fall back to the visible text, an empty string tells it there is no price.
+ */
+function textIn(container: Element, selector: string): string | null {
+  const match = container.querySelector(selector);
+  if (!match) return null;
+  // textContent is typed as nullable because Document and DocumentType nodes
+  // return null there; querySelector only ever yields an Element, so this is a
+  // string. Guarding it would be an unreachable branch, not a safety net.
+  return match.textContent!.trim();
+}
+
+/**
  * The sites that need more than the generic path.
  *
  * Each of these was previously spread across patterns.ts, walker.ts and
@@ -33,7 +49,7 @@ export const SITE_ADAPTERS: SiteAdapter[] = [
     exclude: ['#buy-now-button', '#add-to-cart-button', '#one-click-button'],
     // .a-offscreen is the canonical, unsplit price; the visible spans are the
     // styled rendering of the same number.
-    extract: (el) => el.querySelector('.a-offscreen')?.textContent?.trim() ?? null,
+    extract: (el) => textIn(el, '.a-offscreen'),
   },
   {
     id: 'bol',
@@ -48,8 +64,7 @@ export const SITE_ADAPTERS: SiteAdapter[] = [
     replaceWhole: ['.font-produkt'],
     // The visible spans are aria-hidden fragments; the absolutely-positioned
     // span carries the whole price as a sentence.
-    extract: (el) =>
-      el.querySelector('span[style*="position: absolute"]')?.textContent?.trim() ?? null,
+    extract: (el) => textIn(el, 'span[style*="position: absolute"]'),
   },
   {
     id: 'coolblue',

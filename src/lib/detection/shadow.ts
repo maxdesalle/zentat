@@ -16,10 +16,19 @@ export function shadowRootOf(el: Element): ShadowRoot | null {
   if (el.shadowRoot) return el.shadowRoot;
   // chrome.dom.openOrClosedShadowRoot is available to extensions and is the
   // only way to reach a closed root. Absent in Firefox and in tests.
+  //
+  // The guards below look redundant against the catch, and for the returned
+  // value they are: an absent API throws and the catch answers null, which is
+  // what the guards answer too. They are here for cost, not for correctness.
+  // This runs once per element on every mutation batch, and on Firefox the API
+  // is absent on every single one — a thrown-and-caught exception per element
+  // is a price the host page pays on every batch, forever.
   try {
+    // Stryker disable next-line OptionalChaining: absent chrome throws into the catch, same null
     const dom = (globalThis as unknown as {
       chrome?: { dom?: { openOrClosedShadowRoot?: (e: Element) => ShadowRoot | null } };
     }).chrome?.dom;
+    // Stryker disable next-line OptionalChaining: absent API throws into the catch, same null
     return dom?.openOrClosedShadowRoot?.(el) ?? null;
   } catch {
     return null;

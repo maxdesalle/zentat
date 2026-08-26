@@ -43,6 +43,10 @@ export function matchesPattern(hostname: string, pattern: string): boolean {
  */
 export function siteToggleKey(hostname: string): string {
   const parts = hostname.toLowerCase().replace(/^www\./, '').split('.');
+  // Stryker disable next-line ConditionalExpression,EqualityOperator: on an
+  // array of two or fewer parts both slice(-2) and slice(-3) return the whole
+  // array, so the paths below produce this exact string; the early return is
+  // for readability and cannot change a result.
   if (parts.length <= 2) return parts.join('.');
   // Keep two-part public suffixes intact (co.uk, com.au, com.br).
   const tail = parts.slice(-2).join('.');

@@ -63,6 +63,11 @@ async function getFirefoxClient() {
   // whole Nym bundle on every cold start, for every user, to reach code it
   // never executes.
   if (!import.meta.env.FIREFOX) throw new Error('Direct Nym client is Firefox-only');
+  // Holding the reference saves a trip through the module loader per fetch and
+  // nothing else: import() of a specifier that is already in the ESM registry
+  // resolves to the very same namespace object, so a reload would hand back the
+  // identical client.
+  // Stryker disable next-line ConditionalExpression: re-import returns the same namespace object
   if (!firefoxClientModule) {
     firefoxClientModule = await import('../nym/client');
   }

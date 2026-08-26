@@ -13,7 +13,10 @@ WeaningTest
 │   │   └── it says how long until the next step
 │   ├── given the last stage is reached
 │   │   └── it stops counting
-│   └── given weaning was never started
-│       └── it says nothing
+│   ├── given weaning was never started
+│   │   └── it says nothing
+│   └── given the start is still ahead
+│       └── it counts down to the day weaning begins
 └── describeStage
-    └── it describes every stage
+    ├── it describes every stage
+    └── it gives each stage its own wording

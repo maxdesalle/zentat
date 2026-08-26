@@ -219,9 +219,11 @@ const FATAL_ERROR_SIGNATURES = [
 ];
 
 export async function nymFetch(url: string, timeoutMs: number): Promise<NymFetchResult> {
-  const timeout = typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs > 0
-    ? timeoutMs
-    : DEFAULT_TIMEOUT_MS;
+  // Number.isFinite is the whole guard: it is false for everything that is not
+  // a number, so a value that crossed the message boundary as a string or a
+  // null lands on the default rather than on a deadline that has already run
+  // out. A typeof check in front of it can never change the answer.
+  const timeout = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_TIMEOUT_MS;
   // Reaching the destination at all proves the tunnel, so an HTTP error is the
   // origin's answer rather than a transport fault. The distinction is carried
   // on the result (`transportOk`) and acted on by the caller; there is

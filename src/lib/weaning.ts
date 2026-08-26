@@ -24,7 +24,9 @@ const SCHEDULE: Array<{ day: number; stage: WeanStage }> = [
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function weanStage(startedAt: number, now: number = Date.now()): WeanStage {
-  if (!startedAt || startedAt > now) return 'always';
+  if (!startedAt) return 'always';
+  // A clock that ran backwards gives a negative day count, which is below every
+  // stage in the schedule, so the loop below leaves the stage where it starts.
   const days = (now - startedAt) / DAY_MS;
 
   let stage: WeanStage = 'always';
