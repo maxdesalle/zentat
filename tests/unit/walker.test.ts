@@ -1019,7 +1019,7 @@ describe('walkPriceElements', () => {
       // anyway would drop every genuine price over a thousand.
       const results = walkPriceElements(render(
         '<div class="p"><span class="sr-only">$4999</span>'
-        + '<span aria-hidden="true">49</span><span aria-hidden="true">99</span></div>',
+          + '<span aria-hidden="true">49</span><span aria-hidden="true">99</span></div>',
       ));
       expect(results.map((r) => r.text)).toContain('$4999');
     });

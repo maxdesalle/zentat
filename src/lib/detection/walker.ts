@@ -348,13 +348,12 @@ export function walkPriceElements(root: Node): WalkResult[] {
       // Page-authored again: a child holding only OUR output is not a child
       // with its own price, and treating it as one made the parent look like
       // a single price and swallow the whole page.
+      // No length cap on the child: this loop only runs when the element has
+      // no accessible copy, so the text checked against the cap above WAS the
+      // parent's, and a child's is part of it.
       const childText = pageAuthoredText(child);
       if (
         childText && QUICK_DETECT_PATTERN.test(childText)
-        // Stryker disable next-line ConditionalExpression,EqualityOperator:
-        // equivalent — a parent's text includes its child's, and the parent was
-        // already rejected at this same limit, so a child cannot reach it.
-        && childText.length <= MAX_PURE_PRICE_LENGTH
         && !isNonPriceText(childText)
       ) {
         hasMatchingChild = true;
@@ -366,29 +365,22 @@ export function walkPriceElements(root: Node): WalkResult[] {
       results.push({ node: element, text: trimmed });
       processedElements.add(element);
     } else {
+      // textOf trims each node, so the pieces arrive tight and only the join
+      // could add anything — and it only ever joins already-trimmed pieces.
       const directText = Array.from(element.childNodes)
         .filter((n) => n.nodeType === Node.TEXT_NODE)
         .map((n) => textOf(n))
         .join(' ');
-      const directTrimmed = directText.trim();
+      // Same as the child above: no length cap, because this text is part of
+      // the parent's, which was capped already.
       if (
-        // empty direct text fails the price pattern below.
-        // Stryker disable next-line ConditionalExpression,LogicalOperator: equivalent, see above.
-        directTrimmed
-        // reaching here means a child holds a price too, so the direct text is strictly shorter
-        // than the parent's, which was already checked against this limit.
-        // Stryker disable next-line ConditionalExpression,EqualityOperator: equivalent, see above.
-        // Stryker disable next-line ConditionalExpression,EqualityOperator:
-        // equivalent — reaching here means a child holds a price too, so the
-        // direct text is strictly shorter than the parent's, which was already
-        // checked against this limit.
-        && directTrimmed.length <= MAX_PURE_PRICE_LENGTH
-        && QUICK_DETECT_PATTERN.test(directTrimmed)
-        && !isNonPriceText(directTrimmed)
+        directText
+        && QUICK_DETECT_PATTERN.test(directText)
+        && !isNonPriceText(directText)
       ) {
         // Deliberately NOT added to processedElements: the matching children
         // must still be collected below.
-        results.push({ node: element, text: directTrimmed, directTextOnly: true });
+        results.push({ node: element, text: directText, directTextOnly: true });
       }
     }
   }
