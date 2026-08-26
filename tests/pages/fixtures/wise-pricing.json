@@ -1,15 +1,15 @@
 {
-  "name": "stripe-pricing",
-  "url": "https://stripe.com/pricing",
-  "hostname": "stripe.com",
-  "lang": "en-CA",
-  "title": "Pricing & Fees",
+  "name": "wise-pricing",
+  "url": "https://wise.com/us/pricing/send-money",
+  "hostname": "wise.com",
+  "lang": "en",
+  "title": "Wise Fees for Sending Money",
   "capturedAt": "2026-08-26",
-  "bytes": 465682,
+  "bytes": 71858,
   "knownGaps": [
     {
       "invariant": "one shape per page",
-      "why": "Genuine limitation. A payments price list quotes a $0.30 per-transaction fee beside $50K and $1 billion volume figures — five orders of magnitude on one page by construction. No single decimal count serves both ends. Note this page ALSO runs red on \"gives the page back exactly as it was\", which is a real defect and unrelated to shape; see the report."
+      "why": "Genuine limitation. A fees page quotes a 1 USD minimum fee against a 25,000 USD transfer — four and a half orders of magnitude, and both are prices the reader actually cares about. The median grid lands on three decimals, so the 1 USD fee renders as \"0.001 ZEC\" with one significant figure while 25,000 USD keeps four as \"32.05 ZEC\". Holding the transfer to the grid would print \"32.051 ZEC\", a fifth significant figure the held rate cannot support. Every amount converts correctly; the shape is the only failure."
     },
     {
       "invariant": "controls stay fiat",

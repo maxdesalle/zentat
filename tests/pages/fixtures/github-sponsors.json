@@ -1,0 +1,15 @@
+{
+  "name": "github-sponsors",
+  "url": "https://github.com/sponsors/sindresorhus",
+  "hostname": "github.com",
+  "lang": "en",
+  "title": "Sponsor @sindresorhus on GitHub Sponsors · GitHub",
+  "capturedAt": "2026-08-26",
+  "bytes": 137014,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "DEFECT, not a limitation, and the same one recorded on digitalocean-pricing. The four-significant-figure cap is applied per amount rather than to the page grid, so a single price crossing a power of ten renders one decimal shorter than the column it sits in. Every pair here reads fine at one shared decimal count. Reconciling the truthfulness cap with the shared grid is a product decision about which rule bends, not a line edit."
+    }
+  ]
+}

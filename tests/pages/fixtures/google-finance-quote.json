@@ -1,0 +1,19 @@
+{
+  "name": "google-finance-quote",
+  "url": "https://www.google.com/finance/quote/AAPL:NASDAQ",
+  "hostname": "www.google.com",
+  "lang": "en-US",
+  "title": "Apple Inc (AAPL) Stock Price & News - Google Finance",
+  "capturedAt": "2026-08-26",
+  "bytes": 544029,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation. A quote page carries an $0.11 dividend beside a $147 billion market cap \u2014 twelve orders of magnitude. The median grid (share prices, three decimals) fits neither end."
+    },
+    {
+      "invariant": "no unreadable magnitudes",
+      "why": "Two separate things are red here and only one of them is a limitation.\n(1) OPEN PRODUCT QUESTION: $109.42 billion renders as 140,282,051 ZEC. That is nearly seven times the entire 21 million ZEC supply, so it is a number no reader can use as a unit of account even though it is arithmetically right. Undecided; recorded, not fixed.\n(2) DEFECT, not a limitation: \"$108.959 billion\" renders as 139,691,025,641 ZEC and \"$109.417 billion\" as 140,278,205,128 ZEC \u2014 both exactly 1000x too high. parseNumber in src/lib/detection/parser.ts takes the dot in \"108.959\" for thousands grouping because its US-decimal escape only fires on a single-digit integer part (sepIndex <= 1). The multiplier word was already consumed by then, so the parser knows it is reading a mantissa and reads it wrong anyway. \"$109.4 billion\" on the same page comes out correct at 140,256,410 ZEC, which is the scale the other two should have landed on."
+    }
+  ]
+}

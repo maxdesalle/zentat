@@ -52,7 +52,13 @@ export function oneUnitPerPage(): Violation[] {
 export function oneShapePerPage(): Violation[] {
   const shapes = new Set(
     converted()
-      .map((el) => shown(el).replace(/\d/g, '#'))
+      // The leading run of digits collapses to one. What the grid promises is
+      // a shared number of DECIMALS — that is what lets the eye scan a column
+      // without reading it — and how many digits sit left of the point is a
+      // fact about the amount, not about the rendering. Counting those made
+      // "12.34 ZEC" a different shape from "1.23 ZEC", which is a page doing
+      // exactly what it should.
+      .map((el) => shown(el).replace(/\d/g, '#').replace(/^#+/, '#'))
       .filter((shape) => shape.length > 0),
   );
   return shapes.size > 1
@@ -95,14 +101,20 @@ export function tooltipMatchesOriginal(): Violation[] {
   return bad.slice(0, 3);
 }
 
-/** Nothing inside a control the user acts on may show a converted price. */
+/**
+ * Nothing inside a control the user acts on may show a converted price.
+ *
+ * Stated without reference to how the walker decides what a control is. The
+ * old version re-applied the walker's own forty-character limit, so it could
+ * only flag elements the walker already agreed were controls — which the
+ * walker, agreeing, never converted. It was very close to incapable of
+ * failing, and it duly passed while the NYT subscribe page converted eight
+ * prices inside its offer buttons. An invariant that borrows the
+ * implementation's definition cannot falsify the implementation.
+ */
 export function controlsStayFiat(): Violation[] {
   return converted()
-    .filter((el) => {
-      const control = el.closest('button, [role="button"]');
-      if (!control) return false;
-      return (control.textContent ?? '').trim().length <= 40;
-    })
+    .filter((el) => el.closest('button, label') !== null)
     .slice(0, 3)
     .map((el) => ({ invariant: 'controls stay fiat', detail: shown(el) }));
 }

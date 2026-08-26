@@ -1,0 +1,19 @@
+{
+  "name": "ibkr-pricing",
+  "url": "https://www.interactivebrokers.com/en/pricing/commissions-stocks.php",
+  "hostname": "www.interactivebrokers.com",
+  "lang": "en",
+  "title": "Commissions Stocks | Interactive Brokers LLC",
+  "capturedAt": "2026-08-26",
+  "bytes": 507644,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation, the same shape as aws-s3-pricing. A commissions schedule quotes USD 0.0005 per share beside a USD 130,000 account tier \u2014 eight and a half orders of magnitude. The median grid (five decimals, set by the EUR 1.25 to EUR 80 order fees that make up most of the page) is right for the fees and wrong for both extremes."
+    },
+    {
+      "invariant": "no unreadable magnitudes",
+      "why": "Genuine limitation. USD 0.0015 per share is 0.000001923 ZEC. The rule that a nonzero price must never render as 0.00000 expands it to nine decimals, which nobody reads. Same open question as openai-pricing and aws-s3-pricing, in the same words: a per-unit price this small has no honest ZEC rendering, and whether it should convert at all is undecided. Every amount here was checked against its original and converts correctly."
+    }
+  ]
+}

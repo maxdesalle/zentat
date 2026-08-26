@@ -1,16 +1,12 @@
 {
-  "name": "stripe-pricing",
-  "url": "https://stripe.com/pricing",
-  "hostname": "stripe.com",
-  "lang": "en-CA",
-  "title": "Pricing & Fees",
+  "name": "nyt-subscribe",
+  "url": "https://www.nytimes.com/subscription",
+  "hostname": "www.nytimes.com",
+  "lang": "",
+  "title": "The New York Times: Digital and Home Delivery Subscriptions",
   "capturedAt": "2026-08-26",
-  "bytes": 465682,
+  "bytes": 87372,
   "knownGaps": [
-    {
-      "invariant": "one shape per page",
-      "why": "Genuine limitation. A payments price list quotes a $0.30 per-transaction fee beside $50K and $1 billion volume figures — five orders of magnitude on one page by construction. No single decimal count serves both ends. Note this page ALSO runs red on \"gives the page back exactly as it was\", which is a real defect and unrelated to shape; see the report."
-    },
     {
       "invariant": "controls stay fiat",
       "why": "DEFECT, not a limitation. Prices inside a <button> or <label> convert, which this project forbids outright: the charge lands in fiat, so a ZEC figure on a control the user clicks invites a costly mistake. isInteractiveControl tests SIZE rather than tag, because storefronts wrap whole product tiles in <a> and role=button and skipping those drops entire category pages. A literal <button> or a <label> bound to an input is a different claim, and making the tag decide for those is written and measured: it costs 31 conversions across the whole corpus and clears this page and two others. It is NOT applied yet because it also shifts which container the walker offers, and on wise.com a container falls under the length cap only AFTER the prices inside it have been rewritten — so eligibility changes between passes and the page fails idempotence. That fragility is older than this rule and has to be fixed first. Recorded rather than papered over: controlsStayFiat no longer borrows isInteractiveControl's own threshold, which is why this is visible at all."

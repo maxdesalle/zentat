@@ -1,0 +1,15 @@
+{
+  "name": "livemint-crore",
+  "url": "https://www.livemint.com/market/stock-market-news",
+  "hostname": "www.livemint.com",
+  "lang": "en",
+  "title": "Stock Market News: Latest Stock News Today, Stock Market LIVE, Stock Market Headline Updates | Mint",
+  "capturedAt": "2026-08-26",
+  "bytes": 70114,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation. The page spans more orders of magnitude than one decimal grid can serve, so no single shape fits both ends. Same family as openai-pricing and aws-s3-pricing. Indian market copy quotes a share price beside a figure in crore."
+    }
+  ]
+}

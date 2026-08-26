@@ -1,0 +1,19 @@
+{
+  "name": "sp500-index",
+  "url": "https://www.google.com/finance/quote/.INX:INDEXSP",
+  "hostname": "www.google.com",
+  "lang": "en-US",
+  "title": "S&P 500 Price, Real-time Quote & News - Google Finance",
+  "capturedAt": "2026-08-26",
+  "bytes": 138763,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation. An index page quotes a $37.56 figure beside a $61.1 trillion total \u2014 twelve orders of magnitude. The median grid gives two decimals, which the significant-figure cap then strips entirely from the trillions."
+    },
+    {
+      "invariant": "no unreadable magnitudes",
+      "why": "OPEN PRODUCT QUESTION, not a parse error: $61.1 trillion converts correctly to 78,333,333,333 ZEC. It is also 3,700 times the entire 21 million ZEC supply, rendered as eleven digits. This is the clearest case in the corpus that a correct conversion can still be a useless one: nothing above 21,000,000 ZEC can be held, quoted or compared, so rendering it as a ZEC quantity states something that cannot be true of any holder. Whether these should convert at all, render coarsely, or stay in fiat is undecided; recorded, not fixed."
+    }
+  ]
+}

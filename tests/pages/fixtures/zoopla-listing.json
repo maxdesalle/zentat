@@ -1,0 +1,15 @@
+{
+  "name": "zoopla-listing",
+  "url": "https://www.zoopla.co.uk/for-sale/details/72735507/",
+  "hostname": "www.zoopla.co.uk",
+  "lang": "en-GB",
+  "title": "West Way, Petts Wood, Orpington BR5, 4 bed semi-detached house for sale, \u00a31,050,000 - Zoopla",
+  "capturedAt": "2026-08-26",
+  "bytes": 55304,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation, same shape as redfin-listing. The page spans \u00a3561 (0.91 ZEC) to \u00a31,100,000 (1,791 ZEC), three and a half orders of magnitude. UK comma grouping reads correctly. The visible break is the asking price at 1,710 ZEC beside a \u00a3375,000 comparable at 610.6 ZEC: the per-amount significant-figure cap drops a decimal at the 1,000 ZEC line, and both would read fine at zero decimals \u2014 the digitalocean-pricing defect surfacing inside a page whose span is genuinely too wide for one grid either way."
+    }
+  ]
+}

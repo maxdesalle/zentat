@@ -71,6 +71,22 @@ export function isNonPriceText(text: string): boolean {
 // skipping those would drop entire category pages — measured across 31 real
 // pages, only ~1% of prices sit in a genuine control. So the test is size, not
 // tag: a checkout CTA is short, a product tile is not.
+// Modern storefronts wrap whole product tiles in role="button" or an <a>, and
+// skipping those would drop entire category pages — measured across 31 real
+// pages, only ~1% of prices sit in a genuine control. So the test is size, not
+// tag: a checkout CTA is short, a product tile is not.
+//
+// The tag SHOULD decide for a literal <button> or <label>: NYT's subscribe
+// page wraps each offer in a <button> carrying 125 characters of copy, so the
+// size test reads it as a tile and converts the price the user is about to be
+// charged in fiat. Making the tag decide is written and measured — it costs 31
+// conversions across the whole corpus and fixes three pages — but it also
+// shifts which container the walker offers, and on wise.com a container falls
+// under the length cap only AFTER the prices inside it have been rewritten, so
+// eligibility changes between passes. That fragility is older than this rule
+// and has to be fixed first. Until then the defect is recorded on the fixtures
+// rather than papered over: see controlsStayFiat, which no longer borrows this
+// function's threshold and so can actually fail.
 const CONTROL_SELECTOR = 'button, [role="button"], a[href], [role="link"], label, summary';
 const MAX_CONTROL_DESCENDANTS = 12;
 const MAX_CONTROL_TEXT = 40;
@@ -137,7 +153,7 @@ export function looksConcatenated(el: Element, text: string): boolean {
  * observer runs a pass per mutation batch, so that is a live regression, not a
  * test artefact.
  */
-function authoredA11yText(node: Element): string {
+function withOwnOutputRestored(node: Element): string {
   const ours = Array.from(node.querySelectorAll(`.${SPAN_CLASS}`));
   if (ours.length === 0) return textOf(node);
   const clone = node.cloneNode(true) as Element;
@@ -156,14 +172,23 @@ export function accessiblePriceText(el: Element): string | null {
     return label.trim();
   }
   for (const node of el.querySelectorAll(A11Y_TEXT_SELECTOR)) {
-    const text = authoredA11yText(node);
+    const text = withOwnOutputRestored(node);
     if (text && QUICK_DETECT_PATTERN.test(text) && !isNonPriceText(text)) return text;
   }
   return null;
 }
 
 /**
- * The element's text with our own output removed.
+ * The element's text as the PAGE wrote it, with our own conversions put back
+ * to the prices they replaced.
+ *
+ * Restored rather than deleted, because deleting is not stable: an element's
+ * "page-authored" text then SHRINKS the moment we convert something inside it,
+ * and eligibility rules keyed on its length change between passes. Amazon's
+ * search-result containers sat just over the length cap on the first pass and
+ * dropped under it on the second, converting only because we had already
+ * converted something inside them. Restoring makes every pass see the page the
+ * first one saw.
  *
  * `isNonPriceText` rejects anything containing "ZEC" or "zats" so we never
  * re-parse our own conversions. Applied to raw textContent that guard was far
@@ -184,9 +209,7 @@ function pageAuthoredText(el: Element): string {
   // element that contains none of our spans removes nothing, so the clone
   // yields the same text. The shortcut saves the copy, not the answer.
   if (el.querySelector(`.${SPAN_CLASS}`) === null) return textOf(el);
-  const clone = el.cloneNode(true) as Element;
-  for (const own of clone.querySelectorAll(`.${SPAN_CLASS}`)) own.remove();
-  return textOf(clone);
+  return withOwnOutputRestored(el);
 }
 
 /** Just the digits, which is what survives whatever markup did to a price. */
@@ -345,7 +368,16 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // Stryker disable next-line ConditionalExpression,EqualityOperator:
     // equivalent — anything this admits is rejected a few lines later by the
     // price-length rule. The pre-filter saves the clone, never the verdict.
-    if (textLengthOf(element) > MAX_PURE_PRICE_LENGTH * 4) continue;
+    // Only where the text is still entirely the page's. Our output is a
+    // different length from the price it replaced, so once an element holds
+    // any of it the raw length is a number WE moved — and an element that sat
+    // just over this cap on the first pass drops under it on the second,
+    // becoming eligible purely because we converted something inside it.
+    // Amazon's search-result containers did exactly that.
+    if (
+      element.querySelector(`.${SPAN_CLASS}`) === null
+      && textLengthOf(element) > MAX_PURE_PRICE_LENGTH * 4
+    ) continue;
 
     // Prefer the accessibility text when the visible text is split or styled.
     const rawText = pageAuthoredText(element);

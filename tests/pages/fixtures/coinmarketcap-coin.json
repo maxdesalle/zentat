@@ -1,0 +1,15 @@
+{
+  "name": "coinmarketcap-coin",
+  "url": "https://coinmarketcap.com/currencies/zcash/",
+  "hostname": "coinmarketcap.com",
+  "lang": "en",
+  "title": "Zcash price today, ZEC to USD live price, marketcap and chart | CoinMarketCap",
+  "capturedAt": "2026-08-26",
+  "bytes": 335504,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation. A $15.97 figure, ~$780 spot prices and a $16.45B market cap share one page \u2014 nine orders of magnitude. The median grid gives spot two decimals (\"1.00 ZEC\") and the significant-figure cap strips them from the totals (\"21,089,744 ZEC\"). Every amount on this page was checked against its original and converts correctly; the shape is the only thing wrong. Worth noting that 21,089,744 ZEC is the entire ZEC supply and clears \"no unreadable magnitudes\" only because that rule triggers at nine digits and this is eight \u2014 the same open question sp500-index records, one digit under the wire."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "kleinanzeigen-car-listing",
+  "url": "https://www.kleinanzeigen.de/s-anzeige/mini-cooper-cabrio-automatik-97-000-km-top-gepflegt/3448523753-216-3536",
+  "hostname": "www.kleinanzeigen.de",
+  "lang": "de",
+  "title": "MINI Cooper Cabrio Automatik 97.000 km Top gepflegt in Berlin - Wilmersdorf | Mini Cooper Gebrauchtwagen kaufen | kleinanzeigen.de",
+  "capturedAt": "2026-08-26",
+  "bytes": 175672,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation. The page spans more orders of magnitude than one decimal grid can serve, so no single shape fits both ends. Same family as openai-pricing and aws-s3-pricing. A car listing carries a 6,90 EUR fee beside a 15.900 EUR vehicle."
+    }
+  ]
+}

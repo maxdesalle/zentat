@@ -1,0 +1,19 @@
+{
+  "name": "investing-quote",
+  "url": "https://www.investing.com/equities/apple-computer-inc",
+  "hostname": "www.investing.com",
+  "lang": "en",
+  "title": "Apple Stock Price Today | NASDAQ: AAPL Live - Investing.com",
+  "capturedAt": "2026-08-26",
+  "bytes": 546959,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation. A $1.89 dividend, ~$300 share prices and a 4.60T USD total sit in one document \u2014 twelve orders of magnitude. No single decimal count serves them."
+    },
+    {
+      "invariant": "no unreadable magnitudes",
+      "why": "OPEN PRODUCT QUESTION, not a parse error: every amount on this page was checked against its original and converts correctly, including 4.60T USD to 5,897,435,897 ZEC. The problem is that the answer is meaningless. Total ZEC supply is 21 million, so a market cap rendered in ZEC is 280 times every coin that will ever exist, printed as ten digits nobody can read or compare. Whether a market cap should convert at all, render coarsely, or be left in fiat is undecided; recorded here rather than papered over."
+    }
+  ]
+}

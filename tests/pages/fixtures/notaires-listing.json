@@ -1,0 +1,15 @@
+{
+  "name": "notaires-listing",
+  "url": "https://www.immobilier.notaires.fr/fr/annonce-immo/vente/appartement/rennes-35/1994934",
+  "hostname": "www.immobilier.notaires.fr",
+  "lang": "",
+  "title": "Appartement \u00e0 A vendre 4 pi\u00e8ces (88.25 m\u00b2) - RENNES 35000 - 350 900 \u20ac",
+  "capturedAt": "2026-08-26",
+  "bytes": 94195,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation. The property is 350 900 \u20ac (490.4 ZEC), the fees on the same page are 910 \u20ac to 2859\u20ac (1.27 to 4.00 ZEC) \u2014 two and a half orders of magnitude, and the fees are a figure the buyer needs, not noise to be filtered out. French narrow-space grouping is read correctly. Holding the fees to the property's one decimal would print \"1.3 ZEC\" for a 910 \u20ac fee; holding the property to the fees' two would print \"490.44 ZEC\" and claim a fifth significant figure the rate cannot support."
+    }
+  ]
+}
