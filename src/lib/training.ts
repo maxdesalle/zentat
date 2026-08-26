@@ -54,11 +54,13 @@ export function nextQuestion(
   held?: HeldRate | null,
   exclude?: string,
 ): Question | null {
-  const rate = held
+  // A held rate that cannot cover the currency comes back null, which is worth
+  // exactly as much as a rate of zero, so one guard covers it along with a
+  // missing, negative or NaN feed. A rate we cannot vouch for must produce no
+  // question at all, never a plausible-looking wrong price.
+  const rate = (held
     ? heldRateFor(held, rates, currency)
-    : rates.rates[currency.toUpperCase()];
-  // Missing, zero, negative and NaN all fail this. A rate we cannot vouch for
-  // must yield no question at all, never a plausible-looking wrong price.
+    : rates.rates[currency.toUpperCase()]) ?? 0;
   if (!(rate > 0)) return null;
 
   const pool = TRAINING_ITEMS.filter((item) => item.id !== exclude);
@@ -73,6 +75,17 @@ export interface Score {
   error: number;
   verdict: 'spot on' | 'close' | 'in the region' | 'way off';
 }
+
+/**
+ * Verdict bands on the size of the miss, kindest first. Anything past the last
+ * band is 'way off'. One comparison for all three keeps the edges consistent:
+ * a miss that lands exactly on a limit always earns the kinder verdict.
+ */
+const VERDICTS: ReadonlyArray<readonly [number, Score['verdict']]> = [
+  [0.1, 'spot on'],
+  [0.25, 'close'],
+  [0.6, 'in the region'],
+];
 
 /**
  * Score a guess.
@@ -93,19 +106,7 @@ export function scoreGuess(guess: number, answer: number): Score | null {
   const points = Math.max(0, Math.round((1 - logError) * 100));
 
   const off = Math.abs(error);
-  // Stryker disable next-line EqualityOperator: `off < 0.1` differs only when
-  // off is exactly 0.1, and it never can be. off is |guess/answer - 1|; for a
-  // ratio in [1,2) that subtraction is exact and lands on a multiple of 2^-52,
-  // which 0.1 is not, and for a ratio in [0.5,1) on a multiple of 2^-53, which
-  // it also is not. Every other ratio puts off above 0.4. Try it: 1.1 - 1 is
-  // not 0.1. The 0.25 and 0.6 edges below are reachable and are tested.
-  const verdict = off <= 0.1
-    ? 'spot on'
-    : off <= 0.25
-    ? 'close'
-    : off <= 0.6
-    ? 'in the region'
-    : 'way off';
+  const verdict = VERDICTS.find(([limit]) => off <= limit)?.[1] ?? 'way off';
 
   return { points, error, verdict };
 }

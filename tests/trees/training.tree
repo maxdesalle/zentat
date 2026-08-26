@@ -1,12 +1,20 @@
 TrainingTest
+├── TRAINING_ITEMS
+│   ├── it gives every item an id, a label, an emoji and a price
+│   └── it keeps every id distinct so the last item can be excluded
 ├── scoreGuess
 │   ├── given an exact guess
 │   │   └── it gives full marks
 │   ├── given a guess off by a factor
 │   │   ├── it treats double and half as equally wrong
+│   │   ├── it halves the marks for a guess out by a factor of two
 │   │   ├── it scores zero at a factor of four out, and never negative
 │   │   └── it reports the signed error so the user learns which way they lean
+│   ├── when the answer is a fraction of a ZEC
+│   │   └── it scores the same relative miss the same way at any price
 │   ├── it grades the verdict by how far off, in either direction
+│   ├── when the guess sits exactly on a verdict boundary
+│   │   └── it gives the kinder of the two verdicts
 │   └── given nonsense input
 │       ├── it refuses a non-positive guess
 │       └── it refuses a non-positive answer
@@ -15,9 +23,15 @@ TrainingTest
 │   │   └── it asks about a real item at the current rate
 │   ├── given a held rate
 │   │   └── it asks at the rate the pages are showing
+│   ├── when the currency is written in lower case
+│   │   └── it reports the currency in upper case
+│   ├── when the draw lands at either end of the pool
+│   │   └── it can ask about any item in the catalogue
 │   ├── when an item is excluded
 │   │   └── it does not repeat the item just asked
 │   ├── given no rate to ask about
+│   │   └── it returns nothing
+│   ├── given a rate that is not a positive number
 │   │   └── it returns nothing
 │   └── given a held rate that cannot cover the currency
 │       └── it returns nothing

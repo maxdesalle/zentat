@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { RatesData } from '../../src/lib/storage/rates';
 import {
   accuracy,
@@ -17,6 +17,23 @@ const rates: RatesData = {
   source: 'test',
 };
 
+describe('TRAINING_ITEMS', () => {
+  it('gives every item an id, a label, an emoji and a price', () => {
+    // A blank prompt asks the user to put a number on nothing at all.
+    for (const item of TRAINING_ITEMS) {
+      expect(item.id).toMatch(/\S/);
+      expect(item.label).toMatch(/\S/);
+      expect(item.emoji).toMatch(/\S/);
+      expect(item.amount).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps every id distinct so the last item can be excluded', () => {
+    const ids = new Set(TRAINING_ITEMS.map((item) => item.id));
+    expect(ids.size).toBe(TRAINING_ITEMS.length);
+  });
+});
+
 describe('scoreGuess', () => {
   describe('given an exact guess', () => {
     it('gives full marks', () => {
@@ -33,6 +50,11 @@ describe('scoreGuess', () => {
       expect(scoreGuess(4, 1)!.points).toBe(scoreGuess(0.25, 1)!.points);
     });
 
+    it('halves the marks for a guess out by a factor of two', () => {
+      expect(scoreGuess(2, 1)!.points).toBe(50);
+      expect(scoreGuess(0.5, 1)!.points).toBe(50);
+    });
+
     it('scores zero at a factor of four out, and never negative', () => {
       expect(scoreGuess(4, 1)!.points).toBe(0);
       expect(scoreGuess(1000, 1)!.points).toBe(0);
@@ -45,12 +67,33 @@ describe('scoreGuess', () => {
     });
   });
 
+  describe('when the answer is a fraction of a ZEC', () => {
+    it('scores the same relative miss the same way at any price', () => {
+      // Almost every real answer is a fraction, so a score built on the gap
+      // rather than the ratio would grade cheap items as easy and dear ones as
+      // impossible. Double the price of a coffee and of a car is one mistake.
+      const coffee = scoreGuess(0.1, 0.05)!;
+      const car = scoreGuess(100, 50)!;
+      expect(coffee.points).toBe(50);
+      expect(car.points).toBe(50);
+      expect(coffee.error).toBeCloseTo(1, 10);
+    });
+  });
+
   it('grades the verdict by how far off, in either direction', () => {
     expect(scoreGuess(1.05, 1)!.verdict).toBe('spot on');
     expect(scoreGuess(1.2, 1)!.verdict).toBe('close');
     expect(scoreGuess(0.8, 1)!.verdict).toBe('close');
     expect(scoreGuess(1.5, 1)!.verdict).toBe('in the region');
     expect(scoreGuess(3, 1)!.verdict).toBe('way off');
+  });
+
+  describe('when the guess sits exactly on a verdict boundary', () => {
+    it('gives the kinder of the two verdicts', () => {
+      expect(scoreGuess(1.25, 1)!.verdict).toBe('close');
+      expect(scoreGuess(0.75, 1)!.verdict).toBe('close');
+      expect(scoreGuess(0.4, 1)!.verdict).toBe('in the region');
+    });
   });
 
   describe('given nonsense input', () => {
@@ -85,6 +128,28 @@ describe('nextQuestion', () => {
     });
   });
 
+  describe('when the currency is written in lower case', () => {
+    it('reports the currency in upper case', () => {
+      // The popup prints this back at the user next to the amount.
+      expect(nextQuestion(rates, 'usd')!.currency).toBe('USD');
+    });
+  });
+
+  describe('when the draw lands at either end of the pool', () => {
+    it('can ask about any item in the catalogue', () => {
+      // Asking about the same first item forever trains one price, not a unit.
+      const random = vi.spyOn(Math, 'random');
+      try {
+        random.mockReturnValue(0);
+        expect(nextQuestion(rates, 'USD')!.item).toBe(TRAINING_ITEMS[0]);
+        random.mockReturnValue(0.999);
+        expect(nextQuestion(rates, 'USD')!.item).toBe(TRAINING_ITEMS.at(-1));
+      } finally {
+        random.mockRestore();
+      }
+    });
+  });
+
   describe('when an item is excluded', () => {
     it('does not repeat the item just asked', () => {
       const first = nextQuestion(rates, 'USD')!;
@@ -97,6 +162,16 @@ describe('nextQuestion', () => {
   describe('given no rate to ask about', () => {
     it('returns nothing', () => {
       expect(nextQuestion(rates, 'JPY')).toBeNull();
+    });
+  });
+
+  describe('given a rate that is not a positive number', () => {
+    it('returns nothing', () => {
+      // A zero or negative rate would price a coffee at nothing, and the user
+      // reads that as an answer rather than as a broken feed.
+      for (const rate of [0, -0.00125, Number.NaN]) {
+        expect(nextQuestion({ ...rates, rates: { USD: rate } }, 'USD')).toBeNull();
+      }
     });
   });
 

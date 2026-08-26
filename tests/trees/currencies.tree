@@ -1,0 +1,6 @@
+CurrenciesTest
+├── SUPPORTED_CURRENCIES
+│   ├── it names each currency by a symbol its pattern looks for
+│   └── it labels each currency with a name of its own
+└── CURRENCY_CODES
+    └── it holds exactly the codes the detector has patterns for

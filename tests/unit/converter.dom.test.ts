@@ -232,6 +232,14 @@ describe('convertPricesInNode', () => {
   });
 
   describe('given two different prices in one text node', () => {
+    it('replaces the longer of two that start together', () => {
+      // "$1,600" and "$1" both begin at the same offset. Replacing the short
+      // one first strands ",600" in the page beside a converted "$1".
+      document.body.innerHTML = '<p>$1,600 and $1.00</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.body.textContent).not.toContain(',600');
+    });
+
     it('replaces them in the order they appear', () => {
       // Replacements are tried longest-first so a longer match wins a tie, but
       // the EARLIER match still has to win overall or the text is rebuilt out
@@ -239,6 +247,38 @@ describe('convertPricesInNode', () => {
       document.body.innerHTML = '<p>$800 and $1,600</p>';
       convertPricesInNode(document.body, freshRates(), settings());
       expect(document.body.textContent).toBe('1.00 ZEC and 2.00 ZEC');
+    });
+  });
+
+  describe('given the same price written twice in one text node', () => {
+    it('converts both from one replacement', () => {
+      // One replacement is built per distinct price text, and it has to keep
+      // being applied until the text runs out.
+      document.body.innerHTML = '<p>$800 and $800 again</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.querySelectorAll(`.${SPAN_CLASS}`)).toHaveLength(2);
+    });
+  });
+
+  describe("given a price only its container's whole text spells out", () => {
+    it('replaces the container', () => {
+      // Split across inline children, the price lives in no single text node,
+      // so the only place to put the conversion is the element itself.
+      document.body.innerHTML = '<div class="p"><span>$</span><span>8</span><span>00</span></div>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.querySelector('.p')!.textContent).toContain('ZEC');
+    });
+
+    describe('given the container also holds other text', () => {
+      it('is left alone', () => {
+        // The whole-element replacement is only safe when the element's text
+        // IS the price. Anything else and the surrounding words are destroyed.
+        document.body.innerHTML =
+          '<div class="p">Now <span>$</span><span>8</span><span>00</span> only</div>';
+        convertPricesInNode(document.body, freshRates(), settings());
+        expect(document.querySelector('.p')!.textContent).toContain('Now');
+        expect(document.querySelector('.p')!.textContent).toContain('only');
+      });
     });
   });
 
@@ -420,6 +460,63 @@ describe('copying a converted price yields the fiat', () => {
     selection.addRange(range);
   }
 
+  it('stops the browser writing the ZEC text over the top', () => {
+    // Setting the clipboard is only half of it — without preventing the
+    // default, the browser's own copy of the ZEC text wins and the whole
+    // feature does nothing.
+    document.body.innerHTML = '<p id="p">$800</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    const uninstall = installCopyHandler();
+    select(document.getElementById('p')!);
+    const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', { value: { setData: () => {} } });
+    document.dispatchEvent(event);
+    uninstall();
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('catches the copy before the page can', () => {
+    // Registered on the capture phase: a site that stops the event on its own
+    // container would otherwise take the ZEC text to the clipboard.
+    document.body.innerHTML = '<div id="wrap"><p id="p">$800</p></div>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    document.getElementById('wrap')!.addEventListener(
+      'copy',
+      (e) => e.stopPropagation(),
+    );
+    expect(copyAfter(() => select(document.getElementById('p')!))).toBe('$800');
+  });
+
+  it('stops swapping once the handler is removed', () => {
+    document.body.innerHTML = '<p id="p">$800</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    const uninstall = installCopyHandler();
+    uninstall();
+    let copied: string | null = null;
+    select(document.getElementById('p')!);
+    const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', {
+      value: { setData: (_t: string, d: string) => (copied = d) },
+    });
+    document.dispatchEvent(event);
+    expect(copied).toBeNull();
+  });
+
+  describe('given the selection is empty', () => {
+    it('leaves the clipboard alone', () => {
+      document.body.innerHTML = '<p id="p">$800</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(copyAfter(() => {
+        const range = document.createRange();
+        range.setStart(document.getElementById('p')!, 0);
+        range.collapse(true);
+        const selection = window.getSelection()!;
+        selection.removeAllRanges();
+        selection.addRange(range);
+      })).toBeNull();
+    });
+  });
+
   describe('given nothing is selected', () => {
     it('leaves the clipboard alone', () => {
       document.body.innerHTML = '<p id="p">$800</p>';
@@ -546,6 +643,61 @@ describe('a site adapter that replaces the whole container', () => {
     expect(container.getAttribute('title')).toContain('Original:');
   });
 
+  it('hides that copy from sight', () => {
+    // Without the clipping the screen-reader copy renders too, so every
+    // whole-replaced price appears on screen twice.
+    onHost('www.bol.com');
+    document.body.innerHTML = '<div class="font-produkt">'
+      + "<span style=\"position: absolute\">'149' euro en '95' cent</span></div>";
+    convertPricesInNode(document.body, freshRates(), settings({ currencies: ['EUR'] }));
+    const copies = document.querySelectorAll(`.font-produkt .${SPAN_CLASS}`);
+    const hidden = Array.from(copies).find((el) =>
+      (el as HTMLElement).style.position === 'absolute'
+    ) as HTMLElement;
+    expect(hidden).toBeDefined();
+    expect(hidden.style.clipPath).toContain('inset');
+  });
+
+  it('separates two prices in one container', () => {
+    // Joined with nothing between them, "1.00 ZEC" and "2.00 ZEC" read as one
+    // unparseable number.
+    onHost('www.coolblue.nl');
+    document.body.innerHTML = '<div data-testid="price">€800 <span>€1,600</span></div>';
+    convertPricesInNode(document.body, freshRates(), settings({ currencies: ['EUR'] }));
+    expect(document.querySelector('[data-testid="price"]')!.textContent)
+      .toContain('1.04 ZEC 2.08 ZEC');
+  });
+
+  it('clears the original markup rather than appending to it', () => {
+    onHost('www.bol.com');
+    document.body.innerHTML = '<div class="font-produkt"><span>149,95</span>'
+      + "<span style=\"position: absolute\">'149' euro en '95' cent</span></div>";
+    convertPricesInNode(document.body, freshRates(), settings({ currencies: ['EUR'] }));
+    expect(document.querySelector('.font-produkt')!.textContent).not.toContain('149,95');
+  });
+
+  it('keeps the untrimmed original out of the tooltip', () => {
+    onHost('www.bol.com');
+    document.body.innerHTML = '<div class="font-produkt">'
+      + "<span style=\"position: absolute\">  '149' euro en '95' cent  </span></div>";
+    convertPricesInNode(document.body, freshRates(), settings({ currencies: ['EUR'] }));
+    const title = document.querySelector('.font-produkt')!.getAttribute('title') ?? '';
+    expect(title).toBe(title.trim());
+    expect(title).not.toContain('Original:  ');
+  });
+
+  describe('given the container had a title of its own', () => {
+    it('puts that title back on revert', () => {
+      onHost('www.bol.com');
+      document.body.innerHTML = '<div class="font-produkt" title="Frito-Lay">'
+        + "<span style=\"position: absolute\">'149' euro en '95' cent</span></div>";
+      const container = document.querySelector('.font-produkt')!;
+      convertPricesInNode(document.body, freshRates(), settings({ currencies: ['EUR'] }));
+      revertElement(container);
+      expect(container.getAttribute('title')).toBe('Frito-Lay');
+    });
+  });
+
   it('leaves an accessible copy behind', () => {
     // Assigning textContent used to delete the only price a screen reader
     // ever saw: sighted users got ZEC, screen-reader users got nothing.
@@ -572,6 +724,26 @@ describe('convertPricesInDocument', () => {
   it('converts the whole page', () => {
     document.body.innerHTML = '<p>$800</p><div><span>$1,600</span></div>';
     expect(convertPricesInDocument(freshRates(), settings())).toBe(2);
+  });
+
+  it('gives every price on the page one decimal shape', () => {
+    // The whole point of a shared scale: three prices the eye can compare
+    // without reading them.
+    document.body.innerHTML = '<p>$800</p><p>$16</p><p>$1,600</p>';
+    convertPricesInDocument(freshRates(), settings());
+    const shapes = Array.from(document.querySelectorAll(`.${SPAN_CLASS}`))
+      .map((el) => (el.textContent ?? '').replace(/\d/g, '#'));
+    expect(new Set(shapes).size).toBe(1);
+  });
+
+  it('starts a fresh scale for each page it is given', () => {
+    // Without this the grid a previous page settled on follows the user to
+    // the next one, and a page of ordinary prices inherits six decimals.
+    document.body.innerHTML = '<p>$0.80</p>';
+    convertPricesInDocument(freshRates(), settings());
+    document.body.innerHTML = '<p>$800</p>';
+    convertPricesInDocument(freshRates(), settings());
+    expect(document.querySelector(`.${SPAN_CLASS}`)!.textContent).toBe('1.00 ZEC');
   });
 
   describe('given conversion is switched off', () => {
@@ -616,6 +788,21 @@ describe('weaning withdraws the fiat crutch', () => {
     return document.querySelector(`.${SPAN_CLASS}`)!.getAttribute('title') ?? '';
   }
 
+  describe('given weaning is switched off entirely', () => {
+    it('keeps the original whatever the start date says', () => {
+      // A start date left behind from a previous run must not withdraw the
+      // fiat price from someone who has turned the feature off.
+      document.body.innerHTML = '<p>$800</p>';
+      convertPricesInNode(
+        document.body,
+        freshRates(),
+        settings({ weanFromFiat: false, weanStartedAt: Date.now() - 60 * DAY }),
+      );
+      expect(document.querySelector(`.${SPAN_CLASS}`)!.getAttribute('title'))
+        .toContain('Original: $800');
+    });
+  });
+
   describe('given weaning has reached the hidden stage', () => {
     it('drops the original from the tooltip', () => {
       expect(tooltipAfter(60)).not.toContain('Original:');
@@ -639,6 +826,18 @@ describe('the held-rate disclosure states its age', () => {
     convertPricesInNode(document.body, freshRates(), settings(), { peg, pegged });
     return document.querySelector(`.${SPAN_CLASS}`)!.getAttribute('title') ?? '';
   }
+
+  it('signs a gap above spot positive', () => {
+    // A sign that only ever appears one way teaches nothing about which
+    // direction the held rate is lagging.
+    expect(tooltipWithPeg(RATE / 2, Date.now())).toContain('+100.0%');
+  });
+
+  describe('given the peg was taken exactly an hour ago', () => {
+    it('says one hour, not just now', () => {
+      expect(tooltipWithPeg(RATE, Date.now() - HOUR)).toContain('1h ago');
+    });
+  });
 
   describe('given the peg was taken minutes ago', () => {
     it('says just now', () => {
@@ -674,6 +873,34 @@ describe('the held-rate disclosure states its age', () => {
 });
 
 describe('reverting', () => {
+  it('puts the original text back in place', () => {
+    // Reverting is what makes the extension a guest rather than a squatter:
+    // switch it off and the page must be exactly as its author wrote it.
+    document.body.innerHTML = '<p id="p">Total: $800 today</p>';
+    const before = document.getElementById('p')!.innerHTML;
+    convertPricesInNode(document.body, freshRates(), settings());
+    revertConversions();
+    expect(document.getElementById('p')!.innerHTML).toBe(before);
+  });
+
+  it('clears the marker so the element can convert again', () => {
+    document.body.innerHTML = '<p>$800</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    revertConversions();
+    convertPricesInNode(document.body, freshRates(), settings());
+    expect(document.querySelectorAll(`.${SPAN_CLASS}`)).toHaveLength(1);
+  });
+
+  it('clears the marker on a partly converted element too', () => {
+    // A partly converted element carries a different marker, and leaving it
+    // behind means the element is skipped for the rest of the visit.
+    document.body.innerHTML = '<p>Now $800 only</p>';
+    convertPricesInNode(document.body, freshRates(), settings());
+    revertConversions();
+    convertPricesInNode(document.body, freshRates(), settings());
+    expect(document.querySelectorAll(`.${SPAN_CLASS}`)).toHaveLength(1);
+  });
+
   describe('given a span the page created', () => {
     it('is left alone', () => {
       // A page can put any class it likes on its own markup. Rewriting it from
