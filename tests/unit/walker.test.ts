@@ -41,7 +41,28 @@ beforeEach(() => {
 describe('isSkippedTag', () => {
   describe('given a tag that cannot hold a real price', () => {
     it('is skipped', () => {
-      for (const tag of ['SCRIPT', 'STYLE', 'TEXTAREA', 'CODE', 'CANVAS']) {
+      // Named individually: each one is a place a number can appear that is
+      // not a price a shopper pays — markup, form state, code samples, or a
+      // document Zentat has no business rewriting.
+      for (
+        const tag of [
+          'SCRIPT',
+          'STYLE',
+          'NOSCRIPT',
+          'IFRAME',
+          'OBJECT',
+          'EMBED',
+          'CANVAS',
+          'SVG',
+          'MATH',
+          'TEXTAREA',
+          'INPUT',
+          'SELECT',
+          'CODE',
+          'PRE',
+          'HEAD',
+        ]
+      ) {
         expect(isSkippedTag(tag)).toBe(true);
       }
     });
@@ -111,6 +132,17 @@ describe('isNonPriceText', () => {
       expect(isNonPriceText('4.5 out of 5 stars')).toBe(true);
     });
 
+    it('rejects a score with no word after it', () => {
+      // "4.5 out of 5" appears on its own in review summaries, with nothing
+      // after it for the star rule to catch.
+      expect(isNonPriceText('4.5 out of 5')).toBe(true);
+    });
+
+    it('rejects a single star, spaced or not', () => {
+      expect(isNonPriceText('1 star')).toBe(true);
+      expect(isNonPriceText('5stars')).toBe(true);
+    });
+
     it('rejects a star count', () => {
       expect(isNonPriceText('5 stars')).toBe(true);
       expect(isNonPriceText('$5 Starship kit')).toBe(false);
@@ -122,12 +154,25 @@ describe('isNonPriceText', () => {
       expect(isNonPriceText('10K+ bought')).toBe(true);
       expect(isNonPriceText('2,300 reviews')).toBe(true);
     });
+
+    it('rejects a single one, spaced or not', () => {
+      expect(isNonPriceText('1 review')).toBe(true);
+      expect(isNonPriceText('1 rating')).toBe(true);
+      expect(isNonPriceText('300sold')).toBe(true);
+    });
   });
 
   describe('given a bare number', () => {
     it('rejects it', () => {
       expect(isNonPriceText('4.5')).toBe(true);
       expect(isNonPriceText('42')).toBe(true);
+    });
+
+    it('rejects one with cents but not a longer fraction', () => {
+      // Two decimals is a rating or a bare amount; more than two is a
+      // measurement, and neither is a price without a currency on it.
+      expect(isNonPriceText('4.55')).toBe(true);
+      expect(isNonPriceText('4.5551')).toBe(false);
     });
   });
 
@@ -142,6 +187,14 @@ describe('isNonPriceText', () => {
     describe('given it holds a currency symbol', () => {
       it('keeps it', () => {
         expect(isNonPriceText('($19.99)')).toBe(false);
+      });
+    });
+
+    describe('given the parenthesis is not at the start', () => {
+      it('keeps it', () => {
+        // The rule is about a parenthesised aside standing alone. A price
+        // followed by one is still a price.
+        expect(isNonPriceText('Bag (2 left)')).toBe(false);
       });
     });
   });
@@ -189,6 +242,23 @@ describe('isInteractiveControl', () => {
       expect(isInteractiveControl(document.getElementById('p')!)).toBe(false);
     });
   });
+
+  describe('at the size boundaries', () => {
+    // These two numbers are the whole rule. One character or one element
+    // either side decides whether a checkout button keeps its fiat price or
+    // an entire category page stops converting.
+    it('treats a control of exactly the maximum length as a control', () => {
+      const exactly40 = 'Pay now for this item and save money!!!!'.slice(0, 40);
+      render(`<a href="/pay"><span id="p">${exactly40}</span></a>`);
+      expect(isInteractiveControl(document.getElementById('p')!)).toBe(true);
+    });
+
+    it('treats one descendant past the maximum as a tile', () => {
+      const twelve = Array.from({ length: 12 }, (_, i) => `<i>${i}</i>`).join('');
+      render(`<a href="/pay">${twelve}<span id="p">$5</span></a>`);
+      expect(isInteractiveControl(document.getElementById('p')!)).toBe(false);
+    });
+  });
 });
 
 describe('looksConcatenated', () => {
@@ -224,12 +294,31 @@ describe('looksConcatenated', () => {
       expect(looksConcatenated(document.getElementById('p')!, '$19.99')).toBe(false);
     });
   });
+
+  describe('given the symbol is spaced away from the digits', () => {
+    it('is still concatenated', () => {
+      // Styled prices routinely put whitespace, including a non-breaking
+      // space, between the symbol and the number.
+      render('<div id="p"><span>49</span><span>99</span></div>');
+      expect(looksConcatenated(document.getElementById('p')!, '$ 4999')).toBe(true);
+      expect(looksConcatenated(document.getElementById('p')!, '$\u00A04999')).toBe(true);
+    });
+  });
 });
 
 describe('accessiblePriceText', () => {
   describe('given an aria-label holding a price', () => {
     it('uses the label', () => {
       render('<div id="p" aria-label="$19.99"><span>19</span><span>99</span></div>');
+      expect(accessiblePriceText(document.getElementById('p')!)).toBe('$19.99');
+    });
+  });
+
+  describe('given an aria-label holding a price with whitespace', () => {
+    it('trims the surrounding whitespace', () => {
+      // The label becomes the text the converter searches for, and a stray
+      // newline means it matches nothing at all.
+      render('<div id="p" aria-label="  $19.99  ">19</div>');
       expect(accessiblePriceText(document.getElementById('p')!)).toBe('$19.99');
     });
   });

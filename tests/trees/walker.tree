@@ -21,15 +21,21 @@ WalkerTest
 │   │   └── it rejects a zats amount
 │   ├── given a rating
 │   │   ├── it rejects an out-of-five score
-│   │   └── it rejects a star count
+│   │   ├── it rejects a score with no word after it
+│   │   ├── it rejects a star count
+│   │   └── it rejects a single star, spaced or not
 │   ├── given a sales or review count
-│   │   └── it rejects it
+│   │   ├── it rejects it
+│   │   └── it rejects a single one, spaced or not
 │   ├── given a bare number
-│   │   └── it rejects it
+│   │   ├── it rejects it
+│   │   └── it rejects one with cents but not a longer fraction
 │   ├── given parenthesised text
 │   │   ├── given it holds no currency symbol
 │   │   │   └── it rejects it
-│   │   └── given it holds a currency symbol
+│   │   ├── given it holds a currency symbol
+│   │   │   └── it keeps it
+│   │   └── given the parenthesis is not at the start
 │   │       └── it keeps it
 │   └── given an ordinary price
 │       └── it keeps it
@@ -40,8 +46,11 @@ WalkerTest
 │   │   └── it is a control
 │   ├── given a large product tile wrapped in a link
 │   │   └── it is not a control
-│   └── given a control with many descendants
-│       └── it is not a control
+│   ├── given a control with many descendants
+│   │   └── it is not a control
+│   └── at the size boundaries
+│       ├── it treats a control of exactly the maximum length as a control
+│       └── it treats one descendant past the maximum as a tile
 ├── looksConcatenated
 │   ├── given a single child
 │   │   ├── it is not concatenated
@@ -49,11 +58,15 @@ WalkerTest
 │   │       └── it is concatenated
 │   ├── given several children and a long unbroken digit run
 │   │   └── it is concatenated
-│   └── given several children and an ordinary price
-│       └── it is not concatenated
+│   ├── given several children and an ordinary price
+│   │   └── it is not concatenated
+│   └── given the symbol is spaced away from the digits
+│       └── it is still concatenated
 ├── accessiblePriceText
 │   ├── given an aria-label holding a price
 │   │   └── it uses the label
+│   ├── given an aria-label holding a price with whitespace
+│   │   └── it trims the surrounding whitespace
 │   ├── given an aria-label that is not a price
 │   │   └── it ignores the label
 │   ├── given a visually hidden price
