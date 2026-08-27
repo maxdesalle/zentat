@@ -9,6 +9,12 @@ export type DisplayUnit = 'auto' | 'zec' | 'zats';
 export const ZATS_PER_ZEC = 100_000_000;
 
 /**
+ * Every ZEC there will ever be. Not a display constant so much as the line
+ * where a number stops describing a price and starts describing an economy.
+ */
+export const MAX_ZEC_SUPPLY = 21_000_000;
+
+/**
  * There is no automatic switch to zats. The unit is ZEC unless the user asks
  * for otherwise, and this is a deliberate reversal.
  *
@@ -172,6 +178,25 @@ export function formatZecWithSymbol(
       maximumSignificantDigits: 2,
     }).format(amount);
     return `≈${formatted} ZEC`;
+  }
+
+  // Above the supply, the figure has stopped being a price. A finance page
+  // quoting the S&P 500 at $61.1 trillion converted to 78,333,333,333 ZEC —
+  // arithmetically right, and about 3,700 times every coin that will ever
+  // exist. Nobody can hold that number in mind, and nobody needs to: it is a
+  // market capitalisation, not something anyone pays. So it abbreviates.
+  //
+  // This is the ONE exception to the grouped-digits rule below, and the bound
+  // is what keeps it one. Anything a person could actually transact is under
+  // the supply and still renders in full, so the rounding never discards ZEC
+  // from an amount someone might spend.
+  if (absAmount > MAX_ZEC_SUPPLY) {
+    const formatted = new Intl.NumberFormat(LOCALE, {
+      notation: 'compact',
+      compactDisplay: 'short',
+      maximumSignificantDigits: 3,
+    }).format(amount);
+    return `${formatted} ZEC`;
   }
 
   // Grouped digits, never compact notation. No currency prices anything as

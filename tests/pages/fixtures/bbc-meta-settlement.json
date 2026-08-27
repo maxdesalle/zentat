@@ -5,5 +5,11 @@
   "lang": "en-GB",
   "title": "Meta to pay up to $18bn to settle claims its platforms harm children",
   "capturedAt": "2026-08-26",
-  "bytes": 80115
+  "bytes": 80115,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Limitation of the supply bound, and the narrowest kind. A settlement story quotes figures either side of 21 million ZEC, so one abbreviates to \"#.#M ZEC\" while its neighbour still renders every digit. Any threshold has a boundary and some page will straddle it; the alternative is abbreviating amounts a person could actually transact, which is a worse trade. Only the pages that quote both a market-scale figure and a near-supply one are affected."
+    }
+  ]
 }

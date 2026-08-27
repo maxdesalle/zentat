@@ -157,6 +157,24 @@ describe('formatZecWithSymbol', () => {
     });
   });
 
+  describe('given an amount larger than the whole ZEC supply', () => {
+    it('abbreviates rather than printing every digit', () => {
+      // A finance page quoting the S&P 500 at $61.1 trillion converted to
+      // 78,333,333,333 ZEC: right, and about 3,700 times every coin that will
+      // ever exist. It is a market capitalisation, not something anyone pays.
+      expect(formatZecWithSymbol(78_333_333_333)).toBe('78.3B ZEC');
+      expect(formatZecWithSymbol(2_019_230_769)).toBe('2.02B ZEC');
+      expect(formatZecWithSymbol(37_334_615)).toBe('37.3M ZEC');
+    });
+
+    it('still prints every digit at the supply itself', () => {
+      // The bound is what keeps this the one exception to grouped digits:
+      // anything a person could transact is under it and renders in full.
+      expect(formatZecWithSymbol(21_000_000)).toBe('21,000,000 ZEC');
+      expect(formatZecWithSymbol(1_532)).toBe('1,532 ZEC');
+    });
+  });
+
   describe('given a zero amount', () => {
     it('stays in ZEC at two decimals', () => {
       // Zero zats and zero ZEC are the same number; the ZEC reading is the one

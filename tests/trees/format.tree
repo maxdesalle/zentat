@@ -32,6 +32,9 @@ FormatTest
     │   │   └── it expands rather than showing nothing
     │   └── given the amount sits exactly on the rounding boundary
     │       └── it keeps the fixed precision
+    ├── given an amount larger than the whole ZEC supply
+    │   ├── it abbreviates rather than printing every digit
+    │   └── it still prints every digit at the supply itself
     ├── given a zero amount
     │   ├── it stays in ZEC at two decimals
     │   └── given a page grid
