@@ -149,6 +149,51 @@ describe('convertPricesInNode', () => {
     });
   });
 
+  describe('given every text node of a price is ineligible', () => {
+    it('still converts it at the element level', () => {
+      // A price inside a role="button" product tile has all of its text nodes
+      // rejected by the eligibility filter, so neither text-node pass can
+      // reach it. Removing this path as "dead code" cost DoorDash,
+      // McDonald's and Redfin two dozen prices between them.
+      document.body.innerHTML = '<div role="button" id="tile">'
+        + '<i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i>'
+        + '<i>8</i><i>9</i><i>10</i><i>11</i><i>12</i><i>13</i>'
+        + '<span id="p">$800</span></div>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.getElementById('p')!.textContent).toBe('1.00 ZEC');
+    });
+  });
+
+  describe('given the symbol is in a child and the digits are not', () => {
+    it('converts the price and leaves the rest of the text alone', () => {
+      // Franklin BBQ writes every menu price this way. The price belongs to no
+      // single text node, so the text walk cannot see it, and the whole-element
+      // fallback needs the element's text to be EXACTLY one price — "$42 / lb"
+      // is not. Sixty-two prices on one page were detected, parsed, and then
+      // silently left in dollars.
+      document.body.innerHTML = '<p id="p"><span class="sign">$</span>800 / lb</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.getElementById('p')!.textContent).toBe('1.00 ZEC / lb');
+    });
+
+    it('puts the split markup back exactly on revert', () => {
+      // The price came out of two nodes and cannot go back into one, so this
+      // path restores the element's markup wholesale. An emptied <span> left
+      // behind is the CSS-detectable residue removed twice already.
+      const html = '<p id="p"><span class="sign">$</span>800 / lb</p>';
+      document.body.innerHTML = html;
+      convertPricesInNode(document.body, freshRates(), settings());
+      revertConversions();
+      expect(document.body.innerHTML).toBe(html);
+    });
+
+    it('converts a second price in the same element too', () => {
+      document.body.innerHTML = '<p id="p"><span class="sign">$</span>800 or $1,600 boxed</p>';
+      convertPricesInNode(document.body, freshRates(), settings());
+      expect(document.getElementById('p')!.textContent).toBe('1.00 ZEC or 2.00 ZEC boxed');
+    });
+  });
+
   describe('given a price split across inline child nodes', () => {
     it('converts it', () => {
       document.body.innerHTML = '<div id="split"><span>$</span><span>99</span></div>';

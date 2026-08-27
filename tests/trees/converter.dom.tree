@@ -20,6 +20,12 @@ ConverterDomTest
 │   │   └── it keeps the original price visible
 │   ├── given a price inside a button
 │   │   └── it never rewrites it
+│   ├── given every text node of a price is ineligible
+│   │   └── it still converts it at the element level
+│   ├── given the symbol is in a child and the digits are not
+│   │   ├── it converts the price and leaves the rest of the text alone
+│   │   ├── it puts the split markup back exactly on revert
+│   │   └── it converts a second price in the same element too
 │   ├── given a price split across inline child nodes
 │   │   ├── it converts it
 │   │   ├── it leaves nothing of the split markup behind

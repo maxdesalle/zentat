@@ -306,26 +306,45 @@ function replacePricesInTextNodes(
   // same span, whichever one is picked.
   replacements.sort((a, b) => b.original.length - a.original.length);
 
+  let anyReplaced = false;
+
+  // Before anything else touches this element. A price whose symbol sits in a
+  // child and whose digits sit in the parent's own text belongs to no single
+  // text node, so the loop below cannot see it. Franklin BBQ writes every menu
+  // price that way — `<span class="currency-sign">$</span>42 / lb` — and the
+  // whole-element fallback further down cannot help either, because it needs
+  // the element's text to be EXACTLY one price and "$42 / lb" is not. Sixty-two
+  // prices on one page, detected, parsed, and then silently left in dollars.
+  //
+  // It runs FIRST because it snapshots the element's markup for the revert,
+  // and a snapshot taken after the ordinary pass has already inserted a span
+  // captures our own output as if the page had written it.
+  if (!directTextOnly) {
+    for (const replacement of replacements) {
+      if (replaceAcrossTextNodes(element, replacement, { rates, settings, held })) {
+        anyReplaced = true;
+      }
+    }
+  }
+
+  // Collected after the pass above, which rewrites nodes it spans.
   const textNodes = directTextOnly
     ? (Array.from(element.childNodes).filter((n) => n.nodeType === Node.TEXT_NODE) as Text[])
     : collectTextNodes(element);
 
-  let anyReplaced = false;
   for (const tNode of textNodes) {
     if (replaceInTextNode(tNode, replacements, { rates, settings, held })) {
       anyReplaced = true;
     }
   }
 
-  // Cross-node fallback: a price split across inline children
-  // (<span>$</span><span>99</span>) is detected via concatenated textContent
-  // but lives in no single text node. When the element's whole text IS the
-  // price, replace at the element level.
-  // Stryker disable next-line ConditionalExpression,LogicalOperator: equivalent —
-  // the fallback only fires when a page-written price IS the element's whole
-  // text. Once a text node has been replaced that text holds our own output
-  // instead, and a direct-text-only element by definition also holds a child's
-  // price, so neither state can produce that equality.
+  // Last resort, and NOT subsumed by the cross-boundary pass above: this one
+  // reads element.textContent directly, where both passes above go through
+  // collectTextNodes and its eligibility filter. A price inside a role="button"
+  // product tile has every one of its text nodes rejected by that filter, so
+  // this is the only path that converts it — deleting this block as dead code
+  // cost DoorDash, McDonald's and Redfin two dozen prices between them, and
+  // unit coverage could not show it because only the page corpus reaches here.
   if (!anyReplaced && !directTextOnly) {
     const trimmed = textOf(element);
     const match = replacements.find((r) => r.original === trimmed);
@@ -375,6 +394,62 @@ function collectTextNodes(element: Element): Text[] {
     textNodes.push(textNode);
   }
   return textNodes;
+}
+
+/**
+ * Replace a price that straddles a child boundary, leaving everything else in
+ * the element alone.
+ *
+ * Only the price's own characters are touched: the text before it and after it
+ * stay in the nodes that held them, and any child element the price does not
+ * cover is untouched. The element's markup is snapshotted first so that a
+ * revert restores it exactly — the price came out of two nodes and cannot be
+ * put back into one, and a revert that leaves an emptied `<span>` behind is
+ * the CSS-detectable residue this project has removed twice already.
+ */
+function replaceAcrossTextNodes(
+  element: Element,
+  replacement: Replacement,
+  ctx: ConvertContext,
+): boolean {
+  const nodes = collectTextNodes(element);
+  const at = nodes.map((node) => node.data).join('').indexOf(replacement.original);
+  if (at === -1) return false;
+  const end = at + replacement.original.length;
+
+  // Which nodes the price runs through, and where inside each.
+  const touched: Array<{ node: Text; from: number; to: number }> = [];
+  let offset = 0;
+  for (const node of nodes) {
+    const start = offset;
+    offset += node.data.length;
+    if (offset <= at || start >= end) continue;
+    touched.push({
+      node,
+      from: Math.max(0, at - start),
+      to: Math.min(node.data.length, end - start),
+    });
+  }
+  // A price inside one node is the ordinary path and has already had its turn.
+  if (touched.length < 2) return false;
+
+  rememberContainer(element, element.innerHTML, element.getAttribute('title'));
+
+  const [first, ...rest] = touched;
+  // The first node keeps what precedes the price; the split gives us a node
+  // holding the price's share of it, which the span replaces.
+  const tail = first.node.splitText(first.from);
+  tail.data = '';
+  tail.parentNode?.insertBefore(
+    makeSpan(
+      replacement.original,
+      replacement.converted,
+      tooltipFor(replacement.original, replacement.zecAmount, ctx),
+    ),
+    tail,
+  );
+  for (const { node, to } of rest) node.data = node.data.slice(to);
+  return true;
 }
 
 function replaceInTextNode(
