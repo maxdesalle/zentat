@@ -259,3 +259,28 @@ describe('the page may say ZEC for its own reasons', () => {
     expect(isNonPriceText('1 ZEC = $783.51')).toBe(true);
   });
 });
+
+describe('a join between two digits invents a number', () => {
+  it("reads the element's own text when splicing a child would fabricate one", () => {
+    // CoinMarketCap puts a coin's price in the <a>'s own text and the
+    // percentage change in a child, so reading the element whole gives
+    // "$78,426.810.53%" — which parses to nothing anyone wrote.
+    document.body.innerHTML = '<a id="p">BitcoinBTC$78,426.81<span>0.53%</span></a>';
+    expect(texts()).toContain('BitcoinBTC$78,426.81');
+    expect(texts().some((t) => t.includes('810.53'))).toBe(false);
+  });
+
+  it('does not change what a split price does', () => {
+    // "$" + "49" + "99" joins digits too, but the element has no text of its
+    // own to read instead — so this stays where it was, refused by the
+    // concatenation guard because no accessible copy resolves it.
+    document.body.innerHTML = '<div id="p"><span>$</span><span>49</span><span>99</span></div>';
+    expect(texts()).toEqual([]);
+  });
+
+  it('leaves a symbol-then-digits join alone', () => {
+    // Franklin BBQ: the join is "$" against "4", which fabricates nothing.
+    document.body.innerHTML = '<p id="p"><span>$</span>42 / lb</p>';
+    expect(texts()).toContain('$42 / lb');
+  });
+});

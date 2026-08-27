@@ -355,6 +355,27 @@ function authoredTextLength(element: Element): number {
   return length;
 }
 
+/**
+ * Whether concatenating this element's children into its text would run two
+ * digits together.
+ *
+ * CoinMarketCap puts a coin's price in an <a>'s own text and its percentage
+ * change in a child, so reading the element whole gives "$78,426.810.53%" —
+ * a number nobody wrote, which parses to nothing usable. Its own text reads
+ * "$78,426.81".
+ *
+ * The test is the JOIN, not the presence of a price. Franklin BBQ writes
+ * "<span>$</span>42 / lb", where the join is "$" against "4": the whole text
+ * is the only reading there is, and it is the right one. Only a digit meeting
+ * a digit across a boundary is evidence that the concatenation is a fiction.
+ */
+function joinsDigits(element: Element): boolean {
+  const parts = Array.from(element.childNodes)
+    .map((node) => (node.nodeType === Node.TEXT_NODE ? textOf(node) : textOf(node as Element)))
+    .filter((part) => part !== '');
+  return parts.some((part, index) => index > 0 && /\d$/.test(parts[index - 1]) && /^\d/.test(part));
+}
+
 export function walkPriceElements(root: Node): WalkResult[] {
   const results: WalkResult[] = [];
   let charBudget = MAX_PASS_CHARS;
@@ -551,7 +572,18 @@ export function walkPriceElements(root: Node): WalkResult[] {
       }
     }
 
-    if (!hasMatchingChild) {
+    // Reading the element WHOLE splices its children's text into its own, and
+    // a join between two digits invents a number nobody wrote. See joinsDigits.
+    // The whole reading is a fiction only when a join fabricates a number AND
+    // the element has text of its own to read instead. A price genuinely split
+    // into "$" + "49" + "99" joins digits too, and there the join IS the
+    // price — but such an element has no text of its own, and an accessible
+    // copy settles it outright where one exists.
+    const spliceIsFiction = accessible === null
+      && joinsDigits(element)
+      && directTextOf(element) !== '';
+
+    if (!hasMatchingChild && !spliceIsFiction) {
       results.push({ node: element, text: trimmed });
       processedElements.add(element);
     } else {
