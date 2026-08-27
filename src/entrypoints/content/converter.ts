@@ -4,7 +4,7 @@ import { clearPageScale, setPageScale } from '../../lib/conversion/format';
 import { adapterFor, isWholeReplacement } from '../../lib/detection/adapters';
 import { textOf } from '../../lib/detection/dom';
 import type { ParsedPrice } from '../../lib/detection/parser';
-import { isSkippedTag } from '../../lib/detection/walker';
+import { isInteractiveControl, isSkippedTag } from '../../lib/detection/walker';
 import { divergence, type HeldRate } from '../../lib/rates/held';
 import { isRatesUsable, type RatesData } from '../../lib/storage/rates';
 import type { Settings } from '../../lib/storage/settings';
@@ -381,9 +381,13 @@ function collectTextNodes(element: Element): Text[] {
       if (isSkippedTag(parent.tagName)) return NodeFilter.FILTER_REJECT;
       if (parent.isContentEditable) return NodeFilter.FILTER_REJECT;
       if (parent.closest(`.${SPAN_CLASS}`)) return NodeFilter.FILTER_REJECT;
-      // BUTTON is already a skipped tag; this catches the role attribute,
-      // which storefronts use far more than the element.
-      if (parent.closest('[role="button"]')) return NodeFilter.FILTER_REJECT;
+      // The SAME question the walker asks, not a second opinion. This rejected
+      // every text node under any role="button", while the walker had stopped
+      // treating those as controls unless they ask the user for something —
+      // so an element was collected and then had none of its text touched.
+      // Steam's price widget, DoorDash's menu cards and CoinGecko's headlines
+      // all sat in that gap, offered and then silently skipped.
+      if (isInteractiveControl(parent)) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
   });

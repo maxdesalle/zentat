@@ -88,7 +88,8 @@ ConverterDomTest
 │       │   └── given the control holds no price of its own
 │       │       └── its text is still skipped
 │       └── given the element's price comes from a label
-│           └── it is still left alone
+│           ├── it converts a control that is only a price
+│           └── it still leaves a control that asks for something
 │   ├── given its own output
 │   │   ├── it never re-processes it
 │   │   ├── given a second pass over an already-converted element

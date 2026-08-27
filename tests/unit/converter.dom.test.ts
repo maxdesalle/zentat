@@ -151,16 +151,19 @@ describe('convertPricesInNode', () => {
 
   describe('given every text node of a price is ineligible', () => {
     it('still converts it at the element level', () => {
-      // A price inside a role="button" product tile has all of its text nodes
-      // rejected by the eligibility filter, so neither text-node pass can
-      // reach it. Removing this path as "dead code" cost DoorDash,
-      // McDonald's and Redfin two dozen prices between them.
-      document.body.innerHTML = '<div role="button" id="tile">'
-        + '<i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i>'
-        + '<i>8</i><i>9</i><i>10</i><i>11</i><i>12</i><i>13</i>'
-        + '<span id="p">$800</span></div>';
+      // When every text node of a price is refused — by a skipped tag, a
+      // contenteditable region, a control — neither text-node pass can reach
+      // it, and this element-level path is the only one that can. Removing it
+      // as "dead code" cost DoorDash, McDonald's and Redfin two dozen prices
+      // between them, and the unit suite stayed green throughout.
+      // The label covers the element, so the walk offers it whole rather than
+      // deferring to the child — and the child is a contenteditable region,
+      // whose text node the replacement filter refuses. Neither text-node pass
+      // can reach the price; this element-level path is the only one that can.
+      document.body.innerHTML =
+        '<div id="tile" aria-label="$800"><b contenteditable="true">$800</b></div>';
       convertPricesInNode(document.body, freshRates(), settings());
-      expect(document.getElementById('p')!.textContent).toBe('1.00 ZEC');
+      expect(document.getElementById('tile')!.textContent).toBe('1.00 ZEC');
     });
   });
 
@@ -587,13 +590,24 @@ describe('convertPricesInNode', () => {
     });
 
     describe("given the element's price comes from a label", () => {
-      it('is still left alone', () => {
-        // The user pays the merchant's figure in the merchant's currency; a
-        // ZEC amount on the control they press is a number nobody will charge.
+      it('converts a control that is only a price', () => {
+        // Steam wraps the price ITSELF in role="button". Take the price out of
+        // this control and nothing is left, so nothing is being asked — and
+        // leaving it in dollars beside a page of ZEC is the failure the
+        // product exists to prevent.
         document.body.innerHTML =
           '<div aria-label="$800 total"><span role="button">$800</span> total</div>';
         convertPricesInNode(document.body, freshRates(), settings());
-        expect(document.querySelector('[role="button"]')!.textContent).toBe('$800');
+        expect(document.querySelector('[role="button"]')!.textContent).toBe('1.00 ZEC');
+      });
+
+      it('still leaves a control that asks for something', () => {
+        // The user pays the merchant's figure in the merchant's currency; a
+        // ZEC amount on the control they press is a number nobody will charge.
+        document.body.innerHTML =
+          '<div aria-label="Pay $800"><span role="button">Pay $800</span> total</div>';
+        convertPricesInNode(document.body, freshRates(), settings());
+        expect(document.querySelector('[role="button"]')!.textContent).toBe('Pay $800');
       });
     });
   });
