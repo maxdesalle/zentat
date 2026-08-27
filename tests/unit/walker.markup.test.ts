@@ -298,3 +298,18 @@ describe('a join between two digits invents a number', () => {
     expect(texts()).not.toContain('BTC$78,426.810.53%');
   });
 });
+
+describe('a currency prefix is part of the price', () => {
+  it('converts a button whose whole text is a prefixed price', () => {
+    // "CA$0.51" left "CA" behind when the price was stripped out, and two
+    // letters read as a call to action — so Humble's discount buttons kept
+    // their dollars on a page where everything else had converted.
+    document.body.innerHTML = '<button id="b">CA$0.51</button>';
+    expect(isInteractiveControl(document.getElementById('b')!)).toBe(false);
+  });
+
+  it('still leaves a prefixed price in a real checkout button', () => {
+    document.body.innerHTML = '<button id="b">Add to Cart CDN$ 5.19</button>';
+    expect(isInteractiveControl(document.getElementById('b')!)).toBe(true);
+  });
+});

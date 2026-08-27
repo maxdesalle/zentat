@@ -127,7 +127,10 @@ const MAX_CONTROL_DESCENDANTS = 12;
 const MAX_CONTROL_TEXT = 40;
 
 // A price, in the shapes a control is likely to render one.
-const PRICE_LIKE = /[$€£¥₩₹][\s\u00A0]*[\d.,]+|[\d.,]+[\s\u00A0]*[A-Z]{3}\b/g;
+// The prefix counts as part of the price: "CA$0.51" left "CA" behind, which
+// reads as two letters and so as a call to action, and Humble's discount
+// buttons stayed in dollars because of it.
+const PRICE_LIKE = /[A-Z]{0,3}[$€£¥₩₹][\s\u00A0]*[\d.,]+|[\d.,]+[\s\u00A0]*[A-Z]{3}\b/g;
 
 /**
  * Whether a control asks the user to DO something, as opposed to merely
