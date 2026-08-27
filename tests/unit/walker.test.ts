@@ -257,20 +257,19 @@ describe('isInteractiveControl', () => {
 
   describe('given a short control', () => {
     it('is a control', () => {
-      render('<a href="/pay"><span id="p">Pay $49.99</span></a>');
+      render('<button><span id="p">Pay $49.99</span></button>');
       expect(isInteractiveControl(document.getElementById('p')!)).toBe(true);
     });
   });
 
-  describe('given a large product tile wrapped in a link', () => {
+  describe('given a large product tile that is clickable', () => {
     it('is not a control', () => {
-      // Modern storefronts wrap whole tiles in an <a>. Skipping those would
-      // drop entire category pages; only about 1% of prices sit in a real
-      // control, so the test is size rather than tag.
+      // Storefronts wrap whole tiles in role="button". Skipping those would
+      // drop entire category pages, so among buttons the test is size.
       render(
-        '<a href="/product"><h2>A rather long product title that runs on</h2>'
+        '<div role="button"><h2>A rather long product title that runs on</h2>'
           + '<p>Some description text that also runs on for a while</p>'
-          + '<span id="p">$19.99</span></a>',
+          + '<span id="p">$19.99</span></div>',
       );
       expect(isInteractiveControl(document.getElementById('p')!)).toBe(false);
     });
@@ -279,7 +278,7 @@ describe('isInteractiveControl', () => {
   describe('given a control with many descendants', () => {
     it('is not a control', () => {
       const kids = Array.from({ length: 14 }, (_, i) => `<i>${i}</i>`).join('');
-      render(`<a href="/x">${kids}<span id="p">$5</span></a>`);
+      render(`<div role="button">${kids}<span id="p">$5</span></div>`);
       expect(isInteractiveControl(document.getElementById('p')!)).toBe(false);
     });
   });
@@ -290,13 +289,13 @@ describe('isInteractiveControl', () => {
     // an entire category page stops converting.
     it('treats a control of exactly the maximum length as a control', () => {
       const exactly40 = 'Pay now for this item and save money!!!!'.slice(0, 40);
-      render(`<a href="/pay"><span id="p">${exactly40}</span></a>`);
+      render(`<button><span id="p">${exactly40}</span></button>`);
       expect(isInteractiveControl(document.getElementById('p')!)).toBe(true);
     });
 
     it('treats a control with exactly the maximum descendants as a control', () => {
       const eleven = Array.from({ length: 11 }, (_, i) => `<i>${i}</i>`).join('');
-      render(`<a href="/pay">${eleven}<span id="p">$5</span></a>`);
+      render(`<button>${eleven}<span id="p">$5</span></button>`);
       expect(isInteractiveControl(document.getElementById('p')!)).toBe(true);
     });
 
@@ -506,7 +505,7 @@ describe('isConvertible', () => {
 
   describe('given a control', () => {
     it('is not convertible', () => {
-      render('<a href="/pay"><span id="p">Pay $49.99</span></a>');
+      render('<button><span id="p">Pay $49.99</span></button>');
       expect(isConvertible(document.getElementById('p')!)).toBe(false);
     });
   });

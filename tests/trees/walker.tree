@@ -52,7 +52,7 @@ WalkerTest
 │   │   └── it is not a control
 │   ├── given a short control
 │   │   └── it is a control
-│   ├── given a large product tile wrapped in a link
+│   ├── given a large product tile that is clickable
 │   │   └── it is not a control
 │   ├── given a control with many descendants
 │   │   └── it is not a control

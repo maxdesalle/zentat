@@ -67,14 +67,32 @@ export function isNonPriceText(text: string): boolean {
 }
 
 // A control the user acts on, as opposed to a card that happens to be clickable.
-// Modern storefronts wrap whole product tiles in role="button" or an <a>, and
-// skipping those would drop entire category pages — measured across 31 real
-// pages, only ~1% of prices sit in a genuine control. So the test is size, not
-// tag: a checkout CTA is short, a product tile is not.
-// Modern storefronts wrap whole product tiles in role="button" or an <a>, and
-// skipping those would drop entire category pages — measured across 31 real
-// pages, only ~1% of prices sit in a genuine control. So the test is size, not
-// tag: a checkout CTA is short, a product tile is not.
+// The rule this serves is "never convert a price the user is about to commit
+// to in fiat", and it was written for checkout CTAs: "Buy now — $9.99".
+//
+// A <label>, an <a> and a <summary> are not that. Choosing 48GB on Apple's
+// configurator, or ticking a coupon box on Amazon, charges nobody anything —
+// and skipping them left the option prices sitting in dollars beside every
+// other price on the page already rendered in ZEC, which is the failure this
+// whole extension exists to avoid. A price you cannot read in ZEC is worse
+// than one you can, right up until the moment you pay.
+//
+// So a control is a BUTTON. Storefronts still wrap whole product tiles in
+// role="button", so the size test stays for those: a checkout CTA is short, a
+// product tile is not.
+// The rule this serves is "never convert a price the user is about to commit
+// to in fiat", and it was written for checkout CTAs: "Buy now — $9.99".
+//
+// A <label>, an <a> and a <summary> are not that. Choosing 48GB on Apple's
+// configurator, or ticking a coupon box on Amazon, charges nobody anything —
+// and skipping them left the option prices sitting in dollars beside every
+// other price on the page already rendered in ZEC, which is the failure this
+// whole extension exists to avoid. A price you cannot read in ZEC is worse
+// than one you can, right up until the moment you pay.
+//
+// So a control is a BUTTON. Storefronts still wrap whole product tiles in
+// role="button", so the size test stays for those: a checkout CTA is short, a
+// product tile is not.
 //
 // The tag SHOULD decide for a literal <button> or <label>: NYT's subscribe
 // page wraps each offer in a <button> carrying 125 characters of copy, so the
@@ -87,7 +105,7 @@ export function isNonPriceText(text: string): boolean {
 // and has to be fixed first. Until then the defect is recorded on the fixtures
 // rather than papered over: see controlsStayFiat, which no longer borrows this
 // function's threshold and so can actually fail.
-const CONTROL_SELECTOR = 'button, [role="button"], a[href], [role="link"], label, summary';
+const CONTROL_SELECTOR = 'button, [role="button"]';
 const MAX_CONTROL_DESCENDANTS = 12;
 const MAX_CONTROL_TEXT = 40;
 

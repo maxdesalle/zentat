@@ -9,7 +9,11 @@
   "knownGaps": [
     {
       "invariant": "one shape per page",
-      "why": "Genuine limitation. A $15.97 figure, ~$780 spot prices and a $16.45B market cap share one page \u2014 nine orders of magnitude. The median grid gives spot two decimals (\"1.00 ZEC\") and the significant-figure cap strips them from the totals (\"21,089,744 ZEC\"). Every amount on this page was checked against its original and converts correctly; the shape is the only thing wrong. Worth noting that 21,089,744 ZEC is the entire ZEC supply and clears \"no unreadable magnitudes\" only because that rule triggers at nine digits and this is eight \u2014 the same open question sp500-index records, one digit under the wire."
+      "why": "Genuine limitation. A $15.97 figure, ~$780 spot prices and a $16.45B market cap share one page — nine orders of magnitude. The median grid gives spot two decimals (\"1.00 ZEC\") and the significant-figure cap strips them from the totals (\"21,089,744 ZEC\"). Every amount on this page was checked against its original and converts correctly; the shape is the only thing wrong. Worth noting that 21,089,744 ZEC is the entire ZEC supply and clears \"no unreadable magnitudes\" only because that rule triggers at nine digits and this is eight — the same open question sp500-index records, one digit under the wire."
+    },
+    {
+      "invariant": "no unreadable magnitudes",
+      "why": "Genuine limitation, same family as aws-s3-pricing and openai-pricing. A coin page quotes ticks of a fraction of a cent beside a market cap, and 0.00002495 ZEC is what a sub-cent tick honestly is. The never-render-a-nonzero-price-as-zero rule is what produces the digits, and it is the right rule: a price that reads as zero is a wrong price."
     }
   ]
 }

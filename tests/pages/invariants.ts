@@ -102,7 +102,12 @@ export function tooltipMatchesOriginal(): Violation[] {
 }
 
 /**
- * Nothing inside a control the user acts on may show a converted price.
+ * Nothing inside a real <button> may show a converted price.
+ *
+ * A literal <button> is the shape of a commitment: an author writing one means
+ * the user to act. role="button" is what tile-wrapping frameworks emit around
+ * whole product cards, which the walker converts on purpose, so including it
+ * here flagged Redfin's listing tiles and DoorDash's menu cards as defects.
  *
  * Stated without reference to how the walker decides what a control is. The
  * old version re-applied the walker's own forty-character limit, so it could
@@ -114,7 +119,7 @@ export function tooltipMatchesOriginal(): Violation[] {
  */
 export function controlsStayFiat(): Violation[] {
   return converted()
-    .filter((el) => el.closest('button, label') !== null)
+    .filter((el) => el.closest('button') !== null)
     .slice(0, 3)
     .map((el) => ({ invariant: 'controls stay fiat', detail: shown(el) }));
 }
@@ -172,6 +177,43 @@ export function noBareNumberBesideConverted(): Violation[] {
   return bad.slice(0, 3);
 }
 
+/**
+ * No fiat price is left sitting beside a converted one.
+ *
+ * Every other invariant here asks whether a CONVERTED price is right. None of
+ * them could fail for a price we simply missed, so a page could convert one
+ * figure, skip the headline, and pass. That is what shipped: Apple's
+ * configurator showed "48GB - $2,000.00" beside options already in ZEC, and
+ * Amazon left "$9.99" above a variant list reading 0.0125 ZEC.
+ *
+ * Scoped to a shared parent on purpose. A page-wide count would fire on every
+ * checkout button we deliberately leave in fiat, and an invariant that always
+ * fires is an invariant nobody reads. Two prices under one parent, one
+ * converted and one not, is the shape a reader actually sees as inconsistent.
+ */
+export function noFiatLeftBeside(): Violation[] {
+  const bad: Violation[] = [];
+  const seen = new Set<Element>();
+  for (const el of converted()) {
+    const parent = el.parentElement;
+    if (parent === null || seen.has(parent)) continue;
+    seen.add(parent);
+    for (const node of Array.from(parent.childNodes)) {
+      if (node.nodeType !== 3) continue;
+      const text = node.textContent ?? '';
+      const match = /[$€£¥₩₹]\s?\d[\d.,]*/.exec(text);
+      if (match) {
+        bad.push({
+          invariant: 'no fiat left beside converted',
+          detail: `${shown(el)} beside ${match[0]}`,
+        });
+        break;
+      }
+    }
+  }
+  return bad.slice(0, 3);
+}
+
 export function checkConverted(): Violation[] {
   return [
     ...oneUnitPerPage(),
@@ -181,6 +223,7 @@ export function checkConverted(): Violation[] {
     ...controlsStayFiat(),
     ...noPageScaleElementIsAPrice(),
     ...noBareNumberBesideConverted(),
+    ...noFiatLeftBeside(),
   ];
 }
 

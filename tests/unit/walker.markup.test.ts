@@ -66,9 +66,19 @@ describe('interactive controls', () => {
     expect(isConvertible(document.getElementById('b')!)).toBe(false);
   });
 
-  it('skips a link styled as a control', () => {
+  it('converts a price in a link, which is navigation rather than payment', () => {
     document.body.innerHTML = '<a id="a" href="/pay">Pay $49.99</a>';
-    expect(isConvertible(document.getElementById('a')!)).toBe(false);
+    expect(isConvertible(document.getElementById('a')!)).toBe(true);
+  });
+
+  it('converts an option price in a label, which charges nobody anything', () => {
+    // Apple's configurator rows are a <label> around a radio. Skipping them
+    // left "48GB – $2,000.00" in dollars beside every other price on the page
+    // already rendered in ZEC. Amazon's "Coupon price $8.99" is the same
+    // shape, a label around a checkbox. Choosing is not paying.
+    document.body.innerHTML =
+      '<label id="l"><input type="radio"><span>48GB</span><span>$2,000.00</span></label>';
+    expect(isConvertible(document.getElementById('l')!)).toBe(true);
   });
 
   it('does NOT skip a card-sized container that happens to be clickable', () => {
