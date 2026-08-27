@@ -58,6 +58,8 @@ interface PageMeta {
   knownGaps?: Array<{ invariant: string; why: string }>;
   /** Fiat prices a reader may still see after conversion. Ratcheted. */
   maxFiatRemaining?: number;
+  /** Why each of them is still in fiat. Required whenever any are. */
+  fiatRemainingWhy?: string;
 }
 
 // Metadata is cheap; the markup is not. Real captures run to hundreds of
@@ -142,6 +144,13 @@ describe.each(pages.map((p) => [p.meta.name, p] as const))('%s', (_name, page) =
       problems.push(`left ${fiatAfter} fiat prices on screen, was allowed ${allowed}`);
     } else if (fiatAfter < allowed) {
       problems.push(`only ${fiatAfter} fiat prices remain, tighten maxFiatRemaining to that`);
+    }
+    // A number on its own says nothing. Every price this page still shows in
+    // fiat has to have a reason written down — deliberate refusal, a rate we
+    // do not hold, a guard against a hundredfold error — or it is a bug
+    // nobody has looked at yet, quietly recorded as if it were fine.
+    if (allowed !== undefined && allowed > 0 && !page.meta.fiatRemainingWhy) {
+      problems.push(`${allowed} fiat prices remain with no fiatRemainingWhy recorded`);
     }
 
     const expected = new Set((page.meta.knownGaps ?? []).map((gap) => gap.invariant));

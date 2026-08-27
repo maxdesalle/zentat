@@ -6,5 +6,6 @@
   "title": "Buy Dead Space | Xbox",
   "capturedAt": "2026-08-26",
   "bytes": 235562,
-  "maxFiatRemaining": 1
+  "maxFiatRemaining": 1,
+  "fiatRemainingWhy": "1 remaining, deliberate: \"$17.49\" sits inside a control reading \"BUY$69.99$17.49+\". A checkout button asks the user to commit, and the charge lands in fiat."
 }

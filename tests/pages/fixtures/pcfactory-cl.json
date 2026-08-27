@@ -6,5 +6,6 @@
   "title": "Samsung Tablet Samsung Galaxy Tab S10 Lite 10.9\" 6GB 128GB WiFi Octa Core Android Gris + Lapiz + Funda | pc Factory",
   "capturedAt": "2026-08-26",
   "bytes": 473147,
-  "maxFiatRemaining": 214
+  "maxFiatRemaining": 214,
+  "fiatRemainingWhy": "All 214 remaining, deliberate: this page prices in Chilean pesos, a currency we hold no rate for. Reading a \"$\" here as a US dollar was a ~950x error on every price on the page. The TLD names the currency so the parser can refuse it."
 }
