@@ -211,7 +211,30 @@ export function looksConcatenated(el: Element, text: string): boolean {
   // text concatenates to "$1879". Requiring two meant the most common
   // superscript-cents markup on the web walked straight past this guard.
   if (el.children.length < 1) return false;
-  return /[$€£¥₩₹][\s\u00A0]*\d{4,}(?!\d)/.test(text);
+  const run = /[$€£¥₩₹][\s\u00A0]*(\d{4,})(?!\d)/.exec(text);
+  if (run === null) return false;
+  // Only if the DIGITS crossed a boundary. What makes "$4999" dangerous is
+  // that the page wrote "$" + "49" + "99" and the decimal point was CSS — the
+  // digits themselves were split. A symbol in its own child is not that:
+  // Franklin BBQ writes "<span>$</span>1199" and the digits are whole.
+  //
+  // Testing the run including its symbol refused both, and with it every
+  // four-digit price in any element that had a child of any kind: "From $1199"
+  // beside a <sup>**</sup> footnote, "Option $1199" in a label with a radio.
+  // Apple's lineup page is entirely four-digit prices.
+  return !someTextNodeHolds(el, run[1]);
+}
+
+/** Whether any single text node in this element contains the whole run. */
+function someTextNodeHolds(el: Element, run: string): boolean {
+  const walker = el.ownerDocument.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  // .data rather than textContent: a Text node's data is always a string,
+  // where textContent is typed as nullable for nodes that are not.
+  let node: Node | null;
+  while ((node = walker.nextNode()) !== null) {
+    if ((node as Text).data.includes(run)) return true;
+  }
+  return false;
 }
 
 /**
@@ -315,6 +338,13 @@ function digitsOf(text: string): string {
 export function accessibleCopyCovers(el: Element, accessible: string | null): string | null {
   if (accessible === null) return null;
   const covered = digitsOf(accessible);
+  // The element's OWN text as well as its descendants'. Apple states its lease
+  // terms in a 4,056-character <span> carrying a 286-character accessible
+  // summary; every price in the footnote sits in the span's own text nodes, so
+  // a check that only looked at descendants found nothing to disagree with and
+  // let the summary stand in for the lot. Twelve prices, three of them read.
+  const own = digitsOf(directTextOf(el));
+  if (own !== '' && !covered.includes(own)) return null;
   // Every price-bearing element inside, not only the direct children. A label
   // reading "₹498.00" on a 1,089-character Amazon carousel passed the
   // direct-child test — its immediate children are wrappers — and the copy
@@ -431,24 +461,29 @@ function joinsDigits(element: Element): boolean {
 const MAX_PROSE_NODES = 40;
 
 /**
- * The first of an element's own text nodes that could hold a price.
+ * Each of an element's own text nodes that could hold a price.
+ *
+ * Each, not the first: Apple states its lease terms in a span whose own text
+ * runs to four thousand characters across nine sentences, and returning only
+ * the first read three of its twelve prices.
  *
  * Only the element's OWN text, one node at a time, and only nodes short enough
  * to be read as a price anywhere else. A price stated in prose is still a
  * price — Craigslist puts the asking figure in the body of the posting — and
  * refusing the whole element because it is long refuses that with it.
  */
-function proseTextIn(element: Element): string | null {
+function proseTextIn(element: Element): string[] {
+  const found: string[] = [];
   let seen = 0;
   for (const node of Array.from(element.childNodes)) {
     if (node.nodeType !== Node.TEXT_NODE) continue;
-    if (++seen > MAX_PROSE_NODES) return null;
+    if (++seen > MAX_PROSE_NODES) break;
     const text = textOf(node);
     if (text.length === 0 || text.length > MAX_PURE_PRICE_LENGTH) continue;
     if (!QUICK_DETECT_PATTERN.test(text) || isNonPriceText(text)) continue;
-    return text;
+    found.push(text);
   }
-  return null;
+  return found;
 }
 
 export function walkPriceElements(root: Node): WalkResult[] {
@@ -573,8 +608,9 @@ export function walkPriceElements(root: Node): WalkResult[] {
       // candidate, so this can never be cheaper to abuse than the pre-filter
       // it sits in front of: a page-sized text node is still refused, which is
       // what that guard is actually for.
-      const prose = proseTextIn(element);
-      if (prose) results.push({ node: element, text: prose, directTextOnly: true });
+      for (const prose of proseTextIn(element)) {
+        results.push({ node: element, text: prose, directTextOnly: true });
+      }
       continue;
     }
 
@@ -619,12 +655,24 @@ export function walkPriceElements(root: Node): WalkResult[] {
       continue;
     }
 
+    // Whether reading this element WHOLE would splice a child's digits onto its
+    // own and invent a number. Computed here because the refusal below must not
+    // fire on an element we are not going to read whole anyway.
+    const spliceIsFiction = accessible === null
+      && joinsDigits(element)
+      && directTextOf(element) !== '';
+
     // Refuse rather than risk a 100x error when the text looks like it lost a
     // separator between child elements and no accessible source disambiguates.
     // Not marked processed, unlike the adapter pass above: any ancestor can
     // trip this, and an ancestor's refusal must not veto a descendant that
     // still has an accessible copy to resolve it.
-    if (accessible === null && looksConcatenated(element, trimmed)) continue;
+    //
+    // Not when the splice is already known to be a fiction: "From $1199" beside
+    // a <a>1</a> footnote reads as "$11991" spliced, which is exactly the shape
+    // this refuses — and exactly the shape the element's OWN text resolves.
+    // Refusing first threw the price away before that could happen.
+    if (accessible === null && !spliceIsFiction && looksConcatenated(element, trimmed)) continue;
 
     if (charBudget <= 0) break;
     charBudget -= trimmed.length;
@@ -666,10 +714,6 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // into "$" + "49" + "99" joins digits too, and there the join IS the
     // price — but such an element has no text of its own, and an accessible
     // copy settles it outright where one exists.
-    const spliceIsFiction = accessible === null
-      && joinsDigits(element)
-      && directTextOf(element) !== '';
-
     if (!hasMatchingChild && !spliceIsFiction) {
       results.push({ node: element, text: trimmed });
       processedElements.add(element);

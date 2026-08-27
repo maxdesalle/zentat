@@ -62,13 +62,17 @@ describe('readRenderedZec', () => {
     // "1,282,051" is a grouped integer, not three decimals. Reading it as
     // decimals set the tolerance a thousand times too tight, and the oracle
     // failed a value it had itself computed as exactly right.
-    expect(readRenderedZec('1,282,051 ZEC')).toEqual({ value: 1282051, tolerance: 0.5 });
-    expect(readRenderedZec('0.0128 ZEC')).toEqual({ value: 0.0128, tolerance: 0.00005 });
+    // Half a unit in the last place printed, plus a hair so a value sitting
+    // exactly on the rounding boundary is not failed by binary floating point.
+    expect(readRenderedZec('1,282,051 ZEC')?.value).toBe(1282051);
+    expect(readRenderedZec('1,282,051 ZEC')?.tolerance).toBeCloseTo(0.5, 5);
+    expect(readRenderedZec('0.0128 ZEC')?.value).toBe(0.0128);
+    expect(readRenderedZec('0.0128 ZEC')?.tolerance).toBeCloseTo(0.00005, 8);
   });
 
   it('undoes abbreviation', () => {
     const read = readRenderedZec('78.3B ZEC');
     expect(read?.value).toBe(78.3e9);
-    expect(read?.tolerance).toBe(0.05e9);
+    expect(read?.tolerance).toBeCloseTo(0.05e9, -3);
   });
 });

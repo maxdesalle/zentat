@@ -12,6 +12,5 @@
       "why": "Genuine limitation. The page spans more orders of magnitude than one decimal grid can serve, so no single shape fits both ends. Same family as openai-pricing and aws-s3-pricing. Indian market copy quotes a share price beside a figure in crore."
     }
   ],
-  "maxFiatRemaining": 1,
-  "fiatRemainingWhy": "1 remaining, deliberate: \"₹ 3999\" is refused as a possible concatenation, because four unbroken digits after a symbol is the signature of a price glued together out of separate elements ($49 + 99 reading as $4999). Styled prices routinely put a space there too, so the space cannot be used to tell the two apart. A hundredfold error is worse than a gap."
+  "maxFiatRemaining": 0
 }

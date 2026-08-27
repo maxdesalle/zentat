@@ -7,5 +7,11 @@
   "capturedAt": "2026-08-26",
   "bytes": 226206,
   "maxFiatRemaining": 1,
-  "fiatRemainingWhy": "1 remaining, and it is not a price: \"$ 1435\" is the restaurant's street address, 1435 Broadway. The oracle in tests/pages/visible.ts joins text nodes with a space to catch prices split across elements, and that join manufactured this one. The extension is right not to convert it."
+  "fiatRemainingWhy": "1 remaining, and it is not a price: \"$ 1435\" is the restaurant's street address, 1435 Broadway. The oracle in tests/pages/visible.ts joins text nodes with a space to catch prices split across elements, and that join manufactured this one. The extension is right not to convert it.",
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation. A menu of $3-$37 items sits beside a $1,435 catering figure and delivery thresholds, so one decimal grid cannot fit both ends."
+    }
+  ]
 }

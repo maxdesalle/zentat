@@ -138,29 +138,6 @@ export function readAmount(text: string): number | null {
 }
 
 /**
- * Digits after the decimal point, and none after a thousands group.
- *
- * Reading "1,282,051" as three decimals set the tolerance a thousand times
- * too tight, so the oracle failed a value it had itself computed as exactly
- * right. Grouping and decimals look identical one separator at a time; what
- * separates them is how many separators there are.
- */
-function decimalPlaces(text: string): number {
-  const cleaned = text.replace(/[^\d.,]/g, '');
-  const commas = (cleaned.match(/,/g) ?? []).length;
-  const dots = (cleaned.match(/\./g) ?? []).length;
-  if (commas + dots === 0) return 0;
-  if (commas > 0 && dots > 0) {
-    const decimal = cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.') ? ',' : '.';
-    return cleaned.length - cleaned.lastIndexOf(decimal) - 1;
-  }
-  // Repeated separators are grouping, so there is no decimal part at all.
-  if (commas + dots > 1) return 0;
-  const separator = commas === 1 ? ',' : '.';
-  return cleaned.length - cleaned.lastIndexOf(separator) - 1;
-}
-
-/**
  * The ZEC figure this rendering shows, with the slack its own rounding allows.
  *
  * The tolerance is half a unit in the last place it actually printed, which is
@@ -172,11 +149,20 @@ function decimalPlaces(text: string): number {
 export function readRenderedZec(text: string): { value: number; tolerance: number } | null {
   const match = /(-?[\d.,]+)\s*([KMBT])?\s*ZEC/i.exec(text);
   if (!match) return null;
-  const base = readAmount(match[1]);
-  if (base === null) return null;
+  // OUR output, not the page's — so the ambiguity readAmount refuses does not
+  // arise. Intl formatted this, and the harness renders in en-US: the comma
+  // groups and the dot is the decimal point. Reading it with the cautious
+  // page rules made the oracle return null for "1,583 ZEC" and "0.110 ZEC",
+  // and every such case was reported as "nothing converted" when the
+  // conversion was in fact correct.
+  const base = Number(match[1].replace(/,/g, ''));
+  if (!Number.isFinite(base)) return null;
   const scale = { K: 1e3, M: 1e6, B: 1e9, T: 1e12 }[match[2]?.toUpperCase() ?? ''] ?? 1;
-  return {
-    value: base * scale,
-    tolerance: 0.5 * Math.pow(10, -decimalPlaces(match[1])) * scale,
-  };
+  const decimals = /\.(\d+)$/.exec(match[1])?.[1].length ?? 0;
+  // Half a unit in the last place printed, plus a hair. A value sitting
+  // exactly on the rounding boundary — 0.32050 rendered "0.321" — differs by
+  // exactly half a unit, and in binary floating point that comes out a shade
+  // over rather than equal.
+  const half = 0.5 * Math.pow(10, -decimals) * scale;
+  return { value: base * scale, tolerance: half * 1.000001 };
 }

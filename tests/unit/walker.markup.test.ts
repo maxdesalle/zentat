@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { rememberSpan, SPAN_CLASS } from '../../src/entrypoints/content/markers';
 
 import {
+  accessibleCopyCovers,
   accessiblePriceText,
   isConvertible,
   isInteractiveControl,
@@ -408,5 +409,46 @@ describe('the prose scan gives up rather than trawling', () => {
     const nodes = Array.from({ length: 60 }, (_, i) => `word${i} <b>x</b>`).join('');
     document.body.innerHTML = `<div id="d">${'padding text '.repeat(400)}${nodes}$19.99</div>`;
     expect(texts().some((t) => t.includes('$19.99'))).toBe(false);
+  });
+});
+
+describe('four digits after a symbol are only suspect when the digits were split', () => {
+  it('reads a four-digit price beside a footnote marker', () => {
+    // Apple's lineup page is entirely four-digit prices, each beside a <sup>
+    // footnote. Testing the run WITH its symbol refused every one of them,
+    // because any child at all made the element eligible for the check.
+    document.body.innerHTML = '<p id="p">From $1199 or more<sup>**</sup></p>';
+    expect(looksConcatenated(document.getElementById('p')!, 'From $1199 or more**')).toBe(false);
+  });
+
+  it('still refuses digits genuinely split across elements', () => {
+    document.body.innerHTML = '<div id="p"><span>$</span><span>49</span><span>99</span></div>';
+    expect(looksConcatenated(document.getElementById('p')!, '$4999')).toBe(true);
+  });
+
+  it('reads a four-digit price whose symbol alone is in a child', () => {
+    // Franklin BBQ's shape: the symbol is separate, the digits are whole.
+    document.body.innerHTML = '<p id="p"><span>$</span>1199 each</p>';
+    expect(looksConcatenated(document.getElementById('p')!, '$1199 each')).toBe(false);
+  });
+});
+
+describe("an accessible copy must account for the element's own text too", () => {
+  it('refuses a summary that covers only part of a long footnote', () => {
+    // Apple states its lease terms in a 4,056-character span carrying a
+    // 286-character accessible summary. Checking only descendants found
+    // nothing to disagree with, so the summary stood in for the lot and three
+    // of twelve prices were read.
+    document.body.innerHTML = '<span id="c" aria-label="Lease from $24.99 per month">'
+      + 'For an iPad Pro with a purchase price of $1199 and a lease of $24.99'
+      + '<a href="#f">1</a></span>';
+    expect(accessibleCopyCovers(document.getElementById('c')!, 'Lease from $24.99 per month'))
+      .toBeNull();
+  });
+
+  it('still stands in when the element has no text of its own', () => {
+    document.body.innerHTML = '<div id="c" aria-label="$19.99">'
+      + '<span class="a-offscreen">$19.99</span><span aria-hidden="true">$19.99</span></div>';
+    expect(accessibleCopyCovers(document.getElementById('c')!, '$19.99')).toBe('$19.99');
   });
 });

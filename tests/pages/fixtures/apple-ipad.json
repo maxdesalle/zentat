@@ -1,0 +1,16 @@
+{
+  "name": "apple-ipad",
+  "url": "https://www.apple.com/ipad/",
+  "hostname": "www.apple.com",
+  "lang": "en-US",
+  "title": "iPad - Apple",
+  "capturedAt": "2026-08-27",
+  "bytes": 223755,
+  "maxFiatRemaining": 0,
+  "knownGaps": [
+    {
+      "invariant": "one shape per page",
+      "why": "Genuine limitation. Apple's lineup page carries $24.99/mo. lease payments beside $1999 purchase prices and, in the legal footnotes, figures spanning three orders of magnitude. No single decimal grid serves all of them. Same family as openai-pricing."
+    }
+  ]
+}

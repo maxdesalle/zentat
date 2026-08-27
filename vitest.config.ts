@@ -6,6 +6,9 @@ export default defineConfig({
       'tests/unit/**/*.test.ts',
       'tests/corpus/**/*.test.ts',
       'tests/pages/**/*.test.ts',
+      // Generated price shapes. The captured corpus can only contain the
+      // markup those pages happen to use; this enumerates the space instead.
+      'tests/fuzz/**/*.test.ts',
     ],
     environment: 'node',
     coverage: {
