@@ -427,6 +427,30 @@ function joinsDigits(element: Element): boolean {
   return parts.some((part, index) => index > 0 && /\d$/.test(parts[index - 1]) && /^\d/.test(part));
 }
 
+/** How many of an element's own text nodes are worth looking at. */
+const MAX_PROSE_NODES = 40;
+
+/**
+ * The first of an element's own text nodes that could hold a price.
+ *
+ * Only the element's OWN text, one node at a time, and only nodes short enough
+ * to be read as a price anywhere else. A price stated in prose is still a
+ * price — Craigslist puts the asking figure in the body of the posting — and
+ * refusing the whole element because it is long refuses that with it.
+ */
+function proseTextIn(element: Element): string | null {
+  let seen = 0;
+  for (const node of Array.from(element.childNodes)) {
+    if (node.nodeType !== Node.TEXT_NODE) continue;
+    if (++seen > MAX_PROSE_NODES) return null;
+    const text = textOf(node);
+    if (text.length === 0 || text.length > MAX_PURE_PRICE_LENGTH) continue;
+    if (!QUICK_DETECT_PATTERN.test(text) || isNonPriceText(text)) continue;
+    return text;
+  }
+  return null;
+}
+
 export function walkPriceElements(root: Node): WalkResult[] {
   const results: WalkResult[] = [];
   let charBudget = MAX_PASS_CHARS;
@@ -540,7 +564,19 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // for such elements fixed that and broke the other direction — a
     // ten-thousand-character Craigslist posting became eligible on the second
     // pass for the same reason. Correcting the length costs no clone.
-    if (authoredTextLength(element) > MAX_PURE_PRICE_LENGTH * 4) continue;
+    if (authoredTextLength(element) > MAX_PURE_PRICE_LENGTH * 4) {
+      // Too big to read as a price, but its own text nodes are not. Craigslist
+      // states the asking price four times inside a 10,967-character posting
+      // body, and the pre-filter dropped the section before anything looked.
+      //
+      // One node at a time, each held to the same length rule as any other
+      // candidate, so this can never be cheaper to abuse than the pre-filter
+      // it sits in front of: a page-sized text node is still refused, which is
+      // what that guard is actually for.
+      const prose = proseTextIn(element);
+      if (prose) results.push({ node: element, text: prose, directTextOnly: true });
+      continue;
+    }
 
     // Prefer the accessibility text when the visible text is split or styled.
     const rawText = pageAuthoredText(element);

@@ -374,3 +374,39 @@ describe('an accessible copy must account for every price inside', () => {
     expect(texts()).toContain('$19.99');
   });
 });
+
+describe('a price stated in prose is still a price', () => {
+  it('reads it out of a body too long to be a price itself', () => {
+    // Craigslist states the asking figure four times inside a
+    // 10,967-character posting, and the length pre-filter dropped the whole
+    // section before anything looked at it.
+    // The SECTION is far too long to be a price; the paragraph of prose that
+    // states it is not. Craigslist's postings are exactly this shape.
+    const para = 'This car has been well maintained and serviced regularly. '.repeat(8);
+    const block = `${para}<div>photo</div>`;
+    document.body.innerHTML = `<section id="s">${block.repeat(6)}`
+      + `Asking $16,995 today.<div>photo</div>${block.repeat(6)}</section>`;
+    expect(document.getElementById('s')!.textContent!.length).toBeGreaterThan(4000);
+    expect(texts().some((t) => t.includes('$16,995'))).toBe(true);
+  });
+
+  it('still refuses a text node too long to be a price', () => {
+    // One node at a time, each held to the same length rule as any other
+    // candidate — so this cannot be cheaper to abuse than the guard it sits
+    // in front of.
+    const long = `$19.99 ${'x'.repeat(4000)}`;
+    document.body.innerHTML = `<p id="p">${long}</p>`;
+    expect(texts().filter((t) => t.length > 1000)).toEqual([]);
+  });
+});
+
+describe('the prose scan gives up rather than trawling', () => {
+  it("stops after enough of an element's own text nodes", () => {
+    // A long element with a great many text nodes and no price in the first
+    // forty is not worth reading further; the pre-filter it sits in front of
+    // exists to stop exactly that kind of work.
+    const nodes = Array.from({ length: 60 }, (_, i) => `word${i} <b>x</b>`).join('');
+    document.body.innerHTML = `<div id="d">${'padding text '.repeat(400)}${nodes}$19.99</div>`;
+    expect(texts().some((t) => t.includes('$19.99'))).toBe(false);
+  });
+});
