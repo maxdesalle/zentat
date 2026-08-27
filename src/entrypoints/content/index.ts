@@ -32,13 +32,16 @@ export default defineContentScript({
   async main() {
     // Render in the page's locale, the same one the parser reads prices under.
     setDisplayLocale(document.documentElement.lang || undefined);
-    await resolvePolicyHost();
     try {
-      // Load cached data (no network requests are ever made from this context)
+      // All four in parallel. Resolving the policy host is a round trip to the
+      // service worker, which in MV3 may have to be woken up first, and doing
+      // it before the storage reads put that wait in front of every page — the
+      // whole of it spent with the page showing fiat.
       const [rates, settings, held] = await Promise.all([
         getRates(),
         getSettings(),
         getHeldRate(),
+        resolvePolicyHost(),
       ]);
       currentHeld = held;
 
@@ -63,7 +66,7 @@ export default defineContentScript({
 
       if (!isActive(settings)) return;
 
-      whenDomReady(start);
+      whenBodyExists(start);
     } catch (error) {
       console.error('Zentat: Initialization error', error);
     }
@@ -94,6 +97,33 @@ async function resolvePolicyHost(): Promise<void> {
 
 function isActive(settings: Settings): boolean {
   return settings.enabled && isSiteAllowed(policyHost, settings);
+}
+
+/**
+ * As soon as there is a body to convert, which is far earlier than the document
+ * is complete.
+ *
+ * Waiting for DOMContentLoaded meant every price parsed before it was painted
+ * in fiat first — a second of dollars on a large page, which is the one thing
+ * this extension exists to remove. The observer converts whatever arrives
+ * after, so starting early costs nothing and shortens the window each price
+ * spends unconverted to a single task.
+ *
+ * The page is still never hidden. Blanking <body> until rates and a full scan
+ * completed was tried once and was a universal page-load regression that
+ * outweighed the flash it prevented.
+ */
+function whenBodyExists(fn: () => void): void {
+  if (document.body) {
+    fn();
+    return;
+  }
+  const waiting = new MutationObserver(() => {
+    if (!document.body) return;
+    waiting.disconnect();
+    fn();
+  });
+  waiting.observe(document.documentElement, { childList: true });
 }
 
 function whenDomReady(fn: () => void): void {
