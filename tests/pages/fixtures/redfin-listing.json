@@ -12,5 +12,5 @@
       "why": "Genuine limitation, with a fixable half worth naming. The span is real: $573 (0.73 ZEC) up to $3,995,000 (5,122 ZEC), nearly four orders of magnitude, and no single decimal count renders both without either faking precision or rounding a price to nothing. But the break a reader actually sees is narrower than that. The comparable-sales column runs $239,000 to $3,995,000, and it changes shape mid-column — 306.4 ZEC then 1,532 ZEC — purely because the four-significant-figure cap is applied per amount rather than to the page grid, so crossing 1,000 ZEC costs a decimal. Every one of those would read correctly at zero decimals. Same root cause as digitalocean-pricing, which records it as a DEFECT; the page-wide span is what keeps this entry a limitation rather than only that."
     }
   ],
-  "maxFiatRemaining": 3
+  "maxFiatRemaining": 0
 }

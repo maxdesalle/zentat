@@ -4,6 +4,7 @@ import { rememberSpan, SPAN_CLASS } from '../../src/entrypoints/content/markers'
 import {
   accessiblePriceText,
   isConvertible,
+  isInteractiveControl,
   looksConcatenated,
   walkPriceElements,
 } from '../../src/lib/detection/walker';
@@ -92,9 +93,11 @@ describe('interactive controls', () => {
 });
 
 describe('eligibility applies however a candidate was collected', () => {
-  it('skips an Amazon-style price container inside a control', () => {
-    document.body.innerHTML =
-      '<button><span class="a-price"><span class="a-offscreen">$19.99</span></span></button>';
+  it('skips an Amazon-style price container inside a checkout control', () => {
+    // The button has to ask for something. A bare "$19.99" in a <button> is a
+    // price rendered clickable, and that converts.
+    document.body.innerHTML = '<button>Add to Cart <span class="a-price">'
+      + '<span class="a-offscreen">$19.99</span></span></button>';
     expect(isConvertible(document.querySelector('.a-price')!)).toBe(false);
   });
 });
@@ -156,5 +159,32 @@ describe('a child with no number in it is not a child with a price', () => {
     // The parent is offered for its own direct text only; the child is its own
     // candidate. Both prices convert, neither twice.
     expect(texts()).toContain('$8');
+  });
+});
+
+describe('a control keeps its fiat only when it asks the user to act', () => {
+  it('leaves a checkout button alone', () => {
+    document.body.innerHTML = '<button id="b">Buy now — $49.99</button>';
+    expect(isConvertible(document.getElementById('b')!)).toBe(false);
+  });
+
+  it('leaves an add-to-cart button alone even with the price inside it', () => {
+    document.body.innerHTML = '<button id="b">Add to Cart CDN$ 5.19</button>';
+    expect(isConvertible(document.getElementById('b')!)).toBe(false);
+  });
+
+  it('converts a price that merely happens to be clickable', () => {
+    // Steam wraps the price ITSELF in role="button": the whole text is
+    // "C$ 27.99". Take the price out and there is nothing left, so there is
+    // nothing being asked. Twenty-two prices on one store page.
+    document.body.innerHTML = '<div role="button" id="b"><div>C$ 27.99</div></div>';
+    expect(isInteractiveControl(document.getElementById('b')!)).toBe(false);
+  });
+
+  it('converts a preset amount button', () => {
+    // BUTTON used to be a skipped TAG, so no price inside one ever converted
+    // whatever it said. A donation preset asks nothing; it offers an amount.
+    document.body.innerHTML = '<button id="b">$63</button>';
+    expect(isConvertible(document.getElementById('b')!)).toBe(true);
   });
 });

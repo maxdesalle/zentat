@@ -3,7 +3,7 @@ WalkerTest
 │   ├── given a tag that cannot hold a real price
 │   │   └── it is skipped
 │   ├── given a button
-│   │   └── it is skipped
+│   │   └── it is not skipped by tag
 │   ├── given an ordinary tag
 │   │   └── it is not skipped
 │   └── when the tag arrives lower-cased

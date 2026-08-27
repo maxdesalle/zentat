@@ -12,6 +12,10 @@ import {
 } from '../../src/entrypoints/content/markers';
 import { plausibleCurrencies, readAmount, readRenderedZec } from './oracle';
 
+/** What a control says when it wants the user to commit, in the corpus's languages. */
+const ACTION_WORDS =
+  /\b(buy|add to (cart|bag|basket)|checkout|check out|pay|order|subscribe|donate|purchase|pre-?order|kaufen|acheter|comprar|bestellen)\b/i;
+
 export interface Violation {
   invariant: string;
   detail: string;
@@ -103,12 +107,16 @@ export function tooltipMatchesOriginal(): Violation[] {
 }
 
 /**
- * Nothing inside a real <button> may show a converted price.
+ * Nothing inside a control that ASKS THE USER TO ACT may show a converted
+ * price.
  *
- * A literal <button> is the shape of a commitment: an author writing one means
- * the user to act. role="button" is what tile-wrapping frameworks emit around
- * whole product cards, which the walker converts on purpose, so including it
- * here flagged Redfin's listing tiles and DoorDash's menu cards as defects.
+ * Named by verb, deliberately. The walker decides this by stripping the price
+ * and asking whether any words are left, and an invariant that reused that
+ * test could only ever agree with it — the mistake that let eight prices
+ * convert inside NYT's subscribe buttons while a check called
+ * "controls stay fiat" passed. A checkout button says buy, add, pay, order,
+ * subscribe. A price that happens to be clickable says none of those, and
+ * leaving it in fiat beside a page of ZEC is its own failure.
  *
  * Stated without reference to how the walker decides what a control is. The
  * old version re-applied the walker's own forty-character limit, so it could
@@ -120,7 +128,11 @@ export function tooltipMatchesOriginal(): Violation[] {
  */
 export function controlsStayFiat(): Violation[] {
   return converted()
-    .filter((el) => el.closest('button') !== null)
+    .filter((el) => {
+      const control = el.closest('button, [role="button"]');
+      if (control === null) return false;
+      return ACTION_WORDS.test(control.textContent ?? '');
+    })
     .slice(0, 3)
     .map((el) => ({ invariant: 'controls stay fiat', detail: shown(el) }));
 }

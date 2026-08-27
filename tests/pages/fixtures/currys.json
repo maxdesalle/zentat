@@ -12,5 +12,5 @@
       "why": "A retail page prices a delivery add-on and a flagship item together, so it spans two orders of magnitude. The page grid is set from the median (four decimals here), but the four-significant-figure honesty cap trims anything above 1 ZEC to three, so the largest price on the page renders one decimal shorter than the rest. The two rules are both deliberate and they genuinely conflict; nothing about this page is unusual, which is why it is recorded rather than tuned around."
     }
   ],
-  "maxFiatRemaining": 1
+  "maxFiatRemaining": 0
 }

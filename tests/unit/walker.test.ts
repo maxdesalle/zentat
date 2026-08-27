@@ -71,10 +71,14 @@ describe('isSkippedTag', () => {
   });
 
   describe('given a button', () => {
-    it('is skipped', () => {
-      // A checkout CTA saying "Pay $49.99 now" must never show a ZEC amount
-      // the merchant will not actually charge.
-      expect(isSkippedTag('BUTTON')).toBe(true);
+    it('is not skipped by tag', () => {
+      // It was, and that meant no price inside any button ever converted —
+      // donation presets, plan pickers, Steam's clickable price widgets —
+      // however little the button asked of anyone. Whether a control keeps its
+      // fiat is isInteractiveControl's question, and it answers it by asking
+      // whether the button says anything besides the price. A checkout CTA
+      // saying "Pay $49.99 now" still does.
+      expect(isSkippedTag('BUTTON')).toBe(false);
     });
   });
 
@@ -294,7 +298,9 @@ describe('isInteractiveControl', () => {
     });
 
     it('treats a control with exactly the maximum descendants as a control', () => {
-      const eleven = Array.from({ length: 11 }, (_, i) => `<i>${i}</i>`).join('');
+      // "Buy" so the control still reads as a call to action; this case is
+      // about the descendant count, not about what the button says.
+      const eleven = Array.from({ length: 10 }, (_, i) => `<i>${i}</i>`).join('') + '<i>Buy</i>';
       render(`<button>${eleven}<span id="p">$5</span></button>`);
       expect(isInteractiveControl(document.getElementById('p')!)).toBe(true);
     });

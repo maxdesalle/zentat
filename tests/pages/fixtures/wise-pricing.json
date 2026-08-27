@@ -10,10 +10,6 @@
     {
       "invariant": "one shape per page",
       "why": "Genuine limitation. A fees page quotes a 1 USD minimum fee against a 25,000 USD transfer — four and a half orders of magnitude, and both are prices the reader actually cares about. The median grid lands on three decimals, so the 1 USD fee renders as \"0.001 ZEC\" with one significant figure while 25,000 USD keeps four as \"32.05 ZEC\". Holding the transfer to the grid would print \"32.051 ZEC\", a fifth significant figure the held rate cannot support. Every amount converts correctly; the shape is the only failure."
-    },
-    {
-      "invariant": "controls stay fiat",
-      "why": "DEFECT, not a limitation. Prices inside a <button> or <label> convert, which this project forbids outright: the charge lands in fiat, so a ZEC figure on a control the user clicks invites a costly mistake. isInteractiveControl tests SIZE rather than tag, because storefronts wrap whole product tiles in <a> and role=button and skipping those drops entire category pages. A literal <button> or a <label> bound to an input is a different claim, and making the tag decide for those is written and measured: it costs 31 conversions across the whole corpus and clears this page and two others. It is NOT applied yet because it also shifts which container the walker offers, and on wise.com a container falls under the length cap only AFTER the prices inside it have been rewritten — so eligibility changes between passes and the page fails idempotence. That fragility is older than this rule and has to be fixed first. Recorded rather than papered over: controlsStayFiat no longer borrows isInteractiveControl's own threshold, which is why this is visible at all."
     }
   ],
   "maxFiatRemaining": 0

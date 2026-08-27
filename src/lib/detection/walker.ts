@@ -23,7 +23,12 @@ const SKIP_TAGS = new Set([
   'TEXTAREA',
   'INPUT',
   'SELECT',
-  'BUTTON',
+  // BUTTON is deliberately NOT here. It was, which meant no price inside any
+  // button ever converted — donation presets, plan pickers, Steam's clickable
+  // price widgets — regardless of whether the button asked the user to commit
+  // to anything. Whether a control keeps its fiat is isInteractiveControl's
+  // question, and it now answers it by asking whether the button says
+  // anything besides the price.
   'CODE',
   'PRE',
   'HEAD',
@@ -109,12 +114,31 @@ const CONTROL_SELECTOR = 'button, [role="button"]';
 const MAX_CONTROL_DESCENDANTS = 12;
 const MAX_CONTROL_TEXT = 40;
 
+// A price, in the shapes a control is likely to render one.
+const PRICE_LIKE = /[$€£¥₩₹][\s\u00A0]*[\d.,]+|[\d.,]+[\s\u00A0]*[A-Z]{3}\b/g;
+
+/**
+ * Whether a control asks the user to DO something, as opposed to merely
+ * showing a price that happens to be clickable.
+ *
+ * Take the price out and see what is left. "Buy now — $49.99" still says "Buy
+ * now"; Steam's price widget is a role="button" whose entire text is
+ * "C$ 27.99", and once the price is gone there is nothing there. The first is
+ * the commitment this rule exists to protect. The second is a price, and
+ * leaving it in dollars beside a page of ZEC is the failure the product
+ * exists to prevent.
+ */
+function isCallToAction(text: string): boolean {
+  return /[A-Za-z]{2,}/.test(text.replace(PRICE_LIKE, ' '));
+}
+
 export function isInteractiveControl(el: Element): boolean {
   const control = el.closest(CONTROL_SELECTOR);
   if (!control) return false;
   const text = textOf(control);
   return text.length <= MAX_CONTROL_TEXT
-    && control.getElementsByTagName('*').length <= MAX_CONTROL_DESCENDANTS;
+    && control.getElementsByTagName('*').length <= MAX_CONTROL_DESCENDANTS
+    && isCallToAction(text);
 }
 
 // One list, two uses: the selector that RECOGNISES an accessibility copy and
