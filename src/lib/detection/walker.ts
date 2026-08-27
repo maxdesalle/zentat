@@ -369,10 +369,30 @@ function authoredTextLength(element: Element): number {
  * is the only reading there is, and it is the right one. Only a digit meeting
  * a digit across a boundary is evidence that the concatenation is a fiction.
  */
-function joinsDigits(element: Element): boolean {
-  const parts = Array.from(element.childNodes)
-    .map((node) => (node.nodeType === Node.TEXT_NODE ? textOf(node) : textOf(node as Element)))
+/**
+ * An element's child nodes as text, as the PAGE wrote them: every one of our
+ * spans counted as the price it replaced.
+ *
+ * Every rule that reads an element's shape has to agree across passes, and
+ * each one that forgot this drifted — the direct text shrank once a price
+ * moved into a span child, the length pre-filter moved because our output is a
+ * different length from the price it replaced, and the digit-join analysis saw
+ * "0.0128 ZEC" where the page had written "$1,17,990". One helper, so the next
+ * rule cannot forget.
+ */
+function authoredPartsOf(element: Element): string[] {
+  return Array.from(element.childNodes)
+    .map((node) => {
+      if (node.nodeType === Node.TEXT_NODE) return textOf(node);
+      const el = node as Element;
+      if (el.nodeType !== Node.ELEMENT_NODE) return '';
+      return el.classList.contains(SPAN_CLASS) ? spanOriginalText(el) ?? '' : textOf(el);
+    })
     .filter((part) => part !== '');
+}
+
+function joinsDigits(element: Element): boolean {
+  const parts = authoredPartsOf(element);
   return parts.some((part, index) => index > 0 && /\d$/.test(parts[index - 1]) && /^\d/.test(part));
 }
 
