@@ -108,6 +108,22 @@ function symbolIsClaimedByPrefix(text: string, price: ParsedPrice): boolean {
   return CLAIMING_PREFIX.test(text.slice(0, price.startIndex));
 }
 
+/**
+ * Whether this match only found its symbol by ignoring case.
+ *
+ * "R$" is the Brazilian real and "r$" is the end of the word "Dollar" against
+ * a dollar sign. The patterns cannot tell them apart — they are compiled with
+ * the i flag so that currency CODES match however a page writes them — so the
+ * distinction is drawn here, where the original text is still in hand.
+ */
+function matchedSymbolInWrongCase(pattern: CurrencyPattern, original: string): boolean {
+  return pattern.symbols.some((symbol) =>
+    /[A-Za-z]/.test(symbol)
+    && original.toLowerCase().startsWith(symbol.toLowerCase())
+    && !original.startsWith(symbol)
+  );
+}
+
 export function parsePrice(
   text: string,
   enabledCurrencies: string[],
@@ -157,8 +173,15 @@ export function parsePrice(
         // "NZ$131,981" is not a plain dollar sign. The prefix names a currency
         // we may or may not hold a rate for, and either way this pattern is
         // not the one that should read it.
-        // Only a MULTI-character symbol takes the prefix with it: "CA$19.49"
-        // is CAD's own match and keeps its "CA", while "$131,981" out of
+        // A symbol spelled with letters means its own case and no other.
+        // These patterns are compiled case-insensitively, so BRL's "R$"
+        // matched the "r$" inside "Canadian Dollar$1,087.47" and priced a
+        // Canadian dollar figure in Brazilian reais — caught by the page
+        // harness comparing what we rendered against what we said we read.
+        if (matchedSymbolInWrongCase(pattern, parsed.price.original)) continue;
+
+        // Only a MULTI-character symbol takes a prefix with it: "CA$19.49" is
+        // CAD's own match and keeps its "CA", while "$131,981" out of
         // "NZ$131,981" is a bare dollar sign with someone else's letters in
         // front of it.
         const keepsItsPrefix = pattern.symbols.some((symbol) =>

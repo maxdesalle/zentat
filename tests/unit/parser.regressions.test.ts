@@ -220,3 +220,25 @@ describe('a letter beside a symbol is not always claiming it', () => {
     expect(parsePrice(text, ALL, 'example.com', 'en')[0].currency).toBe(currency);
   });
 });
+
+describe('a symbol spelled with letters means its own case', () => {
+  it('does not read the end of a word as a currency symbol', () => {
+    // "R$" is the Brazilian real; "r$" is the end of "Dollar" against a dollar
+    // sign. The patterns are compiled case-insensitively so that currency
+    // CODES match however a page writes them, which made coinmarketcap's
+    // "Canadian Dollar$1,087.47" a Brazilian price at a fifth of its value.
+    const [price] = parsePrice('Canadian Dollar$1,087.47', ALL, 'coinmarketcap.com', 'en');
+    expect(price.currency).not.toBe('BRL');
+    expect(price.amount).toBe(1087.47);
+  });
+
+  it('still reads the symbol written properly', () => {
+    expect(parsePrice('R$4,034.99', ALL, 'example.com', 'en')[0].currency).toBe('BRL');
+    expect(parsePrice('US$50', ALL, 'example.com', 'en')[0].currency).toBe('USD');
+  });
+
+  it('leaves a symbol with no letters in it alone', () => {
+    // The rule only has anything to say about symbols spelled with letters.
+    expect(parsePrice('€300', ALL, 'example.com', 'en')[0].currency).toBe('EUR');
+  });
+});
