@@ -90,6 +90,24 @@ export function isBetterMatch(
   return candidate.endIndex - candidate.startIndex > existing.endIndex - existing.startIndex;
 }
 
+/**
+ * Whether an uppercase prefix immediately before this match claims the symbol
+ * for a different currency: "NZ$" is not "$", and reading it as one is a
+ * currency error on a page that told us exactly what it meant.
+ *
+ * Case matters, which is why this is here and not in the pattern: those are
+ * compiled case-insensitively, so a lookbehind that excludes [A-Z] excludes
+ * [a-z] with it — and then "Euro€672.33", where the symbol merely abuts a
+ * word, matches nothing at all.
+ */
+const CLAIMING_PREFIX = /(?:NZ|HK|SG|CDN|CA|AU|MX|US|S|R|A|C)$/;
+
+function symbolIsClaimedByPrefix(text: string, price: ParsedPrice): boolean {
+  // Only a match that STARTS with its symbol can have one taken from it.
+  if (/^[\d]/.test(price.original)) return false;
+  return CLAIMING_PREFIX.test(text.slice(0, price.startIndex));
+}
+
 export function parsePrice(
   text: string,
   enabledCurrencies: string[],
@@ -136,6 +154,17 @@ export function parsePrice(
         // before the match — but not a range dash, which has a price/digit on
         // its left side ("£10–£20").
         if (isNegatedAt(text, parsed.price.startIndex)) continue;
+        // "NZ$131,981" is not a plain dollar sign. The prefix names a currency
+        // we may or may not hold a rate for, and either way this pattern is
+        // not the one that should read it.
+        // Only a MULTI-character symbol takes the prefix with it: "CA$19.49"
+        // is CAD's own match and keeps its "CA", while "$131,981" out of
+        // "NZ$131,981" is a bare dollar sign with someone else's letters in
+        // front of it.
+        const keepsItsPrefix = pattern.symbols.some((symbol) =>
+          symbol.length > 1 && parsed.price.original.startsWith(symbol)
+        );
+        if (!keepsItsPrefix && symbolIsClaimedByPrefix(text, parsed.price)) continue;
 
         let currency = parsed.price.currency;
         // Undefined for every unambiguous symbol, and for a match that carried

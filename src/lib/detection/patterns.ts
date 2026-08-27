@@ -57,8 +57,14 @@ function buildPattern(symbols: string[], code: string): RegExp {
   //
   // It guards the START of the alternative rather than the symbol itself, so
   // "EUR€300" still matches through the code prefix.
+  //
+  // The letter guard has moved out of this regex and into parsePrice, because
+  // these patterns are compiled case-insensitively and a lookbehind cannot
+  // tell "NZ$" from "…o€". Blocking every letter cost coinmarketcap's whole
+  // rate table, which renders "ZEC/EUREuro€672.33" — the € sits against the
+  // "o" of "Euro", and nothing matched at all. See symbolIsClaimedByPrefix.
   const pattern = String
-    .raw`(?:(?:(?<![A-Za-z])\b${code}\b\s*|(?<![A-Za-z]))(${escapedSymbols})\s*${NUM}|${NUM}\s*(${escapedSymbols})|(?:^|\s)\b(${code})\b\s*(?!${ALL_SYMBOLS})${NUM}|${NUM}\s*\b(${code})\b)`;
+    .raw`(?:(?:\b${code}\b\s*)?(${escapedSymbols})\s*${NUM}|${NUM}\s*(${escapedSymbols})|(?:^|\s)\b(${code})\b\s*(?!${ALL_SYMBOLS})${NUM}|${NUM}\s*\b(${code})\b)`;
   return new RegExp(pattern, 'gi');
 }
 

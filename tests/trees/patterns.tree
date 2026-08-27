@@ -8,6 +8,7 @@ PatternsTest
 │   │   ├── it reads a code on either side of the number
 │   │   └── it ignores a code that the text before it runs straight into
 │   ├── given another letter claims the dollar sign
+│   │   ├── it matches the bare symbol here and is refused in parsePrice
 │   │   └── it reads nothing rather than guessing US dollars
 │   ├── when the number is grouped
 │   │   ├── it reads Indian lakh grouping as one number

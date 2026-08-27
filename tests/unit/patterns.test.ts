@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { parsePrice } from '../../src/lib/detection/parser';
 import {
   CURRENCY_PATTERNS,
   type CurrencyPattern,
@@ -107,12 +108,24 @@ describe('CURRENCY_PATTERNS', () => {
   });
 
   describe('given another letter claims the dollar sign', () => {
+    it('matches the bare symbol here and is refused in parsePrice', () => {
+      // The pattern no longer carries this guard. These regexes are compiled
+      // case-insensitively, so a lookbehind excluding [A-Z] excludes [a-z]
+      // with it — and that cost every price on a page rendering
+      // "ZEC/EUREuro€672.33", where the symbol merely abuts a word. Case
+      // matters, so the rule lives in parsePrice, which can see it.
+      for (const text of ['NZ$50', 'HK$50', 'S$50']) expect(spans(usd(), text)).toEqual(['$50']);
+      expect(spans(usd(), 'US$50')).toEqual(['US$50']);
+    });
+
     it('reads nothing rather than guessing US dollars', () => {
       // NZ$, HK$ and S$ are currencies this extension does not carry, and each
       // is worth roughly two thirds of a US dollar. A visible gap is a mistake
       // the user can catch; a confident wrong price is not.
-      for (const text of ['NZ$50', 'HK$50', 'S$50']) expect(spans(usd(), text)).toEqual([]);
-      expect(spans(usd(), 'US$50')).toEqual(['US$50']);
+      for (const text of ['NZ$50', 'HK$50', 'S$50']) {
+        expect(parsePrice(text, ['USD'], 'example.com', 'en')).toEqual([]);
+      }
+      expect(parsePrice('US$50', ['USD'], 'example.com', 'en')[0].amount).toBe(50);
     });
   });
 

@@ -186,3 +186,37 @@ describe('a multiplier means the digits before it are a mantissa', () => {
     expect(parseNumber('1.500', false)).toBe(1500);
   });
 });
+
+describe('a letter beside a symbol is not always claiming it', () => {
+  // coinmarketcap renders its rate table as "ZEC/EUREuro€672.33": the symbol
+  // abuts the "o" of "Euro". The guard against reading "NZ$" as a plain dollar
+  // sign lived in the pattern, which is compiled case-insensitively — so
+  // excluding [A-Z] excluded [a-z] with it, and every rate on the page matched
+  // nothing at all.
+  it.each([
+    ['ZEC/EUREuro€672.33', 672.33, 'EUR'],
+    ['ZEC/GBPPound Sterling£576.37', 576.37, 'GBP'],
+    ['Euro€300', 300, 'EUR'],
+  ])('reads %j', (text, amount, currency) => {
+    const [price] = parsePrice(text, ALL, 'coinmarketcap.com', 'en');
+    expect(price.amount).toBe(amount);
+    expect(price.currency).toBe(currency);
+  });
+
+  it.each(['NZ$50', 'HK$50', 'S$50'])('still refuses %j', (text) => {
+    // Currencies we hold no rate for, each worth about two thirds of a US
+    // dollar. Reading them as US dollars is the pcfactory error again.
+    expect(parsePrice(text, ALL, 'example.com', 'en')).toEqual([]);
+  });
+
+  it.each([
+    ['US$50', 'USD'],
+    ['CA$19.49', 'CAD'],
+    ['CDN$ 19.49', 'CAD'],
+    ['A$50', 'AUD'],
+    ['R$100', 'BRL'],
+    ['MX$200', 'MXN'],
+  ])('keeps %j as %s', (text, currency) => {
+    expect(parsePrice(text, ALL, 'example.com', 'en')[0].currency).toBe(currency);
+  });
+});
