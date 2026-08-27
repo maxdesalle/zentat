@@ -145,7 +145,7 @@ describe.each(pages.map((p) => [p.meta.name, p] as const))('%s', (_name, page) =
     }
 
     const expected = new Set((page.meta.knownGaps ?? []).map((gap) => gap.invariant));
-    const violations = checkConverted();
+    const violations = checkConverted(rates.rates);
     for (const v of violations.filter((v) => !expected.has(v.invariant))) {
       problems.push(`${v.invariant}: ${v.detail}`);
     }

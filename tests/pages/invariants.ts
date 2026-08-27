@@ -10,6 +10,7 @@ import {
   PARTIAL_MARKER,
   SPAN_CLASS,
 } from '../../src/entrypoints/content/markers';
+import { plausibleCurrencies, readAmount, readRenderedZec } from './oracle';
 
 export interface Violation {
   invariant: string;
@@ -214,8 +215,56 @@ export function noFiatLeftBeside(): Violation[] {
   return bad.slice(0, 3);
 }
 
-export function checkConverted(): Violation[] {
+/**
+ * The number on screen follows from the text it replaced.
+ *
+ * Every other check here asks whether our output is self-consistent, and it is
+ * perfectly self-consistent to render "$200" as two dollars' worth — which is
+ * what Cloudflare shipped, under a tooltip still reading "Original: $200".
+ *
+ * So this reads the tooltip's original a SECOND time, with rules written to be
+ * independent of the parser (see oracle.ts), and asks whether the rendered ZEC
+ * divided by that amount lands on a rate the text could plausibly be quoted
+ * in. A hundredfold error lands nowhere near one. Pricing Airbnb's
+ * "$1,257 CAD" at the US rate lands on USD, which the written code rules out.
+ *
+ * Skips whatever the oracle refuses to read, which is a lot: the whole design
+ * is that it never guesses. Three percent of slack covers display rounding —
+ * three significant figures at the coarsest — and sits far below the gap
+ * between any two currencies we hold.
+ */
+export function valuesFollowFromWhatWeRead(rates: Record<string, number>): Violation[] {
+  const bad: Violation[] = [];
+  for (const el of converted()) {
+    const title = el.closest('[title]')?.getAttribute('title') ?? '';
+    const original = /Original:\s*(.+)$/m.exec(title)?.[1]?.trim();
+    if (original === undefined) continue;
+
+    const amount = readAmount(original);
+    const codes = plausibleCurrencies(original);
+    const rendered = readRenderedZec(shown(el));
+    if (amount === null || codes === null || rendered === null) continue;
+    if (amount === 0) continue;
+
+    const fits = codes.some((code) => {
+      const rate = rates[code];
+      return rate !== undefined && Math.abs(rendered.value - amount * rate) <= rendered.tolerance;
+    });
+    if (!fits) {
+      const rate = rates[codes[0]];
+      const off = rate ? rendered.value / (amount * rate) : NaN;
+      bad.push({
+        invariant: 'values follow from what we read',
+        detail: `${original} -> ${shown(el)} (${off.toPrecision(3)}x the ${codes[0]} value)`,
+      });
+    }
+  }
+  return bad.slice(0, 3);
+}
+
+export function checkConverted(rates?: Record<string, number>): Violation[] {
   return [
+    ...(rates ? valuesFollowFromWhatWeRead(rates) : []),
     ...oneUnitPerPage(),
     ...oneShapePerPage(),
     ...noUnreadableMagnitudes(),
