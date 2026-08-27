@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { rememberSpan, SPAN_CLASS } from '../../src/entrypoints/content/markers';
+
 import {
   accessiblePriceText,
   isConvertible,
@@ -186,5 +187,52 @@ describe('a control keeps its fiat only when it asks the user to act', () => {
     // whatever it said. A donation preset asks nothing; it offers an amount.
     document.body.innerHTML = '<button id="b">$63</button>';
     expect(isConvertible(document.getElementById('b')!)).toBe(true);
+  });
+});
+
+describe('a price in prose is still a price', () => {
+  it('offers a long paragraph its own direct text', () => {
+    // AWS states its worked examples inside a 3,581-character paragraph and
+    // Apple its subscription terms inside a 2,298-character footnote. The
+    // length cap exists so a blob is never replaced AS one price; it was
+    // refusing the element outright, so neither page was ever looked at.
+    const filler = 'Some explanatory text that goes on at length. '.repeat(40);
+    document.body.innerHTML = `<p id="p">${filler}The total comes to $19.99 per month.`
+      + `<span>and a child</span>${filler}</p>`;
+    expect(texts().some((t) => t.includes('$19.99'))).toBe(true);
+  });
+
+  it('still refuses to treat the whole paragraph as one price', () => {
+    // It comes back marked directTextOnly, which keeps the whole-element path
+    // away from it: only the price's own characters are ever replaced.
+    const filler = 'Some explanatory text that goes on at length. '.repeat(40);
+    document.body.innerHTML = `<p id="p">${filler}$19.99${filler}</p>`;
+    const long = walkPriceElements(document.body).filter((r) => r.text.length > 1000);
+    expect(long.length).toBeGreaterThan(0);
+    expect(long.every((r) => r.directTextOnly === true)).toBe(true);
+  });
+});
+
+describe('a long element reads the same on every pass', () => {
+  it('counts our own conversion as the price it replaced', () => {
+    // A price that was a direct text node on the first pass sits inside a span
+    // child on the second. Read plainly, the element's direct text shrinks and
+    // the element is offered differently each time; Craigslist drifted on
+    // exactly that, and the harness caught it as "second pass changed the
+    // page". The comment and the unremembered span are here because childNodes
+    // hands back every kind of node, and a span can outlive its original.
+    const filler = 'word '.repeat(300);
+    document.body.innerHTML = `<p id="p">${filler}$800 more words<!-- note -->`
+      + `<span class="${SPAN_CLASS}">stray</span></p>`;
+    const before = walkPriceElements(document.body).find((r) => r.node.id === 'p')!;
+
+    // The same element as it looks once that price has been converted.
+    document.body.innerHTML = `<p id="p">${filler}<span class="${SPAN_CLASS}">1.00 ZEC</span>`
+      + ` more words<!-- note --><span class="${SPAN_CLASS}">stray</span></p>`;
+    const ours = document.querySelector(`.${SPAN_CLASS}`)!;
+    rememberSpan(ours, '$800');
+    const after = walkPriceElements(document.body).find((r) => r.node.id === 'p')!;
+
+    expect(after.text).toBe(before.text);
   });
 });

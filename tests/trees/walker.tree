@@ -122,13 +122,13 @@ WalkerTest
     ├── given text of exactly the greatest length a price may be
     │   └── it is still collected
     ├── given text one character longer
-    │   └── it is skipped
+    │   └── it is offered for its own text only, never as one price
     ├── given an element that is only whitespace
     │   └── it is skipped
     ├── given a parent whose direct text spans several nodes
     │   └── it keeps them separated
     ├── given a parent whose direct text is too long
-    │   └── it is left alone
+    │   └── it still converts the price in it
     ├── given a parent of exactly the greatest length holding a child price
     │   └── it converts its own text and defers the child
     ├── given a parent whose direct text is padded with whitespace

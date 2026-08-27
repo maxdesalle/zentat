@@ -552,10 +552,16 @@ describe('walkPriceElements', () => {
   });
 
   describe('given text one character longer', () => {
-    it('is skipped', () => {
+    it('is offered for its own text only, never as one price', () => {
+      // Past the cap the element stops being a candidate to replace WHOLE —
+      // that is what the cap is for — but its text nodes are still where a
+      // price might be, and refusing them outright lost every price AWS and
+      // Apple state in prose. It comes back marked directTextOnly, which is
+      // the flag that keeps the whole-element path away from it.
       const text = `$19.99${'x'.repeat(995)}`;
       expect(text).toHaveLength(1001);
-      expect(textsFrom(`<span>${text}</span>`)).toEqual([]);
+      const [result] = walkPriceElements(render(`<span>${text}</span>`));
+      expect(result.directTextOnly).toBe(true);
     });
   });
 
@@ -578,12 +584,15 @@ describe('walkPriceElements', () => {
   });
 
   describe('given a parent whose direct text is too long', () => {
-    it('is left alone', () => {
+    it('still converts the price in it', () => {
+      // It used to be left alone, and the $10 went with it. Length is a reason
+      // not to replace an element WHOLE; it is no reason to refuse to look
+      // inside its text, where only the price's own characters are touched.
       const filler = 'word '.repeat(300);
       const results = walkPriceElements(render(
         `<p>$10 ${filler}<span>$8</span></p>`,
       ));
-      expect(results.filter((r) => r.directTextOnly)).toHaveLength(0);
+      expect(results.filter((r) => r.directTextOnly)).toHaveLength(1);
     });
   });
 
@@ -662,13 +671,15 @@ describe('walkPriceElements', () => {
 
   describe('given an element exactly at the pre-filter limit', () => {
     it('is still inspected', () => {
-      // Four thousand characters is the line. It is well above what a price
-      // can be, so an element on it is still rejected — but by the length
-      // rule that knows about prices, not by the one that avoids the clone.
+      // Four thousand characters is the line the clone-avoiding pre-filter
+      // draws. An element on it is still read, by the length rule that knows
+      // about prices — which now offers it for its own text rather than
+      // dropping it, so the $19.99 in it converts.
       const text = `$19.99 ${'x'.repeat(3993)}`;
       expect(text).toHaveLength(4000);
       const results = walkPriceElements(render(`<p>${text}</p>`));
-      expect(results.filter((r) => r.node.tagName === 'P')).toHaveLength(0);
+      const [p] = results.filter((r) => r.node.tagName === 'P');
+      expect(p.directTextOnly).toBe(true);
     });
   });
 

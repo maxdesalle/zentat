@@ -16,5 +16,5 @@
       "why": "Genuine limitation. $0.00001953 per request is 0.00000002504 ZEC. The rule that a nonzero price must never render as 0.00 expands it to eleven decimals. Whether a price this small should convert at all is the open question openai-pricing already raised."
     }
   ],
-  "maxFiatRemaining": 20
+  "maxFiatRemaining": 0
 }

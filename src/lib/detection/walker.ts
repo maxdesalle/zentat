@@ -305,6 +305,44 @@ function selfAndMatching(root: Element, selector: string): Element[] {
   return root.matches(selector) ? [root, ...within] : within;
 }
 
+/**
+ * An element's own text, without any belonging to its children — and with our
+ * own conversions counted as the text they replaced.
+ *
+ * A price that was a direct text node on the first pass is inside a span child
+ * on the second, so a plain reading of the direct text SHRINKS between passes
+ * and the element is offered differently each time. Craigslist drifted on
+ * exactly that.
+ */
+function directTextOf(element: Element): string {
+  return Array.from(element.childNodes)
+    .map((node) => {
+      if (node.nodeType === Node.TEXT_NODE) return textOf(node);
+      const el = node as Element;
+      if (el.nodeType === Node.ELEMENT_NODE && el.classList.contains(SPAN_CLASS)) {
+        return spanOriginalText(el) ?? '';
+      }
+      return '';
+    })
+    .filter(Boolean)
+    .join(' ');
+}
+
+/**
+ * How long this element's text is as the page wrote it.
+ *
+ * Our own spans are counted as the prices they replaced, so the number does
+ * not move when we convert something inside the element. Cheaper than
+ * pageAuthoredText, which clones the subtree; this only needs the length.
+ */
+function authoredTextLength(element: Element): number {
+  let length = textLengthOf(element);
+  for (const own of element.querySelectorAll(`.${SPAN_CLASS}`)) {
+    length += (spanOriginalText(own)?.length ?? 0) - textLengthOf(own);
+  }
+  return length;
+}
+
 export function walkPriceElements(root: Node): WalkResult[] {
   const results: WalkResult[] = [];
   let charBudget = MAX_PASS_CHARS;
@@ -410,16 +448,15 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // Stryker disable next-line ConditionalExpression,EqualityOperator:
     // equivalent — anything this admits is rejected a few lines later by the
     // price-length rule. The pre-filter saves the clone, never the verdict.
-    // Only where the text is still entirely the page's. Our output is a
-    // different length from the price it replaced, so once an element holds
-    // any of it the raw length is a number WE moved — and an element that sat
-    // just over this cap on the first pass drops under it on the second,
-    // becoming eligible purely because we converted something inside it.
-    // Amazon's search-result containers did exactly that.
-    if (
-      element.querySelector(`.${SPAN_CLASS}`) === null
-      && textLengthOf(element) > MAX_PURE_PRICE_LENGTH * 4
-    ) continue;
+    // Measured as the PAGE wrote it. Our output is a different length from the
+    // price it replaced, so a raw reading is a number WE moved: an element
+    // sitting just over this cap on the first pass drops under it on the
+    // second and becomes eligible purely because we converted inside it, which
+    // is what Amazon's search-result containers did. Skipping the pre-filter
+    // for such elements fixed that and broke the other direction — a
+    // ten-thousand-character Craigslist posting became eligible on the second
+    // pass for the same reason. Correcting the length costs no clone.
+    if (authoredTextLength(element) > MAX_PURE_PRICE_LENGTH * 4) continue;
 
     // Prefer the accessibility text when the visible text is split or styled.
     const rawText = pageAuthoredText(element);
@@ -437,9 +474,30 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // its own parent.
     if (isNonPriceText(trimmed)) continue;
 
-    // Only process elements where the text is SHORT (likely just a price)
-    // This avoids replacing "Price: $19.99 - Save 20%" with just the ZEC amount
-    if (trimmed.length > MAX_PURE_PRICE_LENGTH) continue;
+    // Long text cannot be treated as ONE price — "Price: $19.99 - Save 20%"
+    // must not become a bare ZEC amount. But that is a rule about replacing an
+    // element WHOLE, and it was refusing the element outright. Prices in prose
+    // were the casualty: AWS states its worked examples inside a
+    // 3,581-character paragraph ("Total monthly storage cost = 59 GB *
+    // $0.06/GB"), Apple its subscription terms inside a 2,298-character
+    // footnote. Neither was ever looked at.
+    //
+    // So a long element is offered for its own DIRECT text and nothing else,
+    // and takes no further part: it is not collected as a whole, does not mark
+    // its subtree processed, and does not spend the pass budget. Its children
+    // are walked exactly as they were.
+    if (trimmed.length > MAX_PURE_PRICE_LENGTH) {
+      // No length cap on the direct text. The cap above is about refusing to
+      // treat a blob as ONE price; replacing inside a text node touches only
+      // the price's own characters, so a long paragraph is no more dangerous
+      // than a short one. AWS's worked examples run to two thousand characters
+      // of direct text in a single <p>, and capping this rejected them again.
+      const proseText = directTextOf(element);
+      if (proseText && QUICK_DETECT_PATTERN.test(proseText) && !isNonPriceText(proseText)) {
+        results.push({ node: element, text: proseText, directTextOnly: true });
+      }
+      continue;
+    }
 
     // Refuse rather than risk a 100x error when the text looks like it lost a
     // separator between child elements and no accessible source disambiguates.
