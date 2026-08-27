@@ -138,3 +138,23 @@ describe('a prefixed accessibility class is still an accessibility class', () =>
     expect(accessiblePriceText(document.getElementById('p')!)).toBe('£9.99');
   });
 });
+
+describe('a child with no number in it is not a child with a price', () => {
+  it('offers the parent when the pieces are a symbol, a number and a code', () => {
+    // GitHub writes "<sup>$</sup> <span>21</span> <span>USD</span>". The quick
+    // pattern matches a bare "USD", so the parent deferred to a child that was
+    // only a currency label — while no child held a whole price and the
+    // parent's own direct text was three spaces. The price was offered to
+    // nobody, and every price on that page above the free tier stayed fiat.
+    document.body.innerHTML = '<span id="p"><sup>$</sup> <span>21</span>'
+      + ' <span>USD</span></span>';
+    expect(texts()).toContain('$ 21 USD');
+  });
+
+  it('still defers to a child that holds a whole price', () => {
+    document.body.innerHTML = '<p id="p">$10 – <span>$8</span></p>';
+    // The parent is offered for its own direct text only; the child is its own
+    // candidate. Both prices convert, neither twice.
+    expect(texts()).toContain('$8');
+  });
+});

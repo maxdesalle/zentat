@@ -441,8 +441,15 @@ export function walkPriceElements(root: Node): WalkResult[] {
       // no accessible copy, so the text checked against the cap above WAS the
       // parent's, and a child's is part of it.
       const childText = pageAuthoredText(child);
+      // A digit as well, because a child holding no number holds no price.
+      // GitHub writes "<sup>$</sup> <span>21</span> <span>USD</span>", and the
+      // quick pattern matches a bare "USD" — so the parent deferred to a child
+      // that was only a currency label, while no child held a whole price and
+      // the parent's own direct text was three spaces. The price was offered
+      // to nobody. Every price on that page above the free tier, and the same
+      // shape on Zoopla.
       if (
-        childText && QUICK_DETECT_PATTERN.test(childText)
+        childText && /\d/.test(childText) && QUICK_DETECT_PATTERN.test(childText)
         && !isNonPriceText(childText)
       ) {
         hasMatchingChild = true;
