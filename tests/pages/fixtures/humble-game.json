@@ -10,10 +10,6 @@
     {
       "invariant": "one shape per page",
       "why": "Genuine limitation, though a narrow one. The prices a shopper acts on span a single order of magnitude (CA$0.79 to CA$25.99) and share a shape. What breaks the page is two figures either side of them: a \"-100% Store Discount\" breakdown reading CA$0.01 to CA$0.00, and the prose line \"the Humble community has contributed over US$282,000,000 to charity\", which renders as 361,538 ZEC beside a 0.0179 ZEC game. Ten orders of magnitude, all of it genuinely on the page."
-    },
-    {
-      "invariant": "no unreadable magnitudes",
-      "why": "Genuine limitation. The CA$0.01 in the discount breakdown is 0.000009427 ZEC; the never-render-as-zero rule spends nine decimals on it, ten digits in all. Same open question as openai-pricing — whether a price this small should convert at all — arriving here from a store page rather than an API price list."
     }
   ],
   "maxFiatRemaining": 0
