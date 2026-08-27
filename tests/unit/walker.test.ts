@@ -298,9 +298,10 @@ describe('isInteractiveControl', () => {
     });
 
     it('treats a control with exactly the maximum descendants as a control', () => {
-      // "Buy" so the control still reads as a call to action; this case is
+      // "Buy now" so the control still reads as a call to action; this case is
       // about the descendant count, not about what the button says.
-      const eleven = Array.from({ length: 10 }, (_, i) => `<i>${i}</i>`).join('') + '<i>Buy</i>';
+      const eleven = Array.from({ length: 10 }, (_, i) => `<i>${i} </i>`).join('')
+        + '<i>Buy now </i>';
       render(`<button>${eleven}<span id="p">$5</span></button>`);
       expect(isInteractiveControl(document.getElementById('p')!)).toBe(true);
     });

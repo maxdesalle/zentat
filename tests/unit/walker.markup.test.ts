@@ -313,3 +313,22 @@ describe('a currency prefix is part of the price', () => {
     expect(isInteractiveControl(document.getElementById('b')!)).toBe(true);
   });
 });
+
+describe('a control keeps its fiat only when it says a verb', () => {
+  it.each([
+    ['<button id="b">Buy now — $49.99</button>', true],
+    ['<button id="b">Add to Cart CDN$ 5.19</button>', true],
+    ['<button id="b">Jetzt kaufen 49,99 €</button>', true],
+    ['<button id="b">$63Donation</button>', false],
+    ['<button id="b">20 oz. Soda$3.50</button>', false],
+    ['<button id="b">£1,614 below market average</button>', false],
+    ['<div role="button" id="b">C$ 27.99</div>', false],
+  ])('%s', (html, expected) => {
+    // "Any words at all" kept the fiat on all four of the false cases. None of
+    // them asks for anything — they name what the price is FOR. UNICEF's
+    // preset amounts, Grubhub's menu items, AutoTrader's price comparison and
+    // Steam's clickable price all stayed in dollars because of it.
+    document.body.innerHTML = html;
+    expect(isInteractiveControl(document.getElementById('b')!)).toBe(expected);
+  });
+});

@@ -133,18 +133,29 @@ const MAX_CONTROL_TEXT = 40;
 const PRICE_LIKE = /[A-Z]{0,3}[$€£¥₩₹][\s\u00A0]*[\d.,]+|[\d.,]+[\s\u00A0]*[A-Z]{3}\b/g;
 
 /**
+ * What a control says when it wants the user to commit.
+ *
+ * "Any words at all" was the first version of this, and it kept the fiat on
+ * everything: UNICEF's "$63Donation", Grubhub's "20 oz. Soda$3.50",
+ * AutoTrader's "£1,614 below market average". None of those asks for
+ * anything — they name what the price is FOR. A checkout button says buy,
+ * pay, order, add to cart, and says it in a verb.
+ */
+const ACTION_VERB =
+  /\b(?:buy|purchase|order|checkout|check out|pay|subscribe|donate|add to (?:cart|bag|basket)|kaufen|acheter|comprar|bestellen|in den warenkorb)\b/i;
+
+/**
  * Whether a control asks the user to DO something, as opposed to merely
  * showing a price that happens to be clickable.
  *
- * Take the price out and see what is left. "Buy now — $49.99" still says "Buy
- * now"; Steam's price widget is a role="button" whose entire text is
- * "C$ 27.99", and once the price is gone there is nothing there. The first is
- * the commitment this rule exists to protect. The second is a price, and
- * leaving it in dollars beside a page of ZEC is the failure the product
- * exists to prevent.
+ * "Buy now — $49.99" asks. Steam's price widget is a role="button" whose
+ * entire text is "C$ 27.99", and a menu item that reads "20 oz. Soda$3.50"
+ * names a drink. Leaving those in dollars beside a page of ZEC is the failure
+ * this product exists to prevent; the charge still lands in fiat either way,
+ * and every converted price carries its original in a tooltip.
  */
 function isCallToAction(text: string): boolean {
-  return /[A-Za-z]{2,}/.test(text.replace(PRICE_LIKE, ' '));
+  return ACTION_VERB.test(text);
 }
 
 export function isInteractiveControl(el: Element): boolean {
