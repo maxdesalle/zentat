@@ -103,6 +103,13 @@ ParserTest
     │       └── it asks the browser about that language only once
     │   └── given the language tag is not one the browser knows
     │       └── it falls back to a dot decimal rather than failing
+    ├── given a whole-euro price closed with ",-"
+    │   ├── it reads the mark as part of the price
+    │   ├── it leaves a minus sign on the next number alone
+    │   └── it does not claim it for another currency
+    ├── given a price qualified by a tax label
+    │   ├── it reads the number and leaves the label on the page
+    │   └── it still swallows a currency NAME, which the ZEC replaces
     ├── given a code after the amount
     │   └── it reads the code
     ├── given a code before the amount

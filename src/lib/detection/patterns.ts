@@ -14,6 +14,18 @@ export interface CurrencyPattern {
    */
   requiresPriceContainer?: boolean;
   /**
+   * The match extends past the price, over text that proves the currency but
+   * is not part of the price and must stay on the page.
+   *
+   * "1.271,90 excl. btw" is a price and a TAX QUALIFIER. Replacing the whole
+   * match dropped the qualifier, and Coolblue shows the ex-VAT and inc-VAT
+   * prices one above the other — so the page went from two labelled prices to
+   * two bare ZEC amounts with nothing to tell them apart. Only the number is
+   * ours to rewrite. Contrast "149 euro", where the word IS the currency and
+   * replacing it with ZEC is the whole point.
+   */
+  readsPastThePrice?: boolean;
+  /**
    * Substrings this pattern cannot match without. Text holding none of them is
    * skipped before the expensive scan runs.
    *
@@ -150,6 +162,7 @@ const PATTERN_SOURCES: Array<Omit<CurrencyPattern, 'evidence'>> = [
     regex: EUR_BTW_PATTERN,
     hostnames: EUR_REGIONAL_SITES,
     needles: ['btw'],
+    readsPastThePrice: true,
   },
   // Dutch "euro" word format (e.g., "149 euro", "53,95 euro")
   {

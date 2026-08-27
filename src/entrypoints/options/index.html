@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark light" />
+    <!--
+      A full tab, not Chrome's embedded dialog. That dialog is a fixed narrow
+      panel the page cannot widen, so the settings surface — currency lists,
+      site filters, the obligations table — was scrolling inside a column
+      barely wider than a phone.
+    -->
+    <meta name="manifest.open_in_tab" content="true" />
     <title>Zentat Options</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
@@ -71,6 +78,49 @@
               <span class="slider"></span>
             </label>
           </div>
+        </section>
+
+        <section class="section" id="liabilities-section">
+          <h2>What you earn and owe</h2>
+          <p class="section-desc">
+            Your salary, your rent, the subscriptions that leave every month.
+            Zentat holds them in ZEC so you can see what your month actually
+            looks like in the unit &mdash; and how that has drifted since you
+            entered it. Prices on a shop page are the on-ramp; this is the
+            thing that makes ZEC yours to think in.
+          </p>
+          <ul class="anchor-list liability-list" id="liability-list"></ul>
+          <form class="anchor-form liability-form" id="liability-form">
+            <input
+              type="text"
+              id="liability-label"
+              placeholder="rent"
+              maxlength="32"
+              aria-label="What it is"
+              required
+            />
+            <input
+              type="number"
+              id="liability-amount"
+              placeholder="1200"
+              step="any"
+              min="0"
+              aria-label="How much"
+              required
+            />
+            <select class="select" id="liability-currency" aria-label="Currency"></select>
+            <select class="select" id="liability-cadence" aria-label="How often">
+              <option value="monthly">a month</option>
+              <option value="weekly">a week</option>
+              <option value="yearly">a year</option>
+            </select>
+            <select class="select" id="liability-direction" aria-label="In or out">
+              <option value="out">goes out</option>
+              <option value="in">comes in</option>
+            </select>
+            <button type="submit" class="anchor-add">Add</button>
+          </form>
+          <p class="anchor-hint" id="liability-hint"></p>
         </section>
 
         <section class="section" id="anchors-section">

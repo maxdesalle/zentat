@@ -370,12 +370,13 @@ function readPrices(
 
         // Swallowing the code is part of the fix, not tidying: left behind it
         // sits against our output as a currency label for a value in ZEC.
-        const endIndex = parsed.price.endIndex + (stated?.length ?? 0);
+        const noCents = currency === 'EUR' ? trailingNoCentsMark(text, parsed.price.endIndex) : 0;
+        const endIndex = parsed.price.endIndex + (stated?.length ?? 0) + noCents;
         const price = {
           ...parsed.price,
           currency,
           endIndex,
-          original: stated
+          original: stated || noCents
             ? text.slice(parsed.price.startIndex, endIndex).trim()
             : parsed.price.original,
         };
@@ -418,6 +419,27 @@ function trailingCurrencyCode(
 ): { code: string; length: number } | null {
   const match = TRAILING_CODE.exec(text.slice(endIndex));
   return match ? { code: match[1], length: match[0].length } : null;
+}
+
+/**
+ * The Dutch and Belgian ",-" that closes a whole-euro price.
+ *
+ * It says "and no cents", so it belongs to the price and has to go with it.
+ * The euro-sign pattern matched "€ 250" out of "€ 250,-" and stopped, leaving
+ * the mark to sit against our output as "0,36 ZEC,-". Same reasoning as the
+ * trailing currency code above: what is left behind reads as a label on a
+ * value in ZEC.
+ *
+ * A digit after the dash means it is a minus sign on the next number, not this
+ * price's ending.
+ */
+const TRAILING_NO_CENTS = /^[\s\u00a0]*,[\s\u00a0]*[-–—](?!\d)/;
+
+function trailingNoCentsMark(text: string, endIndex: number): number {
+  // Only where it means that: ",-" also ends prices in kroner and francs, and
+  // this is reached with a currency already decided.
+  const match = TRAILING_NO_CENTS.exec(text.slice(endIndex));
+  return match ? match[0].length : 0;
 }
 
 // "$210–360": a range whose upper bound inherits the lower one's symbol. The
@@ -511,8 +533,15 @@ export function extractPriceFromMatch(
   hostname?: string,
   documentLang?: string,
 ): ExtractedPrice | null {
-  const original = match[0];
-  const startIndex = match.index;
+  // The number alone when the pattern deliberately matched more than the price
+  // — see readsPastThePrice. The rest of the match proved the currency; it did
+  // not state the amount, and it belongs to the page.
+  const whole = match[0];
+  const priceText = pattern.readsPastThePrice
+    ? match.slice(1).find((group) => group && /\d/.test(group)) ?? whole
+    : whole;
+  const original = priceText;
+  const startIndex = match.index + whole.indexOf(priceText);
   const endIndex = startIndex + original.length;
 
   // Find the numeric parts from the match groups

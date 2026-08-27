@@ -46,7 +46,12 @@ const MAX_RATIO = 0.7;
  */
 const KNOWN_TIGHT: Record<string, { ceiling: number; why: string }> = {
   'plausible-pricing': {
-    ceiling: 0.97,
+    // Measured between 0.76 and 0.98 across runs on one machine. The ceiling is
+    // the top of that spread, not the best of it: this page paints at 50–100ms,
+    // so the fixed cost of STARTING a content script is the whole budget, and
+    // how much is left depends on what else the machine is doing. A tighter
+    // number here fails on a busy afternoon and says nothing about the code.
+    ceiling: 1,
     why:
       'Smallest pricing page in the corpus; paints at ~50–100ms, so startup is the whole budget.',
   },

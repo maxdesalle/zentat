@@ -472,6 +472,53 @@ describe('parsePrice', () => {
     });
   });
 
+  describe('given a whole-euro price closed with ",-"', () => {
+    it('reads the mark as part of the price', () => {
+      // Coolblue writes "€ 250,- korting met code MOBBTS250". The euro pattern
+      // matched "€ 250" and stopped, so the mark was left sitting against our
+      // output and the page read "0,36 ZEC,- korting". It says "and no cents";
+      // it belongs to the price.
+      const results = parsePrice('€ 250,- korting met code MOBBTS250', enabledCurrencies);
+      expect(results).toHaveLength(1);
+      expect(results[0].original).toBe('€ 250,-');
+      expect(results[0].amount).toBe(250);
+    });
+
+    it('leaves a minus sign on the next number alone', () => {
+      const results = parsePrice('€ 250, -5 procent', enabledCurrencies);
+      expect(results[0].original).toBe('€ 250');
+    });
+
+    it('does not claim it for another currency', () => {
+      // ",-" ends prices in kroner and francs too, and this one is dollars.
+      const results = parsePrice('$250,-', enabledCurrencies);
+      expect(results[0].original).toBe('$250');
+    });
+  });
+
+  describe('given a price qualified by a tax label', () => {
+    it('reads the number and leaves the label on the page', () => {
+      // Coolblue stacks "1.271,90 excl. btw" above "1.539,-". Replacing the
+      // whole match took the qualifier with it, so the two prices became two
+      // bare ZEC amounts with nothing to tell them apart — and the ex-VAT one
+      // is the cheaper of the two.
+      const results = parsePrice(
+        '1.271,90 excl. btw',
+        enabledCurrencies,
+        'www.coolblue.be',
+        'nl',
+      );
+      expect(results).toHaveLength(1);
+      expect(results[0].original).toBe('1.271,90');
+      expect(results[0].amount).toBe(1271.9);
+    });
+
+    it('still swallows a currency NAME, which the ZEC replaces', () => {
+      const results = parsePrice('149 euro', enabledCurrencies, 'www.bol.com', 'nl');
+      expect(results[0].original).toBe('149 euro');
+    });
+  });
+
   describe('given a code after the amount', () => {
     it('reads the code', () => {
       const results = parsePrice('99.99 USD', enabledCurrencies);

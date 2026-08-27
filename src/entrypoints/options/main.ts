@@ -3,6 +3,12 @@ import { type Anchor, createAnchor, driftedAnchors, MAX_ANCHORS } from '../../li
 import { SUPPORTED_CURRENCIES } from '../../lib/currencies';
 import type { NymStatus } from '../../lib/fetch/types';
 import { localizeDocument } from '../../lib/i18n';
+import {
+  type Cadence,
+  createLiability,
+  type Liability,
+  MAX_LIABILITIES,
+} from '../../lib/liabilities';
 import { getRates } from '../../lib/storage/rates';
 import {
   DEFAULT_SETTINGS,
@@ -69,8 +75,10 @@ async function init() {
   const settings = await getSettings();
   lastKnown = settings;
   initAnchors();
+  initLiabilities();
   populateForm(settings);
   void renderAnchors(settings.anchors ?? []);
+  renderLiabilities(settings.liabilities ?? []);
   void updateNymPill(settings.nymEnabled);
 
   // Without this, the form is a snapshot taken at load. A change made from the
@@ -81,6 +89,7 @@ async function init() {
     lastKnown = next;
     populateForm(next);
     void renderAnchors(next.anchors ?? []);
+    renderLiabilities(next.liabilities ?? []);
     void updateNymPill(next.nymEnabled);
   });
 
@@ -427,3 +436,95 @@ function renderWeanStage(settings: Settings) {
 // Applied once at load: browser.i18n resolves synchronously, so there is no
 // flash of untranslated text.
 localizeDocument();
+
+// ---------------------------------------------------------------------------
+// What you earn and owe
+//
+// The model, the arithmetic and the popup's monthly position all existed; the
+// only missing piece was any way to enter one. Until rent and salary live in
+// ZEC, converting shop prices is translation, not a unit of account — so a
+// feature nobody could reach was the one that mattered most.
+// ---------------------------------------------------------------------------
+
+const liabilityList = document.getElementById('liability-list')!;
+const liabilityForm = document.getElementById('liability-form') as HTMLFormElement;
+const liabilityLabel = document.getElementById('liability-label') as HTMLInputElement;
+const liabilityAmount = document.getElementById('liability-amount') as HTMLInputElement;
+const liabilityCurrency = document.getElementById('liability-currency') as HTMLSelectElement;
+const liabilityCadence = document.getElementById('liability-cadence') as HTMLSelectElement;
+const liabilityDirection = document.getElementById('liability-direction') as HTMLSelectElement;
+const liabilityHint = document.getElementById('liability-hint')!;
+
+const CADENCE_WORD: Record<Cadence, string> = {
+  monthly: 'a month',
+  weekly: 'a week',
+  yearly: 'a year',
+};
+
+function initLiabilities() {
+  for (const { code, name } of SUPPORTED_CURRENCIES) {
+    const option = document.createElement('option');
+    option.value = code;
+    option.textContent = `${code} — ${name}`;
+    liabilityCurrency.appendChild(option);
+  }
+
+  liabilityForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const rates = await getRates();
+    const liability = createLiability(
+      liabilityLabel.value,
+      Number(liabilityAmount.value),
+      liabilityCurrency.value,
+      liabilityCadence.value as Cadence,
+      liabilityDirection.value as 'in' | 'out',
+      rates,
+    );
+    if (!liability) {
+      liabilityHint.textContent =
+        'Need a name, an amount above zero, and a rate for that currency.';
+      return;
+    }
+    const liabilities = [...(lastKnown?.liabilities ?? []), liability].slice(0, MAX_LIABILITIES);
+    await setSettings({ liabilities });
+    liabilityForm.reset();
+    liabilityCurrency.value = lastKnown?.displayCurrency ?? 'USD';
+  });
+}
+
+function renderLiabilities(liabilities: Liability[]) {
+  liabilityList.replaceChildren();
+
+  for (const liability of liabilities) {
+    const item = document.createElement('li');
+    item.className = 'anchor-item';
+
+    const text = document.createElement('span');
+    // The direction said in words rather than by a sign: a minus in front of a
+    // number people are reading as money is the wrong kind of ambiguous.
+    const flow = liability.direction === 'in' ? 'in' : 'out';
+    text.textContent = `${liability.label} — ${liability.amount} ${liability.currency} `
+      + `${CADENCE_WORD[liability.cadence]}, ${flow}`;
+    item.appendChild(text);
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'anchor-remove';
+    remove.textContent = 'Remove';
+    remove.setAttribute('aria-label', `Remove ${liability.label}`);
+    remove.addEventListener('click', async () => {
+      await setSettings({
+        liabilities: (lastKnown?.liabilities ?? []).filter((l) => l.id !== liability.id),
+      });
+    });
+    item.appendChild(remove);
+
+    liabilityList.appendChild(item);
+  }
+
+  liabilityHint.textContent = liabilities.length >= MAX_LIABILITIES
+    ? `That's the maximum (${MAX_LIABILITIES}). Remove one to add another.`
+    : liabilities.length === 0
+    ? 'Start with your rent and your salary. The popup then shows your month in ZEC.'
+    : '';
+}

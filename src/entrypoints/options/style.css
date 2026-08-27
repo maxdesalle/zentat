@@ -511,3 +511,19 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+/* Obligations. Same furniture as the anchors, one more row of controls: five
+   fields do not fit the anchors' single line at any sane width. */
+.liability-form {
+  flex-wrap: wrap;
+}
+
+.liability-form input,
+.liability-form .select {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+.liability-item-meta {
+  color: var(--muted, #888);
+}
