@@ -53,11 +53,23 @@ export interface WalkResult {
   directTextOnly?: boolean;
 }
 
-// Text that looks numeric but is not a price. Never treat the extension's own
-// output ("… ZEC", "… zats") as a price — that is what allowed converted text
-// to be re-parsed and compounded on sites with bare-number patterns.
+/**
+ * Our own output, which must never be read back as a price — that is what let
+ * converted text be re-parsed and compounded on sites with bare-number
+ * patterns.
+ *
+ * A NUMBER then the unit, because the bare word is the page's to use. This
+ * matched "ZEC" anywhere, so on coinmarketcap.com every price sat in text that
+ * says ZEC for its own reasons — "ZEC/CAD", "ZEC Hits 8-Year High Over $855" —
+ * and the one page on the web most about Zcash converted none of them. A page
+ * that writes "1 ZEC = $783" is still refused, and should be: it is stating
+ * the rate, not quoting a price.
+ */
+const OUR_OWN_OUTPUT = /\d[\d.,]*\s*[KMBT]?\s*(?:ZEC\b|zats?\b)/i;
+
+// Text that looks numeric but is not a price.
 export function isNonPriceText(text: string): boolean {
-  if (/\bZEC\b/.test(text) || /\bzats?\b/i.test(text)) return true;
+  if (OUR_OWN_OUTPUT.test(text)) return true;
   if (/out of \d/i.test(text)) return true; // "4.5 out of 5 stars"
   // Stryker disable next-line Regex: equivalent — any run of digits contains a
   // single digit, so requiring one or more matches exactly where one does.

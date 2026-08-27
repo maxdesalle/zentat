@@ -6,6 +6,7 @@ import {
   accessiblePriceText,
   isConvertible,
   isInteractiveControl,
+  isNonPriceText,
   looksConcatenated,
   walkPriceElements,
 } from '../../src/lib/detection/walker';
@@ -234,5 +235,27 @@ describe('a long element reads the same on every pass', () => {
     const after = walkPriceElements(document.body).find((r) => r.node.id === 'p')!;
 
     expect(after.text).toBe(before.text);
+  });
+});
+
+describe('the page may say ZEC for its own reasons', () => {
+  it('reads a price in text that mentions ZEC without a number', () => {
+    // coinmarketcap.com is the page on the web most about Zcash, and every
+    // price on it sits in text that says ZEC: "ZEC/CAD", "ZEC Hits 8-Year
+    // High Over $855". Matching the bare word treated the page's own
+    // vocabulary as our output, and it converted none of them.
+    document.body.innerHTML = '<a id="p">ZEC Hits 8-Year High Over $855</a>';
+    expect(isNonPriceText('ZEC Hits 8-Year High Over $855')).toBe(false);
+    expect(texts()).toContain('ZEC Hits 8-Year High Over $855');
+  });
+
+  it('still refuses our own output', () => {
+    expect(isNonPriceText('1.00 ZEC')).toBe(true);
+    expect(isNonPriceText('78.3B ZEC')).toBe(true);
+    expect(isNonPriceText('2,399,683 zats')).toBe(true);
+  });
+
+  it('still refuses a stated rate, which is not a price to convert', () => {
+    expect(isNonPriceText('1 ZEC = $783.51')).toBe(true);
   });
 });
