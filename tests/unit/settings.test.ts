@@ -239,8 +239,8 @@ describe('setSettings', () => {
 describe('migration from sync storage', () => {
   describe('given there is nothing in sync storage', () => {
     it('does nothing', async () => {
-      const { getSettings } = await freshModule();
-      await getSettings();
+      const { ensureSettingsMigrated } = await freshModule();
+      await ensureSettingsMigrated();
       expect(store.has(LOCAL)).toBe(false);
     });
   });
@@ -249,7 +249,8 @@ describe('migration from sync storage', () => {
     describe('given local storage is empty', () => {
       it('copies them to local', async () => {
         store.set(SYNC, { displayCurrency: 'BRL', enabled: false });
-        const { getSettings } = await freshModule();
+        const { ensureSettingsMigrated, getSettings } = await freshModule();
+        await ensureSettingsMigrated();
         const settings = await getSettings();
         expect(settings.displayCurrency).toBe('BRL');
         expect(settings.enabled).toBe(false);
@@ -259,8 +260,8 @@ describe('migration from sync storage', () => {
         // Site block lists reveal browsing interests; leaving them on a sync
         // server is the thing this migration exists to undo.
         store.set(SYNC, { displayCurrency: 'BRL' });
-        const { getSettings } = await freshModule();
-        await getSettings();
+        const { ensureSettingsMigrated } = await freshModule();
+        await ensureSettingsMigrated();
         expect(store.has(SYNC)).toBe(false);
       });
     });
@@ -269,15 +270,16 @@ describe('migration from sync storage', () => {
       it('keeps the local values', async () => {
         store.set(SYNC, { displayCurrency: 'BRL' });
         store.set(LOCAL, { displayCurrency: 'JPY' });
-        const { getSettings } = await freshModule();
+        const { ensureSettingsMigrated, getSettings } = await freshModule();
+        await ensureSettingsMigrated();
         expect((await getSettings()).displayCurrency).toBe('JPY');
       });
 
       it('removes the sync copy', async () => {
         store.set(SYNC, { displayCurrency: 'BRL' });
         store.set(LOCAL, { displayCurrency: 'JPY' });
-        const { getSettings } = await freshModule();
-        await getSettings();
+        const { ensureSettingsMigrated } = await freshModule();
+        await ensureSettingsMigrated();
         expect(store.has(SYNC)).toBe(false);
       });
     });
@@ -287,22 +289,22 @@ describe('migration from sync storage', () => {
     it('falls through to local without failing', async () => {
       syncThrows = true;
       store.set(LOCAL, { displayCurrency: 'GBP' });
-      const { getSettings } = await freshModule();
+      const { ensureSettingsMigrated, getSettings } = await freshModule();
+      await ensureSettingsMigrated();
       expect((await getSettings()).displayCurrency).toBe('GBP');
     });
   });
 
   describe('given two callers migrate at once', () => {
     it('migrates exactly once', async () => {
-      // The popup and the background both call getSettings on startup. If the
-      // guard is set after the first await, both see it unset, both migrate,
-      // and the second can write defaults over what the first just restored.
+      // If the guard is set after the first await, both callers see it unset,
+      // both migrate, and the second can write defaults over what the first
+      // just restored.
       store.set(SYNC, { displayCurrency: 'BRL' });
-      const { getSettings } = await freshModule();
+      const { ensureSettingsMigrated, getSettings } = await freshModule();
 
-      const [a, b] = await Promise.all([getSettings(), getSettings()]);
-      expect(a.displayCurrency).toBe('BRL');
-      expect(b.displayCurrency).toBe('BRL');
+      await Promise.all([ensureSettingsMigrated(), ensureSettingsMigrated()]);
+      expect((await getSettings()).displayCurrency).toBe('BRL');
     });
   });
 });

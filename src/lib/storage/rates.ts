@@ -32,7 +32,7 @@ export interface RateFetchStatus {
 export const REFRESH_TTL_MS = 10 * 60 * 1000;
 export const MAX_RATE_AGE_MS = 24 * 60 * 60 * 1000;
 
-const DEFAULT_RATES: RatesData = {
+export const DEFAULT_RATES: RatesData = {
   rates: {},
   updatedAt: 0,
   source: '',

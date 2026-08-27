@@ -357,7 +357,13 @@ describe('extractPriceFromMatch', () => {
   // a run of digits. They are the rules that decide what happens when the next
   // pattern does not, and the answer has to be "no price" rather than a price
   // of NaN shown with as much confidence as a real one.
-  const dollars: CurrencyPattern = { code: 'USD', symbols: ['$'], regex: /never/g };
+  const dollars: CurrencyPattern = {
+    code: 'USD',
+    symbols: ['$'],
+    regex: /never/g,
+    needles: ['$'],
+    evidence: /\$/,
+  };
   const matchOf = (regex: RegExp, text: string) => regex.exec(text) as RegExpExecArray;
 
   describe('given the match captured no digits', () => {

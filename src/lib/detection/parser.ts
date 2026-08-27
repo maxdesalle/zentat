@@ -124,6 +124,87 @@ function matchedSymbolInWrongCase(pattern: CurrencyPattern, original: string): b
   );
 }
 
+/**
+ * Every pattern the corpus and the fuzzer can reach, run unconditionally.
+ *
+ * This is the reference `parsePrice` is checked against, not a code path the
+ * extension uses. The fast path skips patterns whose needles are absent, and a
+ * needle list that is wrong in the unsafe direction would drop real prices
+ * while every existing test stayed green — the exact failure this suite keeps
+ * being burned by. So the equivalence is asserted directly, over the whole
+ * fixture corpus, rather than reasoned about.
+ */
+export function parsePriceExhaustive(
+  text: string,
+  enabledCurrencies: string[],
+  hostname?: string,
+  documentLang?: string,
+  pageCurrency?: string | null,
+  inPriceContainer = false,
+): ParsedPrice[] {
+  return readPrices(
+    CURRENCY_PATTERNS,
+    text,
+    enabledCurrencies,
+    hostname,
+    documentLang,
+    pageCurrency,
+    inPriceContainer,
+  );
+}
+
+/**
+ * Patterns worth running against a given host, in their declared order.
+ *
+ * The hostname test is per-pattern and per-call, and parsePrice is called
+ * thousands of times per page with the same host — so the answer is worked out
+ * once and kept. This changes no result: it applies the same predicate the loop
+ * already applied, just earlier and fewer times.
+ */
+interface HostPatterns {
+  /** Patterns needing currency evidence — the everyday case. */
+  evidenced: CurrencyPattern[];
+  /** Those plus the bare-number patterns, for inside a known price container. */
+  all: CurrencyPattern[];
+  /** Union of `evidenced` needles: text matching none of them holds no price. */
+  gate: RegExp;
+}
+
+const hostPatterns = new Map<string, HostPatterns>();
+
+function patternsFor(hostname?: string): HostPatterns {
+  const key = hostname ?? '';
+  const cached = hostPatterns.get(key);
+  if (cached) return cached;
+
+  const all = CURRENCY_PATTERNS.filter((pattern) =>
+    !pattern.hostnames || !hostname
+    || pattern.hostnames.some((h) => hostname === h || hostname.endsWith('.' + h))
+  );
+  const evidenced = all.filter((pattern) => !pattern.requiresPriceContainer);
+  const needles = [...new Set(evidenced.flatMap((pattern) => pattern.needles))];
+  const gate = new RegExp(
+    needles.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
+    'i',
+  );
+
+  const entry = { evidenced, all, gate };
+  hostPatterns.set(key, entry);
+  return entry;
+}
+
+/**
+ * The literals a price on this host must contain — the union of every needle of
+ * every pattern that can run there.
+ *
+ * Shared with the walker so "could this subtree hold a price at all" is asked
+ * with exactly the same evidence the parser will demand of it, and cannot drift
+ * from it.
+ */
+export function currencyEvidenceFor(hostname?: string): RegExp {
+  return patternsFor(hostname).gate;
+}
+
 export function parsePrice(
   text: string,
   enabledCurrencies: string[],
@@ -141,10 +222,63 @@ export function parsePrice(
    */
   inPriceContainer = false,
 ): ParsedPrice[] {
-  const results: ParsedPrice[] = [];
-  const enabledSet = new Set(enabledCurrencies.map((c) => c.toUpperCase()));
+  const host = patternsFor(hostname);
+  // Most text on a page is prose with no currency mark anywhere in it. One
+  // alternation of literals answers that in a single native scan; without it,
+  // every such string was run past all seventeen patterns, each carrying the
+  // full number grammar. That was a flat ~43ms per page — the same cost on a
+  // small page as on a large one, because it is paid per string, not per price.
+  //
+  // Inside a price container the bare-number patterns are live, and those match
+  // text holding no evidence at all, so the gate does not apply.
+  if (!inPriceContainer && !host.gate.test(text)) return [];
 
-  for (const pattern of CURRENCY_PATTERNS) {
+  // Which patterns can match THIS text, decided here rather than inside the
+  // loop: readPrices has to stay the unfiltered reading, or parsePriceExhaustive
+  // would apply the very filter it exists to check.
+  const eligible = inPriceContainer ? host.all : host.evidenced;
+  return readPrices(
+    eligible.filter((pattern) => pattern.evidence.test(text)),
+    text,
+    enabledCurrencies,
+    hostname,
+    documentLang,
+    pageCurrency,
+    inPriceContainer,
+  );
+}
+
+/**
+ * The user's enabled currencies as an uppercase set, rebuilt only when the
+ * settings array itself changes.
+ *
+ * Building it per call was a fixed cost paid thousands of times per page — a
+ * flat ~22ms whatever the page held, because it depends on the settings and not
+ * on the text being read. Keyed on identity, so a caller that builds a fresh
+ * array each time is simply no worse off than before.
+ */
+let enabledCache: { source: string[]; set: Set<string> } | null = null;
+
+function enabledSetFor(currencies: string[]): Set<string> {
+  if (enabledCache !== null && enabledCache.source === currencies) return enabledCache.set;
+  const set = new Set(currencies.map((c) => c.toUpperCase()));
+  enabledCache = { source: currencies, set };
+  return set;
+}
+
+function readPrices(
+  patterns: CurrencyPattern[],
+  text: string,
+  enabledCurrencies: string[],
+  hostname?: string,
+  documentLang?: string,
+  pageCurrency?: string | null,
+  inPriceContainer = false,
+): ParsedPrice[] {
+  const results: ParsedPrice[] = [];
+  const enabledSet = enabledSetFor(enabledCurrencies);
+
+  for (const pattern of patterns) {
     // A bare-number pattern with no currency evidence needs positional
     // evidence instead, or it reads screen resolutions as prices.
     if (pattern.requiresPriceContainer && !inPriceContainer) continue;

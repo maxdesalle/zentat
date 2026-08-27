@@ -1,8 +1,9 @@
 import { SPAN_CLASS, spanOriginalText } from '../../entrypoints/content/markers';
 import { adapterFor, isExcluded } from './adapters';
-import { textLengthOf, textOf } from './dom';
+import { textOf } from './dom';
+import { currencyEvidenceFor } from './parser';
 import { QUICK_DETECT_PATTERN } from './patterns';
-import { collectShadowRoots, hasShadowDom } from './shadow';
+import { collectShadowRootsAmong } from './shadow';
 
 export { textOf } from './dom';
 
@@ -267,14 +268,49 @@ function withOwnOutputRestored(node: Element): string {
   return textOf(clone);
 }
 
-export function accessiblePriceText(el: Element): string | null {
+/**
+ * Elements with an accessibility-text node somewhere beneath them.
+ *
+ * `[class*="sr-only" i]` has no index behind it: the engine walks the whole
+ * subtree and substring-matches every class attribute, case-folded. Asking that
+ * question from every element on the page made the scan quadratic, and it was
+ * the largest single cost in the content script on every page measured — 47ms
+ * on Amazon, where the answer is "no" for all but a handful of elements.
+ *
+ * Walking UP from the few nodes that match answers it once for the whole tree.
+ */
+export function indexAccessibleText(roots: ParentNode[]): Map<Element, Element[]> {
+  const owners = new Map<Element, Element[]>();
+  for (const scope of roots) {
+    for (const node of scope.querySelectorAll(A11Y_TEXT_SELECTOR)) {
+      // Ancestors only: querySelectorAll never returns the element it is called
+      // on, so a node's own presence says nothing about its owner.
+      for (let el = node.parentElement; el !== null; el = el.parentElement) {
+        const found = owners.get(el);
+        // querySelectorAll walks in document order and this appends, so each
+        // list arrives in the order a fresh query would have returned it.
+        if (found) found.push(node);
+        else owners.set(el, [node]);
+      }
+    }
+  }
+  return owners;
+}
+
+export function accessiblePriceText(
+  el: Element,
+  /** When given, the copies each element owns, already gathered. */
+  owners?: Map<Element, Element[]>,
+): string | null {
   // The label is ON this element, so it describes this element whatever its
   // size. A hidden descendant is a different claim and is bounded below.
   const label = el.getAttribute('aria-label');
   if (label && QUICK_DETECT_PATTERN.test(label) && !isNonPriceText(label)) {
     return label.trim();
   }
-  for (const node of el.querySelectorAll(A11Y_TEXT_SELECTOR)) {
+  const copies = owners ? owners.get(el) : el.querySelectorAll(A11Y_TEXT_SELECTOR);
+  if (copies === undefined) return null;
+  for (const node of copies) {
     const text = withOwnOutputRestored(node);
     if (text && QUICK_DETECT_PATTERN.test(text) && !isNonPriceText(text)) return text;
   }
@@ -408,12 +444,43 @@ function directTextOf(element: Element): string {
  * not move when we convert something inside the element. Cheaper than
  * pageAuthoredText, which clones the subtree; this only needs the length.
  */
-function authoredTextLength(element: Element): number {
-  let length = textLengthOf(element);
-  for (const own of element.querySelectorAll(`.${SPAN_CLASS}`)) {
-    length += (spanOriginalText(own)?.length ?? 0) - textLengthOf(own);
+/**
+ * Page-authored text length for every element, in one pass.
+ *
+ * Computed rather than measured. `element.textContent.length` builds the whole
+ * subtree's text as a string just to ask how long it is, and the old shape did
+ * that once per element and then queried the subtree AGAIN for our own spans —
+ * so a page of a few thousand nested elements paid for its text over and over.
+ * It was 15ms of the pass on the slowest page in the corpus.
+ *
+ * Children come after their parents in document order, so walking the list
+ * backwards means every child's answer is already known when its parent is
+ * reached, and each element's own text is counted exactly once.
+ *
+ * Our own spans contribute the length of the price they replaced, not of what
+ * we wrote, which is what keeps an element the same size on the second pass as
+ * it was on the first.
+ */
+function indexAuthoredLength(elements: Element[]): Map<Element, number> {
+  const lengths = new Map<Element, number>();
+  for (let index = elements.length - 1; index >= 0; index--) {
+    const element = elements[index];
+    let total = 0;
+    for (const child of element.childNodes) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        total += (child.nodeValue ?? '').length;
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        const el = child as Element;
+        // A node outside this walk's element list — a shadow host's own tree —
+        // contributes nothing, exactly as textContent would report it.
+        total += el.classList.contains(SPAN_CLASS)
+          ? spanOriginalText(el)?.length ?? 0
+          : lengths.get(el) ?? 0;
+      }
+    }
+    lengths.set(element, total);
   }
-  return length;
+  return lengths;
 }
 
 /**
@@ -496,6 +563,57 @@ function proseTextIn(element: Element): string[] {
 const HAS_CURRENCY_EVIDENCE =
   /[$€£¥₩₹]|\b(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\bbtw\b|\beuro\b|\d,-/i;
 
+/**
+ * Elements with currency evidence somewhere in their text.
+ *
+ * The loop below asks of every element on the page whether it holds a price,
+ * and answering costs text extraction, subtree queries and in places a clone.
+ * On a page of eight thousand elements the answer is "no" for nearly all of
+ * them, and the cheapest possible proof of "no" is that no text beneath the
+ * element contains a currency symbol, code or word at all.
+ *
+ * The evidence is the parser's own needle set for this host, so this can never
+ * be stricter than what the parser would go on to accept. Symbols are single
+ * characters and cannot be split across nodes; a currency CODE split mid-word
+ * across two text nodes would be missed, which no page in the corpus does and
+ * no markup tool produces.
+ */
+function indexCurrencyEvidence(roots: ParentNode[], hostname: string): Set<Element> {
+  const evidence = currencyEvidenceFor(hostname);
+  const owners = new Set<Element>();
+  for (const scope of roots) {
+    const walker = (scope.ownerDocument ?? (scope as Document)).createTreeWalker(
+      scope as Node,
+      NodeFilter.SHOW_TEXT,
+    );
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      // Stryker disable next-line ConditionalExpression: a text node always has
+      // a parent element here — it was reached by walking down from one.
+      const parent = node.parentElement;
+      if (parent === null || !evidence.test(node.nodeValue ?? '')) continue;
+      mark(owners, parent);
+    }
+    // Our own conversions read as ZEC, not as the price they replaced, so an
+    // element whose only price we already converted would look like an element
+    // with no price in it — and the second pass would offer it differently from
+    // the first. Every rule that reads an element's shape has to give the same
+    // answer on both passes; this one does it by treating our output as the
+    // evidence it stands in for.
+    for (const own of (scope as ParentNode).querySelectorAll(`.${SPAN_CLASS}`)) {
+      mark(owners, own);
+    }
+  }
+  return owners;
+}
+
+function mark(owners: Set<Element>, from: Element): void {
+  for (let el: Element | null = from; el !== null; el = el.parentElement) {
+    // Whatever marked this one already marked everything above it.
+    if (owners.has(el)) break;
+    owners.add(el);
+  }
+}
+
 export function walkPriceElements(root: Node): WalkResult[] {
   const results: WalkResult[] = [];
   let charBudget = MAX_PASS_CHARS;
@@ -554,24 +672,35 @@ export function walkPriceElements(root: Node): WalkResult[] {
     }
   }
 
+  // One list of the page's elements, used for both the shadow probe and the
+  // walk. The root ITSELF, not only its descendants: the observer queues each
+  // added element as a root, so an infinite-scroll page that appends
+  // `<span class="price">$19.99</span>` — the price in the added element's own
+  // text — had that price skipped entirely, because getElementsByTagName and
+  // querySelectorAll both look only downwards.
+  const own = [root, ...Array.from(root.getElementsByTagName('*'))];
+
   // Shadow trees are invisible to getElementsByTagName, so they are walked as
-  // additional roots. Probed first: most pages have none and should not pay.
-  const shadowRoots = hasShadowDom(root as ParentNode)
-    ? collectShadowRoots(root as ParentNode)
-    : [];
+  // additional roots. The "cheap probe" that used to guard this was the same
+  // full walk, element for element, and on a page with no shadow DOM — almost
+  // every page — it did that walk and then this one did it again.
+  const shadowRoots = collectShadowRootsAmong(own);
   const allElements = [
-    // The root ITSELF, not only its descendants. The observer queues each
-    // added element as a root, so an infinite-scroll page that appends
-    // `<span class="price">$19.99</span>` — the price in the added element's
-    // own text — had that price skipped entirely: getElementsByTagName and
-    // querySelectorAll both look only downwards.
-    root,
-    ...Array.from(root.getElementsByTagName('*')),
+    ...own,
     ...shadowRoots.flatMap((shadow) => Array.from(shadow.querySelectorAll('*'))),
   ];
 
+  const authoredLength = indexAuthoredLength(allElements);
+  const a11yOwners = indexAccessibleText([root, ...shadowRoots]);
+  const carriesEvidence = indexCurrencyEvidence([root, ...shadowRoots], hostname);
+
   for (const element of allElements) {
     if (processedElements.has(element)) continue;
+    // Nothing beneath it carries a currency mark, so no rule below can read a
+    // price out of it. Answered from one text-node pass instead of by putting
+    // every element through the eligibility rules, most of which read text,
+    // clone subtrees, or query descendants.
+    if (element !== root && !carriesEvidence.has(element)) continue;
     if (!isConvertible(element)) continue;
 
     // The accessibility copy is read through accessiblePriceText() on its owner
@@ -609,7 +738,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // for such elements fixed that and broke the other direction — a
     // ten-thousand-character Craigslist posting became eligible on the second
     // pass for the same reason. Correcting the length costs no clone.
-    if (authoredTextLength(element) > MAX_PURE_PRICE_LENGTH * 4) {
+    if ((authoredLength.get(element) ?? 0) > MAX_PURE_PRICE_LENGTH * 4) {
       // Too big to read as a price, but its own text nodes are not. Craigslist
       // states the asking price four times inside a 10,967-character posting
       // body, and the pre-filter dropped the section before anything looked.
@@ -626,7 +755,7 @@ export function walkPriceElements(root: Node): WalkResult[] {
 
     // Prefer the accessibility text when the visible text is split or styled.
     const rawText = pageAuthoredText(element);
-    const accessible = accessibleCopyCovers(element, accessiblePriceText(element));
+    const accessible = accessibleCopyCovers(element, accessiblePriceText(element, a11yOwners));
     // Both are trimmed already: accessiblePriceText trims what it returns and
     // pageAuthoredText goes through textOf.
     const trimmed = accessible ?? rawText;

@@ -11,6 +11,15 @@ export default defineConfig({
       'tests/fuzz/**/*.test.ts',
     ],
     environment: 'node',
+    // The page suite builds a full DOM for every captured page, and the corpus
+    // is now large enough to exhaust a worker's default heap partway through.
+    // That failure arrives as a V8 crash, not a test failure, so the run looks
+    // broken rather than red — and the coverage ratchet it carries stops
+    // reporting at all. Give it room explicitly.
+    poolOptions: {
+      forks: { execArgv: ['--max-old-space-size=8192'] },
+      threads: { execArgv: ['--max-old-space-size=8192'] },
+    },
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],

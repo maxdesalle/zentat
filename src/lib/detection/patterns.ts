@@ -13,6 +13,20 @@ export interface CurrencyPattern {
    * Set on any pattern that matches a bare number with no currency evidence.
    */
   requiresPriceContainer?: boolean;
+  /**
+   * Substrings this pattern cannot match without. Text holding none of them is
+   * skipped before the expensive scan runs.
+   *
+   * These are not a heuristic — each is a literal the regex REQUIRES. Every
+   * alternative buildPattern emits contains either one of the symbols it was
+   * built from or the currency code, and each hand-written pattern names the
+   * character it is anchored on. Declaring MORE needles than the regex needs is
+   * harmless (the pattern merely runs when it need not); declaring fewer would
+   * silently drop prices, so `parsePriceExhaustive` exists to prove it doesn't.
+   */
+  needles: string[];
+  /** `needles` compiled to one alternation. Built once, below. */
+  evidence: RegExp;
 }
 
 // Number pattern: 1,234.56 or 1.234,56 or 1234.56 or 69k or 2.5M or 150B or 2T
@@ -112,16 +126,39 @@ const EUR_REGIONAL_SITES = [
   'mediamarkt.be',
 ];
 
-export const CURRENCY_PATTERNS: CurrencyPattern[] = [
-  { code: 'USD', symbols: ['$', 'US$'], regex: buildPattern(['$', 'US$'], 'USD') },
-  { code: 'EUR', symbols: ['€'], regex: buildPattern(['€'], 'EUR') },
+const PATTERN_SOURCES: Array<Omit<CurrencyPattern, 'evidence'>> = [
+  {
+    code: 'USD',
+    symbols: ['$', 'US$'],
+    regex: buildPattern(['$', 'US$'], 'USD'),
+    needles: ['$', 'USD'],
+  },
+  { code: 'EUR', symbols: ['€'], regex: buildPattern(['€'], 'EUR'), needles: ['€', 'EUR'] },
   // European ",-" format (e.g., "339,-" on Dutch/Belgian EUR sites)
   // Restricted to known EUR sites since ",-" is also used for DKK, NOK, CHF, etc.
-  { code: 'EUR', symbols: [',-'], regex: EUR_DASH_PATTERN, hostnames: EUR_REGIONAL_SITES },
+  {
+    code: 'EUR',
+    symbols: [',-'],
+    regex: EUR_DASH_PATTERN,
+    hostnames: EUR_REGIONAL_SITES,
+    needles: [','],
+  },
   // Dutch/Belgian "excl. btw" / "incl. btw" format
-  { code: 'EUR', symbols: ['btw'], regex: EUR_BTW_PATTERN, hostnames: EUR_REGIONAL_SITES },
+  {
+    code: 'EUR',
+    symbols: ['btw'],
+    regex: EUR_BTW_PATTERN,
+    hostnames: EUR_REGIONAL_SITES,
+    needles: ['btw'],
+  },
   // Dutch "euro" word format (e.g., "149 euro", "53,95 euro")
-  { code: 'EUR', symbols: ['euro'], regex: EUR_WORD_PATTERN, hostnames: EUR_REGIONAL_SITES },
+  {
+    code: 'EUR',
+    symbols: ['euro'],
+    regex: EUR_WORD_PATTERN,
+    hostnames: EUR_REGIONAL_SITES,
+    needles: ['euro'],
+  },
   // Bol.com plain decimal format (e.g., "149,00", "53,95") - very restricted
   {
     code: 'EUR',
@@ -129,6 +166,7 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
     regex: BOL_DECIMAL_PATTERN,
     hostnames: ['bol.com'],
     requiresPriceContainer: true,
+    needles: [','],
   },
   // Coolblue whole number format (e.g., "1.349", "899") - thousand separator with no decimal
   {
@@ -137,9 +175,15 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
     regex: COOLBLUE_WHOLE_PATTERN,
     requiresPriceContainer: true,
     hostnames: ['coolblue.nl', 'coolblue.be'],
+    needles: ['.'],
   },
-  { code: 'GBP', symbols: ['£'], regex: buildPattern(['£'], 'GBP') },
-  { code: 'JPY', symbols: ['¥', '円'], regex: buildPattern(['¥', '円'], 'JPY') },
+  { code: 'GBP', symbols: ['£'], regex: buildPattern(['£'], 'GBP'), needles: ['£', 'GBP'] },
+  {
+    code: 'JPY',
+    symbols: ['¥', '円'],
+    regex: buildPattern(['¥', '円'], 'JPY'),
+    needles: ['¥', '円', 'JPY'],
+  },
   // CDN$ is Steam's notation, and Steam is not a small corner of the web. Its
   // absence meant a Canadian user got ZERO conversions on a store page: 13
   // prices, none of them read. Nothing failed, because nothing in the suite
@@ -148,15 +192,44 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
     code: 'CAD',
     symbols: ['C$', 'CA$', 'CDN$'],
     regex: buildPattern(['C$', 'CA$', 'CDN$'], 'CAD'),
+    // The whole symbol, not the dollar sign inside it. Needles are matched
+    // case-insensitively, the way the pattern is compiled, so "c$" is covered.
+    // Listing a bare "$" here would be safe but ruinous: it made every dollar
+    // price on the page run this grammar, and the four dollar currencies below
+    // it, for text only USD could ever match.
+    needles: ['C$', 'CA$', 'CDN$', 'CAD'],
   },
-  { code: 'AUD', symbols: ['A$', 'AU$'], regex: buildPattern(['A$', 'AU$'], 'AUD') },
-  { code: 'CHF', symbols: ['Fr.', 'CHF'], regex: buildPattern(['Fr.', 'CHF'], 'CHF') },
-  { code: 'CNY', symbols: ['¥', '元', 'CN¥'], regex: buildPattern(['CN¥', '元'], 'CNY') },
-  { code: 'KRW', symbols: ['₩'], regex: buildPattern(['₩'], 'KRW') },
-  { code: 'INR', symbols: ['₹'], regex: buildPattern(['₹'], 'INR') },
-  { code: 'BRL', symbols: ['R$'], regex: buildPattern(['R$'], 'BRL') },
-  { code: 'MXN', symbols: ['MX$'], regex: buildPattern(['MX$'], 'MXN') },
+  {
+    code: 'AUD',
+    symbols: ['A$', 'AU$'],
+    regex: buildPattern(['A$', 'AU$'], 'AUD'),
+    needles: ['A$', 'AU$', 'AUD'],
+  },
+  {
+    code: 'CHF',
+    symbols: ['Fr.', 'CHF'],
+    regex: buildPattern(['Fr.', 'CHF'], 'CHF'),
+    needles: ['Fr.', 'CHF'],
+  },
+  // Declared symbols are a superset of the two this regex was built from, which
+  // is the safe direction: an extra needle costs a scan, a missing one costs a
+  // price.
+  {
+    code: 'CNY',
+    symbols: ['¥', '元', 'CN¥'],
+    regex: buildPattern(['CN¥', '元'], 'CNY'),
+    needles: ['¥', '元', 'CNY'],
+  },
+  { code: 'KRW', symbols: ['₩'], regex: buildPattern(['₩'], 'KRW'), needles: ['₩', 'KRW'] },
+  { code: 'INR', symbols: ['₹'], regex: buildPattern(['₹'], 'INR'), needles: ['₹', 'INR'] },
+  { code: 'BRL', symbols: ['R$'], regex: buildPattern(['R$'], 'BRL'), needles: ['R$', 'BRL'] },
+  { code: 'MXN', symbols: ['MX$'], regex: buildPattern(['MX$'], 'MXN'), needles: ['MX$', 'MXN'] },
 ];
+
+export const CURRENCY_PATTERNS: CurrencyPattern[] = PATTERN_SOURCES.map((pattern) => ({
+  ...pattern,
+  evidence: new RegExp(pattern.needles.map(escapeRegex).join('|'), 'i'),
+}));
 
 // Simple combined pattern for quick detection
 // Requires digit after currency symbol to avoid matching cashtags like $BTC

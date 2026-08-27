@@ -1,7 +1,12 @@
 import { destroyNymConnection, getStoredNymStatus } from '../../lib/fetch/nym';
 import { debug } from '../../lib/log';
 import { getRates, isRatesStale, watchRates } from '../../lib/storage/rates';
-import { getSettings, setSettings, watchSettings } from '../../lib/storage/settings';
+import {
+  ensureSettingsMigrated,
+  getSettings,
+  setSettings,
+  watchSettings,
+} from '../../lib/storage/settings';
 import { handleAlarm, setupAlarms } from './alarms';
 import { setupQuickConvert } from './quick';
 import { refreshRates } from './rates';
@@ -114,6 +119,11 @@ export default defineBackground(() => {
   // React to settings changes: tear down the Nym connection the moment the
   // user disables it (previously a live mixnet websocket persisted
   // indefinitely), and keep the toolbar badge honest.
+  // The one place the pre-1.1 sync-storage copy happens. Every other reader —
+  // content scripts above all — reads local storage directly, so none of them
+  // pays for a migration that runs once per install.
+  ensureSettingsMigrated().catch(() => {});
+
   let lastNymEnabled: boolean | null = null;
   getSettings()
     .then((s) => {

@@ -150,6 +150,25 @@ function autoDecimals(abs: number): number {
   return Math.min(grid, significantFigureCap(abs));
 }
 
+/**
+ * Intl.NumberFormat is expensive to construct and free to reuse, and this
+ * module builds one per price. A page showing two hundred prices was building
+ * two hundred formatters for a handful of distinct option sets — enough to be
+ * one of the larger costs in a conversion pass.
+ */
+const formatters = new Map<string, Intl.NumberFormat>();
+
+function formatter(options: Intl.NumberFormatOptions): Intl.NumberFormat {
+  // LOCALE is part of the key, not a constant: setDisplayLocale changes it, and
+  // a formatter cached under the previous one renders the wrong decimal mark.
+  const key = LOCALE + JSON.stringify(options);
+  const cached = formatters.get(key);
+  if (cached) return cached;
+  const made = new Intl.NumberFormat(LOCALE, options);
+  formatters.set(key, made);
+  return made;
+}
+
 export function formatZecWithSymbol(
   amount: number,
   precision: Precision = 'auto',
@@ -162,7 +181,7 @@ export function formatZecWithSymbol(
   // 'auto' and 'zec' are the same thing. Only an explicit choice produces zats.
   if (unit === 'zats') {
     const zats = amount * ZATS_PER_ZEC;
-    const formatted = new Intl.NumberFormat(LOCALE, {
+    const formatted = formatter({
       // Stryker disable next-line ConditionalExpression,EqualityOperator:
       // equivalent — a whole number of zats renders identically at 0 or 2
       // maximum fraction digits, so only sub-zatoshi amounts can tell.
@@ -174,9 +193,7 @@ export function formatZecWithSymbol(
   if (precision === 'coarse') {
     // Two significant figures, and an explicit "about" so the number is not
     // mistaken for a precise quote.
-    const formatted = new Intl.NumberFormat(LOCALE, {
-      maximumSignificantDigits: 2,
-    }).format(amount);
+    const formatted = formatter({ maximumSignificantDigits: 2 }).format(amount);
     return `≈${formatted} ZEC`;
   }
 
@@ -191,7 +208,7 @@ export function formatZecWithSymbol(
   // the supply and still renders in full, so the rounding never discards ZEC
   // from an amount someone might spend.
   if (absAmount > MAX_ZEC_SUPPLY) {
-    const formatted = new Intl.NumberFormat(LOCALE, {
+    const formatted = formatter({
       notation: 'compact',
       compactDisplay: 'short',
       maximumSignificantDigits: 3,
@@ -206,7 +223,7 @@ export function formatZecWithSymbol(
   // An amount too small for the page's grid gets its own decimals rather than
   // rendering as "0.0000": a price that reads as zero is a wrong price.
   const roundsToZero = amount !== 0 && absAmount < Math.pow(10, -decimals) / 2;
-  const formatted = new Intl.NumberFormat(LOCALE, {
+  const formatted = formatter({
     minimumFractionDigits: roundsToZero ? undefined : decimals,
     maximumFractionDigits: roundsToZero ? 8 : decimals,
     ...(roundsToZero ? { maximumSignificantDigits: 4 } : {}),

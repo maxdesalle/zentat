@@ -125,9 +125,24 @@ async function runMigration(): Promise<void> {
   }
 }
 
-export async function getSettings(): Promise<Settings> {
+/**
+ * Bring a pre-1.1 install's settings across from sync storage.
+ *
+ * Called by the background on startup, and NOT by getSettings. It used to be
+ * awaited on every read, which put a sync-storage round trip in front of the
+ * local one — two cross-process hops, serialized, on the critical path of every
+ * page load. In a content script those replies are delivered to a main thread
+ * busy parsing the page, so the pair cost 20–65ms with the page showing fiat
+ * throughout, on every page, forever, for a copy that happens once per install.
+ *
+ * Anything reading settings in the window before the background finishes gets
+ * the defaults and is corrected by watchSettings the moment the copy lands.
+ */
+export async function ensureSettingsMigrated(): Promise<void> {
   await migrateFromSyncStorage();
-  const stored = await settingsItem.getValue();
+}
+
+export function normalizeSettings(stored: Partial<Settings> | undefined): Settings {
   // Merge with defaults to handle missing fields from older versions
   const merged = { ...DEFAULT_SETTINGS, ...stored };
 
@@ -147,6 +162,10 @@ export async function getSettings(): Promise<Settings> {
   }
 
   return merged;
+}
+
+export async function getSettings(): Promise<Settings> {
+  return normalizeSettings(await settingsItem.getValue());
 }
 
 export async function setSettings(settings: Partial<Settings>): Promise<void> {

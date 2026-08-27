@@ -1,11 +1,17 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { collectShadowRoots, hasShadowDom, shadowRootOf } from '../../src/lib/detection/shadow';
+import { collectShadowRoots, shadowRootOf } from '../../src/lib/detection/shadow';
 
 // Spec: tests/trees/shadow.tree
 
-function host(id: string, mode: ShadowRootMode = 'open'): { el: Element; shadow: ShadowRoot } {
-  const el = document.createElement('div');
+function host(
+  id: string,
+  mode: ShadowRootMode = 'open',
+  // Closed roots are only looked for on custom elements, so a test about one
+  // has to attach it where a component would.
+  tag = mode === 'closed' ? 'price-widget' : 'div',
+): { el: Element; shadow: ShadowRoot } {
+  const el = document.createElement(tag);
   el.id = id;
   document.body.appendChild(el);
   return { el, shadow: el.attachShadow({ mode }) };
@@ -35,6 +41,19 @@ describe('shadowRootOf', () => {
         const { el, shadow } = host('b', 'closed');
         vi.stubGlobal('chrome', { dom: { openOrClosedShadowRoot: () => shadow } });
         expect(shadowRootOf(el)).toBe(shadow);
+      });
+    });
+
+    describe('given it is attached to a plain element', () => {
+      it('does not go looking', () => {
+        // The narrowing that keeps this off the critical path: the API call
+        // crosses an extension binding and was made once per element on every
+        // mutation batch. Closed roots belong to web components, and a web
+        // component is a custom element. An OPEN root on a plain element is
+        // still found, by reading the property directly.
+        const { el, shadow } = host('plain', 'closed', 'div');
+        vi.stubGlobal('chrome', { dom: { openOrClosedShadowRoot: () => shadow } });
+        expect(shadowRootOf(el)).toBeNull();
       });
     });
 
@@ -127,35 +146,6 @@ describe('collectShadowRoots', () => {
       outer.appendChild(nested);
       nested.attachShadow({ mode: 'open' });
       expect(collectShadowRoots(document.body, 2)).toEqual([outer, sibling]);
-    });
-  });
-});
-
-describe('hasShadowDom', () => {
-  describe('given a page with no shadow root', () => {
-    it('reports none', () => {
-      document.body.innerHTML = '<div><span>$19.99</span></div>';
-      expect(hasShadowDom(document.body)).toBe(false);
-    });
-  });
-
-  describe('given a page with one', () => {
-    it('reports one', () => {
-      host('a');
-      expect(hasShadowDom(document.body)).toBe(true);
-    });
-  });
-
-  describe('given the root element is itself a host', () => {
-    it('reports one', () => {
-      const { el } = host('self');
-      expect(hasShadowDom(el)).toBe(true);
-    });
-  });
-
-  describe('given the root has no children', () => {
-    it('reports none', () => {
-      expect(hasShadowDom(document.body)).toBe(false);
     });
   });
 });

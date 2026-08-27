@@ -18,6 +18,15 @@ beforeEach(() => {
 
 const texts = () => walkPriceElements(document.body).map((r) => r.text);
 
+/** Run the next walk as though the page were served from this host. */
+function onHost(hostname: string): void {
+  Object.defineProperty(window, 'location', {
+    value: { ...window.location, hostname },
+    writable: true,
+    configurable: true,
+  });
+}
+
 describe('split cents do not become a 100x error', () => {
   it('refuses an element whose children concatenated into one long number', () => {
     document.body.innerHTML = '<div id="p"><span>$</span><span>49</span><span>99</span></div>';
@@ -458,6 +467,11 @@ describe('a bare number in a child cannot be read on its own', () => {
     // Coolblue puts "1.280,17" in a <strong> and "excl. btw" beside it in the
     // parent. The parent stood down, the child parsed to nothing, and the
     // price stayed in euros on a page where its neighbours had converted.
+    //
+    // On coolblue's own host, because "btw" only names a currency there: the
+    // pattern that reads it is restricted to the Dutch and Belgian shops, so
+    // the same words anywhere else are three ordinary letters.
+    onHost('www.coolblue.be');
     document.body.innerHTML = '<div id="p"><strong>1.280,17</strong> excl. btw</div>';
     expect(texts()).toContain('1.280,17 excl. btw');
   });

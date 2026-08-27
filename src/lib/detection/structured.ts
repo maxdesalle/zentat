@@ -165,15 +165,40 @@ export interface Located {
  * The oracle does not find the node — the projection match does. The oracle
  * says what that node MEANS. Independently useless, jointly decisive.
  */
+/** One element's text, kept so it is read from the DOM only once. */
+interface Candidate {
+  element: Element;
+  text: string;
+  /** Document position, so a tie is broken the way a single pass would. */
+  order: number;
+}
+
 export function locatePrices(root: ParentNode, prices: StructuredPrice[]): Located[] {
+  // Most pages state no price in markup at all; do not walk them for nothing.
+  if (prices.length === 0) return [];
+
+  // Grouped by digit projection up front. The previous shape re-read every
+  // element's textContent for every claimed price, which on a pricing page
+  // stating dozens of amounts was the most expensive thing the extension did —
+  // 62ms of textContent on Cloudflare's plans page alone. Each element yields
+  // exactly one projection, so one pass builds the whole index.
+  const byProjection = new Map<string, Candidate[]>();
+  let order = 0;
+  for (const element of root.querySelectorAll('*')) {
+    const text = textOf(element);
+    const projection = digitProjection(text);
+    // An element rendering no digits cannot carry a price: projectionsFor drops
+    // empty projections, so nothing would ever match this bucket.
+    if (projection === '') continue;
+    const bucket = byProjection.get(projection);
+    if (bucket) bucket.push({ element, text, order: order++ });
+    else byProjection.set(projection, [{ element, text, order: order++ }]);
+  }
+
   const located: Located[] = [];
   const claimed = new Set<Element>();
-  // Most pages state no price in markup at all; do not walk them for nothing.
-  let candidates: Element[] | null = null;
 
   for (const price of prices) {
-    candidates ??= Array.from(root.querySelectorAll('*'));
-    const targets = new Set(projectionsFor(price.amount));
     // Shopify themes leak cents-integers into JSON-LD ("15900" for $159.00).
     // Note the two readings project to the SAME digits, so the projection alone
     // cannot separate them — the visible decimal point is what settles it.
@@ -184,23 +209,33 @@ export function locatePrices(root: ParentNode, prices: StructuredPrice[]): Locat
     // The digits the amount renders as-is, before any zero-padding.
     const exact = digitProjection(String(price.amount));
 
+    const pool: Candidate[] = [];
+    for (const projection of projectionsFor(price.amount)) {
+      const bucket = byProjection.get(projection);
+      if (bucket) pool.push(...bucket);
+    }
+    pool.sort((a, b) => a.order - b.order);
+
     let best: { element: Element; text: string; size: number } | null = null;
 
-    for (const el of candidates) {
-      if (claimed.has(el)) continue;
-      const text = textOf(el);
-      const projection = digitProjection(text);
-      if (!targets.has(projection)) continue;
+    for (const candidate of pool) {
+      if (claimed.has(candidate.element)) continue;
       // "$2.00" and "$200" are the same three digits, so the projection alone
       // cannot say which one the page is showing — and reading the second as
       // the first is a hundredfold error on a price someone is about to pay.
       // A claim therefore reaches text that renders its own digits, or text
       // that shows the separator a zero-padded reading requires. Same evidence
       // as the cents-integer rule below, pointed the other way.
-      if (projection !== exact && !SHOWS_SEPARATOR.test(text)) continue;
+      if (
+        digitProjection(candidate.text) !== exact && !SHOWS_SEPARATOR.test(candidate.text)
+      ) continue;
 
-      const size = el.getElementsByTagName('*').length;
-      if (best === null || size < best.size) best = { element: el, text, size };
+      // Deliberately not precomputed: this is O(subtree) per element, and only
+      // the handful whose digits already matched are ever worth measuring.
+      const size = candidate.element.getElementsByTagName('*').length;
+      if (best === null || size < best.size) {
+        best = { element: candidate.element, text: candidate.text, size };
+      }
     }
 
     if (best) {

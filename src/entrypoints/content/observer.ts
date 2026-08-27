@@ -187,6 +187,31 @@ function addPending(el: Element): void {
 
 function schedule(): void {
   if (pendingRoots.size === 0) return;
+
+  // While the document is still parsing, convert in this microtask instead of
+  // deferring to a frame.
+  //
+  // requestAnimationFrame means "before the NEXT paint". The price that just
+  // arrived is going to be painted in the CURRENT one, so a frame-scheduled
+  // conversion is always at least one frame too late — the first paint of any
+  // price is a paint of the fiat price, by construction. That is the flash,
+  // and no amount of making the scan faster removes it.
+  //
+  // A MutationObserver callback runs at the microtask checkpoint, which is
+  // before rendering: converting here lands in the same frame that first shows
+  // the price. This applies only during parsing, where the work is bounded by
+  // what the parser just appended and being early is the whole point. Once the
+  // document has loaded, the content is already on screen, there is no paint to
+  // beat, and frame batching is the better behaviour for the host page.
+  //
+  // Not when the pending set has collapsed to the whole body, though: that is a
+  // full re-walk, and doing one synchronously per mutation batch while the
+  // parser is still appending turns a linear pass into a quadratic one.
+  if (document.readyState === 'loading' && !pendingRoots.has(document.body)) {
+    processPendingNodes();
+    return;
+  }
+
   if (rafId === null) {
     rafId = requestAnimationFrame(() => {
       rafId = null;

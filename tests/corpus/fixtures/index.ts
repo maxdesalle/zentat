@@ -125,11 +125,24 @@ export const FIXTURES: Fixture[] = [
   },
   {
     name: 'latam-dot-thousands',
-    hostname: 'www.tienda.com.ar',
-    lang: 'es-AR',
+    hostname: 'www.tienda.com.mx',
+    lang: 'es-MX',
     // "$1.500" is 1500 pesos here, not 1.5.
     html: `<p class="precio">$1.500</p>`,
-    expect: [{ text: '$1.500', currency: 'USD', amount: 1500 }],
+    expect: [{ text: '$1.500', currency: 'MXN', amount: 1500 }],
+  },
+  {
+    // The same markup where the currency is one we hold no rate for. The TLD
+    // says Argentine pesos, ARS is not supported, and the only safe reading of
+    // "$1.500" is then no reading at all — showing it as dollars is a
+    // thousandfold error stated with full confidence. This fixture used to
+    // expect exactly that dollar reading.
+    name: 'unsupported-currency-refused',
+    hostname: 'www.tienda.com.ar',
+    lang: 'es-AR',
+    html: `<p class="precio">$1.500</p>`,
+    expect: [],
+    forbid: ['$1.500'],
   },
   {
     name: 'european-formats',
