@@ -315,7 +315,12 @@ function digitsOf(text: string): string {
 export function accessibleCopyCovers(el: Element, accessible: string | null): string | null {
   if (accessible === null) return null;
   const covered = digitsOf(accessible);
-  for (const child of el.children) {
+  // Every price-bearing element inside, not only the direct children. A label
+  // reading "₹498.00" on a 1,089-character Amazon carousel passed the
+  // direct-child test — its immediate children are wrappers — and the copy
+  // then stood in for the whole subtree, which was collected as ONE price and
+  // marked processed. Four real prices inside it were never looked at.
+  for (const child of el.querySelectorAll('*')) {
     const childText = textOf(child);
     if (!QUICK_DETECT_PATTERN.test(childText) || isNonPriceText(childText)) continue;
     if (!covered.includes(digitsOf(childText))) return null;

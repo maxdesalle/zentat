@@ -351,3 +351,26 @@ describe('a paragraph may mention an amount of ZEC', () => {
     expect(isNonPriceText('2,399,683 zats')).toBe(true);
   });
 });
+
+describe('an accessible copy must account for every price inside', () => {
+  it('refuses a label that covers only one price in a large container', () => {
+    // An aria-label reading "₹498.00" on a 1,089-character Amazon carousel
+    // passed the direct-child test — its immediate children are wrappers — so
+    // the copy stood in for the whole subtree. The container was collected as
+    // ONE price, marked processed, and the four real prices inside it were
+    // never looked at. The label also bypasses the length cap, which is how
+    // something that big was treated as a price at all.
+    document.body.innerHTML = '<div id="c" aria-label="₹498.00">'
+      + '<div><span>₹498.00</span></div>'
+      + '<div><span>₹999.00</span></div></div>';
+    expect(accessiblePriceText(document.getElementById('c')!)).toBe('₹498.00');
+    expect(texts()).toContain('₹999.00');
+  });
+
+  it('still stands in when it accounts for the split rendering', () => {
+    document.body.innerHTML = '<div id="c" aria-label="$19.99">'
+      + '<span class="a-offscreen">$19.99</span>'
+      + '<span aria-hidden="true"><span>$</span><span>19</span><span>99</span></span></div>';
+    expect(texts()).toContain('$19.99');
+  });
+});
