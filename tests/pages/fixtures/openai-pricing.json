@@ -9,11 +9,12 @@
   "knownGaps": [
     {
       "invariant": "one shape per page",
-      "why": "An API price list spans eight orders of magnitude \u2014 $0.08 per million tokens beside $10.00 per thousand calls. No single page-wide decimal count can make both readable, so the shared shape breaks here by construction rather than by mistake."
+      "why": "An API price list spans eight orders of magnitude — $0.08 per million tokens beside $10.00 per thousand calls. No single page-wide decimal count can make both readable, so the shared shape breaks here by construction rather than by mistake."
     },
     {
       "invariant": "no unreadable magnitudes",
       "why": "$0.08 per million tokens is 0.0000001 ZEC. The rule that a nonzero price must never render as 0.00 expands it to ten decimals, which nobody can read. The open question is whether a price this small should convert at all."
     }
-  ]
+  ],
+  "maxFiatRemaining": 0
 }

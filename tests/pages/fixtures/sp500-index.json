@@ -11,5 +11,6 @@
       "invariant": "one shape per page",
       "why": "Genuine limitation. An index page quotes a $37.56 figure beside a $61.1 trillion total — twelve orders of magnitude. The median grid gives two decimals, which the significant-figure cap then strips entirely from the trillions."
     }
-  ]
+  ],
+  "maxFiatRemaining": 0
 }

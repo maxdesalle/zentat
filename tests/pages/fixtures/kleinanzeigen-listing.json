@@ -3,13 +3,14 @@
   "url": "https://www.kleinanzeigen.de/s-anzeige/vermietete-1-zimmerwohnung-mit-gutem-energiewert-wannenbad-nahe-schlossstrasse/1950107323-196-3422",
   "hostname": "www.kleinanzeigen.de",
   "lang": "de",
-  "title": "Vermietete 1-Zimmerwohnung mit gutem Energiewert & Wannenbad nahe Schlo\u00dfstra\u00dfe in Berlin - Steglitz | Etagenwohnung kaufen | kleinanzeigen.de",
+  "title": "Vermietete 1-Zimmerwohnung mit gutem Energiewert & Wannenbad nahe Schloßstraße in Berlin - Steglitz | Etagenwohnung kaufen | kleinanzeigen.de",
   "capturedAt": "2026-08-26",
   "bytes": 212659,
   "knownGaps": [
     {
       "invariant": "one shape per page",
-      "why": "Genuine limitation. An apartment at 182.900 \u20ac shares the page with a 1,99 \u20ac line item \u2014 five orders of magnitude. German conventions are read correctly in both directions (dot grouping in 182.900 \u20ac, comma decimal in 1,99 \u20ac), and the property prices themselves are internally consistent at \"###.# ZEC\". The break is 1,99 \u20ac at 0.002781 ZEC and 114 \u20ac at 0.16 ZEC against 255.6 ZEC, which no single decimal count reconciles."
+      "why": "Genuine limitation. An apartment at 182.900 € shares the page with a 1,99 € line item — five orders of magnitude. German conventions are read correctly in both directions (dot grouping in 182.900 €, comma decimal in 1,99 €), and the property prices themselves are internally consistent at \"###.# ZEC\". The break is 1,99 € at 0.002781 ZEC and 114 € at 0.16 ZEC against 255.6 ZEC, which no single decimal count reconciles."
     }
-  ]
+  ],
+  "maxFiatRemaining": 1
 }

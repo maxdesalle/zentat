@@ -9,7 +9,8 @@
   "knownGaps": [
     {
       "invariant": "one shape per page",
-      "why": "Genuine limitation. The listing is 350.000 \u20ac (489.1 ZEC) and the page also carries a 1.198 \u20ac figure and comparables up to 501.281 \u20ac \u2014 nearly three orders of magnitude. Spanish dot-grouping is read correctly throughout (1.198 \u20ac is 1,198 euros, not 1.198), so this is magnitude span and not a separator misread. Note the fixable half, which is not span: in the comparables column 97.82 ZEC and 179.0 ZEC differ in decimals only because the four-significant-figure cap is applied per amount instead of to the page grid, and both would read fine at one decimal. That is the digitalocean-pricing defect showing through on a page whose wider span keeps this entry honest regardless."
+      "why": "Genuine limitation. The listing is 350.000 € (489.1 ZEC) and the page also carries a 1.198 € figure and comparables up to 501.281 € — nearly three orders of magnitude. Spanish dot-grouping is read correctly throughout (1.198 € is 1,198 euros, not 1.198), so this is magnitude span and not a separator misread. Note the fixable half, which is not span: in the comparables column 97.82 ZEC and 179.0 ZEC differ in decimals only because the four-significant-figure cap is applied per amount instead of to the page grid, and both would read fine at one decimal. That is the digitalocean-pricing defect showing through on a page whose wider span keeps this entry honest regardless."
     }
-  ]
+  ],
+  "maxFiatRemaining": 0
 }

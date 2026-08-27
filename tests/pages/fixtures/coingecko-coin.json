@@ -9,11 +9,12 @@
   "knownGaps": [
     {
       "invariant": "one shape per page",
-      "why": "Genuine limitation. One coin page runs from a $0.004683 tick to a $1.575T market cap \u2014 fifteen orders of magnitude in one document. The grid is set from the median (spot prices near $78,000, two decimals) and the per-amount significant-figure cap then pulls both ends off it: $0.004683 needs nine decimals not to read as zero, $1.575T has none left to spend."
+      "why": "Genuine limitation. One coin page runs from a $0.004683 tick to a $1.575T market cap — fifteen orders of magnitude in one document. The grid is set from the median (spot prices near $78,000, two decimals) and the per-amount significant-figure cap then pulls both ends off it: $0.004683 needs nine decimals not to read as zero, $1.575T has none left to spend."
     },
     {
       "invariant": "no unreadable magnitudes",
-      "why": "Two separate things are red here and only one of them is a limitation.\n(1) OPEN PRODUCT QUESTION: $1.575T renders as 2,019,230,769 ZEC. Total ZEC supply is 21 million, so every figure above that is arithmetic rather than a quantity anyone can hold \u2014 the number is arguably correct and certainly useless as a unit of account. Whether market caps should convert at all, render coarsely, or stay in fiat is undecided; recorded, not fixed.\n(2) DEFECT, not a limitation: \"$29.121B\" renders as 37,334,615,385 ZEC, exactly 1000x too high. parseNumber in src/lib/detection/parser.ts reads the dot in \"29.121\" as thousands grouping because its US-decimal escape requires a single-digit integer part (sepIndex <= 1) \u2014 which is the only reason \"$1.575T\" on the same page comes out right. The unabbreviated sibling \"$29,126,903,650\" converts to 37,342,184 ZEC, which is what the abbreviated form should have shown."
+      "why": "Two separate things are red here and only one of them is a limitation.\n(1) OPEN PRODUCT QUESTION: $1.575T renders as 2,019,230,769 ZEC. Total ZEC supply is 21 million, so every figure above that is arithmetic rather than a quantity anyone can hold — the number is arguably correct and certainly useless as a unit of account. Whether market caps should convert at all, render coarsely, or stay in fiat is undecided; recorded, not fixed.\n(2) DEFECT, not a limitation: \"$29.121B\" renders as 37,334,615,385 ZEC, exactly 1000x too high. parseNumber in src/lib/detection/parser.ts reads the dot in \"29.121\" as thousands grouping because its US-decimal escape requires a single-digit integer part (sepIndex <= 1) — which is the only reason \"$1.575T\" on the same page comes out right. The unabbreviated sibling \"$29,126,903,650\" converts to 37,342,184 ZEC, which is what the abbreviated form should have shown."
     }
-  ]
+  ],
+  "maxFiatRemaining": 4
 }

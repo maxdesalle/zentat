@@ -13,7 +13,8 @@
     },
     {
       "invariant": "no unreadable magnitudes",
-      "why": "Genuine limitation. The CA$0.01 in the discount breakdown is 0.000009427 ZEC; the never-render-as-zero rule spends nine decimals on it, ten digits in all. Same open question as openai-pricing \u2014 whether a price this small should convert at all \u2014 arriving here from a store page rather than an API price list."
+      "why": "Genuine limitation. The CA$0.01 in the discount breakdown is 0.000009427 ZEC; the never-render-as-zero rule spends nine decimals on it, ten digits in all. Same open question as openai-pricing — whether a price this small should convert at all — arriving here from a store page rather than an API price list."
     }
-  ]
+  ],
+  "maxFiatRemaining": 4
 }

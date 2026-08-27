@@ -134,7 +134,15 @@ export const CURRENCY_PATTERNS: CurrencyPattern[] = [
   },
   { code: 'GBP', symbols: ['£'], regex: buildPattern(['£'], 'GBP') },
   { code: 'JPY', symbols: ['¥', '円'], regex: buildPattern(['¥', '円'], 'JPY') },
-  { code: 'CAD', symbols: ['C$', 'CA$'], regex: buildPattern(['C$', 'CA$'], 'CAD') },
+  // CDN$ is Steam's notation, and Steam is not a small corner of the web. Its
+  // absence meant a Canadian user got ZERO conversions on a store page: 13
+  // prices, none of them read. Nothing failed, because nothing in the suite
+  // could fail for a price we never looked at.
+  {
+    code: 'CAD',
+    symbols: ['C$', 'CA$', 'CDN$'],
+    regex: buildPattern(['C$', 'CA$', 'CDN$'], 'CAD'),
+  },
   { code: 'AUD', symbols: ['A$', 'AU$'], regex: buildPattern(['A$', 'AU$'], 'AUD') },
   { code: 'CHF', symbols: ['Fr.', 'CHF'], regex: buildPattern(['Fr.', 'CHF'], 'CHF') },
   { code: 'CNY', symbols: ['¥', '元', 'CN¥'], regex: buildPattern(['CN¥', '元'], 'CNY') },

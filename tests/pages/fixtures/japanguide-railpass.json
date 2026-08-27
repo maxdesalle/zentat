@@ -5,5 +5,6 @@
   "lang": "en",
   "title": "Japan Rail Pass (JR Pass)",
   "capturedAt": "2026-08-26",
-  "bytes": 170736
+  "bytes": 170736,
+  "maxFiatRemaining": 0
 }

@@ -11,5 +11,6 @@
       "invariant": "one shape per page",
       "why": "DEFECT, not a limitation. The four-significant-figure cap is applied per amount rather than to the page grid, so $10 (0.01282 ZEC) is trimmed to five decimals while the 43 prices under $7.80 keep six. The hardcoded zero shape that used to be the other half of this gap is fixed: a $0 price now takes the page grid. Same root cause as aliexpress, currys and thalia-de — reconciling the truthfulness cap with the shared grid is a product decision, not a line edit."
     }
-  ]
+  ],
+  "maxFiatRemaining": 2
 }

@@ -15,5 +15,6 @@
       "invariant": "no fiat left beside converted",
       "why": "DEFECT, not a limitation, and newly visible because this invariant did not exist until now. A figure renders as 24.5M ZEC while \"$19.4...\" sits in the same parent, unconverted. Every other invariant asks whether a CONVERTED price is right, so nothing here could fail for a price we simply missed - which is exactly how Apple's configurator and Amazon's headline price shipped in dollars. Recorded rather than papered over; the cause on this page is not yet diagnosed."
     }
-  ]
+  ],
+  "maxFiatRemaining": 5
 }

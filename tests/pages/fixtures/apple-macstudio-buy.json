@@ -11,5 +11,6 @@
       "invariant": "one shape per page",
       "why": "DEFECT, not a limitation, and the same one recorded on digitalocean-pricing and github-sponsors: the four-significant-figure cap is applied per amount rather than to the page grid, so a price crossing a power of ten renders one decimal shorter than the column it sits in. This page is the capture that proved the configurator fix: its option rows are <label>s around radios, and they used to leave \"48GB - $2,000.00\" in dollars beside options already in ZEC."
     }
-  ]
+  ],
+  "maxFiatRemaining": 8
 }

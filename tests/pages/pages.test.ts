@@ -34,6 +34,7 @@ import { clearPageScale } from '../../src/lib/conversion/format';
 import type { RatesData } from '../../src/lib/storage/rates';
 import { DEFAULT_SETTINGS } from '../../src/lib/storage/settings';
 import { checkConverted, firstDifference, revertLeavesNothingBehind } from './invariants';
+import { visibleFiatCount } from './visible';
 
 // Below this a capture is a bot wall or an empty JavaScript shell, and a
 // fixture that contains no page proves nothing.
@@ -55,6 +56,8 @@ interface PageMeta {
    * is reminded of is a gap nobody fixes.
    */
   knownGaps?: Array<{ invariant: string; why: string }>;
+  /** Fiat prices a reader may still see after conversion. Ratcheted. */
+  maxFiatRemaining?: number;
 }
 
 // Metadata is cheap; the markup is not. Real captures run to hundreds of
@@ -122,7 +125,24 @@ describe.each(pages.map((p) => [p.meta.name, p] as const))('%s', (_name, page) =
     const before = document.body.innerHTML;
     const problems: string[] = [];
 
+    const fiatBefore = visibleFiatCount(document.body);
+
     expect(() => convertPricesInDocument(rates, settings)).not.toThrow();
+
+    // How many fiat prices a reader can still see. Ratcheted, exactly like a
+    // known gap: leaving MORE behind is a regression, leaving fewer means the
+    // recorded number is stale and should be tightened. Without this the suite
+    // cannot fail for a price we never looked at, which is how Steam shipped
+    // converting nothing at all and Apple's configurator shipped in dollars.
+    const fiatAfter = visibleFiatCount(document.body);
+    const allowed = page.meta.maxFiatRemaining;
+    if (allowed === undefined) {
+      problems.push(`no maxFiatRemaining recorded; it is ${fiatAfter} of ${fiatBefore}`);
+    } else if (fiatAfter > allowed) {
+      problems.push(`left ${fiatAfter} fiat prices on screen, was allowed ${allowed}`);
+    } else if (fiatAfter < allowed) {
+      problems.push(`only ${fiatAfter} fiat prices remain, tighten maxFiatRemaining to that`);
+    }
 
     const expected = new Set((page.meta.knownGaps ?? []).map((gap) => gap.invariant));
     const violations = checkConverted();
@@ -151,5 +171,8 @@ describe.each(pages.map((p) => [p.meta.name, p] as const))('%s', (_name, page) =
     if (residue) problems.push(`revert did not restore the page ${residue}`);
 
     expect(problems).toEqual([]);
-  });
+    // Real captures run to hundreds of kilobytes and this test walks each one
+    // several times. The default five seconds is a limit on the fixture's
+    // size, not on anything the code does.
+  }, 30_000);
 });

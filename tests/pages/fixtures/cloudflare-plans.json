@@ -15,5 +15,6 @@
       "invariant": "no unreadable magnitudes",
       "why": "Genuine limitation. $0.00000007 per request is 0.00000000008974 ZEC, fourteen decimals. Same root question as openai-pricing and aws-s3-pricing: a per-request price below a zatoshi has no honest ZEC rendering."
     }
-  ]
+  ],
+  "maxFiatRemaining": 0
 }

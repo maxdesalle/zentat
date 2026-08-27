@@ -66,7 +66,9 @@ describe('CURRENCY_PATTERNS', () => {
       { code: 'EUR', symbols: [], hostnames: ['coolblue.nl', 'coolblue.be'], bareNumber: true },
       { code: 'GBP', symbols: ['£'], hostnames: null, bareNumber: false },
       { code: 'JPY', symbols: ['¥', '円'], hostnames: null, bareNumber: false },
-      { code: 'CAD', symbols: ['C$', 'CA$'], hostnames: null, bareNumber: false },
+      // CDN$ is Steam's notation. Without it a Canadian user got zero
+      // conversions on a Steam store page: 13 prices, none of them read.
+      { code: 'CAD', symbols: ['C$', 'CA$', 'CDN$'], hostnames: null, bareNumber: false },
       { code: 'AUD', symbols: ['A$', 'AU$'], hostnames: null, bareNumber: false },
       { code: 'CHF', symbols: ['Fr.', 'CHF'], hostnames: null, bareNumber: false },
       { code: 'CNY', symbols: ['¥', '元', 'CN¥'], hostnames: null, bareNumber: false },

@@ -11,5 +11,6 @@
       "invariant": "one shape per page",
       "why": "A books page of 12,00-29,99 EUR prices carries one 1.000 EUR prize voucher in body copy. The page grid is 4 decimals (median ~20 EUR), but significantFigureCap trims anything at or above 1 ZEC to 3, so 1.000 EUR renders 1.397 ZEC beside 0.0252 ZEC. The two rules disagree by design: the sig-fig cap is a truthfulness limit on a +/-10% rate and must win over the shared grid, so any page whose span crosses 1 ZEC breaks this invariant by construction."
     }
-  ]
+  ],
+  "maxFiatRemaining": 0
 }

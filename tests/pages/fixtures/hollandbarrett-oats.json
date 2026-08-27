@@ -9,11 +9,12 @@
   "knownGaps": [
     {
       "invariant": "one shape per page",
-      "why": "Mandatory UK unit pricing puts a per-tablet figure two orders of magnitude below the page's median price. The median fixes the grid at 4 decimals, \u00a30.03/tablet rounds to 0.0000 at that grid, and format.ts's roundsToZero escape hatch ('a price that reads as zero is a wrong price') re-renders it at 8 decimals. The two rules are in direct conflict on any grocery page whose unit price is small enough."
+      "why": "Mandatory UK unit pricing puts a per-tablet figure two orders of magnitude below the page's median price. The median fixes the grid at 4 decimals, £0.03/tablet rounds to 0.0000 at that grid, and format.ts's roundsToZero escape hatch ('a price that reads as zero is a wrong price') re-renders it at 8 decimals. The two rules are in direct conflict on any grocery page whose unit price is small enough."
     },
     {
       "invariant": "no unreadable magnitudes",
-      "why": "Same cause: \u00a30.03 per tablet becomes 0.00004885 ZEC \u2014 nine digits, the exact readability failure the zats rule was written to stop, arrived at through the roundsToZero branch instead. Recorded, not accepted; needs a product decision (a '<0.0001 ZEC' floor, or leaving unit prices in fiat)."
+      "why": "Same cause: £0.03 per tablet becomes 0.00004885 ZEC — nine digits, the exact readability failure the zats rule was written to stop, arrived at through the roundsToZero branch instead. Recorded, not accepted; needs a product decision (a '<0.0001 ZEC' floor, or leaving unit prices in fiat)."
     }
-  ]
+  ],
+  "maxFiatRemaining": 0
 }
