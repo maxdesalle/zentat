@@ -486,6 +486,16 @@ function proseTextIn(element: Element): string[] {
   return found;
 }
 
+/**
+ * Whether text says outright what currency it is in.
+ *
+ * A bare number is a price only because of what surrounds it, so an element
+ * holding one cannot be read on its own — which is what decides whether a
+ * parent may defer to a child.
+ */
+const HAS_CURRENCY_EVIDENCE =
+  /[$€£¥₩₹]|\b(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|KRW|INR|BRL|MXN)\b|\bbtw\b|\beuro\b|\d,-/i;
+
 export function walkPriceElements(root: Node): WalkResult[] {
   const results: WalkResult[] = [];
   let charBudget = MAX_PASS_CHARS;
@@ -682,6 +692,10 @@ export function walkPriceElements(root: Node): WalkResult[] {
     // ("<p>$10 – <span class='sale'>$8</span></p>"), so convert just that part.
     // An accessible copy describes the WHOLE element, so its children are the
     // split rendering of the same price, not separate prices to defer to.
+    // Whether the element's OWN text says what currency its children's numbers
+    // are in. Coolblue's "excl. btw" does; an empty wrapper does not.
+    const ownEvidence = HAS_CURRENCY_EVIDENCE.test(directTextOf(element));
+
     let hasMatchingChild = false;
     for (const child of accessible !== null ? [] : element.children) {
       // Page-authored again: a child holding only OUR output is not a child
@@ -698,9 +712,18 @@ export function walkPriceElements(root: Node): WalkResult[] {
       // the parent's own direct text was three spaces. The price was offered
       // to nobody. Every price on that page above the free tier, and the same
       // shape on Zoopla.
+      // A child holding a BARE number cannot be read on its own. Coolblue puts
+      // "1.280,17" in a <strong> and "excl. btw" beside it in the parent, so
+      // the parent stood down and the child parsed to nothing — whatever tells
+      // that number it is money lives in the PARENT's text.
+      //
+      // Unless the parent has no such evidence either, which is the ordinary
+      // case: a container whose whole text is "1.349" is still the smallest
+      // element that expresses the price, and its ancestors go on deferring.
       if (
         childText && /\d/.test(childText) && QUICK_DETECT_PATTERN.test(childText)
         && !isNonPriceText(childText)
+        && (HAS_CURRENCY_EVIDENCE.test(childText) || !ownEvidence)
       ) {
         hasMatchingChild = true;
         break;

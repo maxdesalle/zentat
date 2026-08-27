@@ -452,3 +452,25 @@ describe("an accessible copy must account for the element's own text too", () =>
     expect(accessibleCopyCovers(document.getElementById('c')!, '$19.99')).toBe('$19.99');
   });
 });
+
+describe('a bare number in a child cannot be read on its own', () => {
+  it('reads the parent when the parent holds the currency evidence', () => {
+    // Coolblue puts "1.280,17" in a <strong> and "excl. btw" beside it in the
+    // parent. The parent stood down, the child parsed to nothing, and the
+    // price stayed in euros on a page where its neighbours had converted.
+    document.body.innerHTML = '<div id="p"><strong>1.280,17</strong> excl. btw</div>';
+    expect(texts()).toContain('1.280,17 excl. btw');
+  });
+
+  it('still defers when the parent has no evidence either', () => {
+    // A container whose whole text is the number remains the smallest element
+    // that expresses the price, and its ancestors go on deferring to it.
+    document.body.innerHTML = '<div id="p"><span>$19.99</span></div>';
+    expect(texts()).toContain('$19.99');
+  });
+
+  it('still defers to a child that carries its own symbol', () => {
+    document.body.innerHTML = '<p id="p">$10 – <span>$8</span></p>';
+    expect(texts()).toContain('$8');
+  });
+});
