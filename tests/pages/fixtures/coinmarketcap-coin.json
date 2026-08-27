@@ -16,5 +16,5 @@
       "why": "Genuine limitation, same family as aws-s3-pricing and openai-pricing. A coin page quotes ticks of a fraction of a cent beside a market cap, and 0.00002495 ZEC is what a sub-cent tick honestly is. The never-render-a-nonzero-price-as-zero rule is what produces the digits, and it is the right rule: a price that reads as zero is a wrong price."
     }
   ],
-  "maxFiatRemaining": 3
+  "maxFiatRemaining": 0
 }

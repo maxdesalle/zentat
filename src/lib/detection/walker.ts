@@ -67,9 +67,21 @@ export interface WalkResult {
  */
 const OUR_OWN_OUTPUT = /\d[\d.,]*\s*[KMBT]?\s*(?:ZEC\b|zats?\b)/i;
 
+/**
+ * The longest text this can be ABOUT rather than merely contain.
+ *
+ * "1.00 ZEC" is our output. A paragraph that happens to mention
+ * "16,000,000 ZEC in circulation" is prose with a figure in it, and treating
+ * the two alike disqualified every price in CoinMarketCap's and Google
+ * Finance's descriptions. The text handed here has already had our own spans
+ * restored to the prices they replaced, so a ZEC figure inside a paragraph is
+ * the page's own words.
+ */
+const MAX_OUR_OUTPUT_LENGTH = 120;
+
 // Text that looks numeric but is not a price.
 export function isNonPriceText(text: string): boolean {
-  if (OUR_OWN_OUTPUT.test(text)) return true;
+  if (text.length <= MAX_OUR_OUTPUT_LENGTH && OUR_OWN_OUTPUT.test(text)) return true;
   if (/out of \d/i.test(text)) return true; // "4.5 out of 5 stars"
   // Stryker disable next-line Regex: equivalent — any run of digits contains a
   // single digit, so requiring one or more matches exactly where one does.

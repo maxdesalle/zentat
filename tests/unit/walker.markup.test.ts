@@ -332,3 +332,22 @@ describe('a control keeps its fiat only when it says a verb', () => {
     expect(isInteractiveControl(document.getElementById('b')!)).toBe(expected);
   });
 });
+
+describe('a paragraph may mention an amount of ZEC', () => {
+  it('reads a price out of prose that also states a ZEC figure', () => {
+    // CoinMarketCap's description of Zcash states the circulating supply, and
+    // Google Finance's earnings summaries do the same sort of thing. Treating
+    // any "N ZEC" as our own output disqualified the whole paragraph, and the
+    // real prices in it with it.
+    const prose = 'The live Zcash price today is $783.51 USD with a 24-hour trading volume'
+      + ' of $99,000,000. The current circulating supply is 16,000,000 ZEC out of a'
+      + ' maximum supply of 21,000,000 ZEC, and the price is up today.';
+    expect(isNonPriceText(prose)).toBe(false);
+  });
+
+  it('still refuses our own output', () => {
+    expect(isNonPriceText('1.00 ZEC')).toBe(true);
+    expect(isNonPriceText('78.3B ZEC')).toBe(true);
+    expect(isNonPriceText('2,399,683 zats')).toBe(true);
+  });
+});
