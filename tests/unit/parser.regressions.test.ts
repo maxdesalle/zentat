@@ -98,6 +98,34 @@ describe('an abbreviated range converts both bounds or neither', () => {
   it('does not mistake a label dash for a range', () => {
     expect(amounts('Basic – $10')).toEqual([10]);
   });
+
+  // The same range with the currency written after it instead of before.
+  // Oceansprint's travel notes read "a flat rate around 20-25 EUR"; only the
+  // upper bound carried a currency, so the page said "around 20-0,04 ZEC" —
+  // the bare bound against our output, reading as ZEC, exactly what the rule
+  // above exists to stop.
+  it.each([
+    ['a flat rate around 20-25 EUR', [20, 25]],
+    ['around 200-350 EUR for the week', [200, 350]],
+    ['20–25 EUR', [20, 25]],
+    ['20 to 25 EUR', [20, 25]],
+    ['1,200-1,500 EUR', [1200, 1500]],
+  ])('reads both bounds of %j when the code follows', (text, expected) => {
+    expect(amounts(text)).toEqual(expected);
+  });
+
+  it('refuses the whole range when the LOWER bound cannot inherit the magnitude', () => {
+    // "20-25k EUR" is twenty thousand to twenty-five thousand. Reading the
+    // lower bound as twenty is a thousandfold error on the cheap end — the end
+    // someone is budgeting against.
+    expect(amounts('20-25k EUR')).toEqual([]);
+    expect(amounts('20-25 million EUR')).toEqual([]);
+  });
+
+  it('does not read a trailing currency code as a magnitude', () => {
+    // The "M" of "MXN" sits where a millions suffix would.
+    expect(amounts('20 MXN')).toEqual([20]);
+  });
 });
 
 describe('a currency code written after a price beats the symbol', () => {

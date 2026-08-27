@@ -398,6 +398,7 @@ function readPrices(
   results.sort((a, b) => a.startIndex - b.startIndex);
 
   expandAbbreviatedRanges(results, text, documentLang);
+  expandLeadingRanges(results, text, documentLang);
 
   // No second dedup pass. There used to be one that collapsed matches sharing
   // the same ORIGINAL TEXT, which dropped legitimate repeats: "Buy 2 for
@@ -451,6 +452,72 @@ const ABBREVIATED_RANGE = /^([\s\u00a0]*(?:[–—−-]|to(?=[\s\u00a0]))[\s\u00
 // the lower bound ("$5-10 million"), so the range is refused rather than guessed.
 const BOUND_MULTIPLIER =
   /^[\s\u00a0]*(?:[kmbt](?![a-z])|million|billion|trillion|thousand|mil|mn|bn)\b/i;
+
+/**
+ * "20-25 EUR": a range whose LOWER bound leans on the code after the upper one.
+ * The bound must be bare digits — a bound with its own symbol is a price the
+ * patterns already found.
+ */
+const LEADING_RANGE = /(\d[\d.,]*)[\s\u00a0]*(?:[–—−-]|to)[\s\u00a0]*$/;
+
+/**
+ * A magnitude the bare bound cannot inherit. "20-25k EUR" states its lower
+ * bound in thousands too, and reading it as twenty is a thousandfold error on
+ * the cheaper end of a range — the end someone is budgeting against.
+ *
+ * The letter form must sit directly against the digits, or the "M" of a trailing
+ * "MXN" would read as millions.
+ */
+const CARRIES_MULTIPLIER =
+  /\d[\s\u00a0]*(?:[kmbt](?![a-z])|million|billion|trillion|thousand|mil|mn|bn)\b/i;
+
+/**
+ * Give an abbreviated range's LOWER bound the currency of its upper one.
+ *
+ * The mirror of the rule below, for the shape where the currency is written
+ * after the range instead of before it. Oceansprint's travel notes say "a flat
+ * rate around 20-25 EUR"; only "25 EUR" carried a currency, so only that
+ * converted and the page read "around 20-0,04 ZEC" — the bare bound sitting
+ * against our output, where it reads as ZEC. Same failure, same answer: both
+ * bounds convert or neither does.
+ */
+function expandLeadingRanges(
+  prices: ParsedPrice[],
+  text: string,
+  documentLang: string | undefined,
+): void {
+  for (let index = prices.length - 1; index >= 0; index--) {
+    const price = prices[index];
+    const head = LEADING_RANGE.exec(text.slice(0, price.startIndex));
+    if (!head) continue;
+
+    const startIndex = head.index;
+    const endIndex = startIndex + head[1].length;
+    // A bound that is already a price of its own is not an abbreviation:
+    // "£10–£20" states both, and "$210–360" belongs to the rule below.
+    if (prices.some((other) => other.startIndex < endIndex && startIndex < other.endIndex)) {
+      continue;
+    }
+
+    const preferUsDecimal = US_DECIMAL_CURRENCIES.has(price.currency)
+      && usesDotDecimal(documentLang);
+    const amount = CARRIES_MULTIPLIER.test(price.original)
+      ? null
+      : parseNumber(head[1], preferUsDecimal);
+
+    if (amount === null) {
+      prices.splice(index, 1);
+      continue;
+    }
+    prices.splice(index, 0, {
+      original: head[1],
+      amount,
+      currency: price.currency,
+      startIndex,
+      endIndex,
+    });
+  }
+}
 
 /**
  * Give an abbreviated range's upper bound the currency of its lower one.
