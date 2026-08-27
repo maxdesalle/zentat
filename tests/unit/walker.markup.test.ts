@@ -283,4 +283,18 @@ describe('a join between two digits invents a number', () => {
     document.body.innerHTML = '<p id="p"><span>$</span>42 / lb</p>';
     expect(texts()).toContain('$42 / lb');
   });
+
+  it('reads our own output as the price it replaced', () => {
+    // On the second pass the price is inside a span child, and reading that
+    // span's ZEC text instead of the price it replaced changes the answer —
+    // which is how Amazon converted more on the second pass than the first.
+    // The comment node is here because childNodes hands back every kind.
+    document.body.innerHTML = `<a id="p">BTC<!-- c -->`
+      + `<span class="${SPAN_CLASS}">0.0128 ZEC</span><span>0.53%</span></a>`;
+    const ours = document.querySelector(`.${SPAN_CLASS}`)!;
+    rememberSpan(ours, '$78,426.81');
+    // "…81" meets "0.53%", so the splice is a fiction and the element's own
+    // text is read instead — the same answer as before it was converted.
+    expect(texts()).not.toContain('BTC$78,426.810.53%');
+  });
 });
