@@ -1,0 +1,20 @@
+PracticeCatalogueTest
+├── it holds at least 300 items
+├── every entry
+│   ├── it has an id that is unique across the catalogue
+│   ├── it has a kebab-case id
+│   ├── it has a label that is not empty
+│   ├── it starts the label with a lowercase letter
+│   ├── it carries a single emoji
+│   ├── it is priced with a finite amount above zero
+│   ├── it is priced in USD
+│   ├── it declares one of the twelve categories
+│   └── it declares itself a catalogue item
+├── coverage of the categories
+│   ├── it uses every category in the union
+│   └── it gives every category enough items to draw from
+└── coverage of the magnitude range
+    ├── it reaches every ZEC band at a plausible rate
+    ├── it fills every order of magnitude from a dollar upwards
+    ├── it starts around a dollar
+    └── it reaches the price of a car

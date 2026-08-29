@@ -16,34 +16,93 @@
         </p>
       </header>
 
+      <!--
+        The picker is a real radiogroup of real radios so arrow keys, labels and
+        screen readers work without a line of JS. The options themselves are
+        built at runtime from MODES: a hardcoded list here would silently go
+        stale the first time a mode is added.
+      -->
+      <section class="modes">
+        <fieldset class="mode-set">
+          <legend class="mode-legend">What do you want to practise?</legend>
+          <div class="mode-grid" id="mode-options"></div>
+        </fieldset>
+        <p class="mode-blurb" id="mode-blurb"></p>
+      </section>
+
       <section class="card" id="card">
-        <div class="item">
-          <span class="item-emoji" id="item-emoji" aria-hidden="true">☕</span>
-          <span class="item-label" id="item-label">a coffee</span>
-          <span class="item-price" id="item-price">$4.00</span>
+        <!--
+          One card, three views. Only one is ever unhidden, so the user is never
+          reading a stale question next to a fresh verdict.
+        -->
+        <div class="session-bar" id="session-bar">
+          <span class="session-count" id="session-count"></span>
+          <span class="session-track" aria-hidden="true">
+            <span class="session-fill" id="session-fill"></span>
+          </span>
         </div>
 
-        <form class="guess" id="guess-form">
-          <label class="guess-label" for="guess" data-i18n="trainingGuessLabel">Your guess, in ZEC</label>
-          <div class="guess-row">
-            <input
-              type="number"
-              id="guess"
-              step="any"
-              min="0"
-              inputmode="decimal"
-              autocomplete="off"
-              placeholder="0.005"
-              required
-            />
-            <button type="submit" class="btn btn-primary" id="submit" data-i18n="trainingCheck">Check</button>
+        <div id="question-view">
+          <div class="item">
+            <span class="item-emoji" id="item-emoji" aria-hidden="true">☕</span>
+            <p class="item-label" id="prompt"></p>
           </div>
-        </form>
 
-        <div class="result" id="result" hidden aria-live="polite">
+          <!-- Numeric questions. -->
+          <form class="guess" id="guess-form" hidden>
+            <label class="guess-label" for="guess" data-i18n="trainingGuessLabel">
+              Your answer, in ZEC
+            </label>
+            <div class="guess-row">
+              <input
+                type="number"
+                id="guess"
+                step="any"
+                min="0"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="0.005"
+                aria-describedby="prompt"
+                required
+              />
+              <button type="submit" class="btn btn-primary" id="submit" data-i18n="trainingCheck">
+                Check
+              </button>
+            </div>
+            <p class="hint" id="guess-hint" hidden></p>
+          </form>
+
+          <!-- Multiple choice. Buttons are built per question. -->
+          <div class="choices" id="choices" role="group" aria-label="Answers" hidden></div>
+          <p class="hint" id="choice-hint" hidden></p>
+        </div>
+
+        <div class="result" id="result-view" tabindex="-1" hidden aria-live="polite">
           <p class="verdict" id="verdict"></p>
           <p class="truth" id="truth"></p>
-          <button type="button" class="btn btn-primary" id="next" data-i18n="trainingNext">Next</button>
+          <button type="button" class="btn btn-primary" id="next" data-i18n="trainingNext">
+            Next
+          </button>
+          <p class="hint">Enter for the next question.</p>
+        </div>
+
+        <div class="summary" id="summary-view" tabindex="-1" hidden>
+          <h2 class="summary-title" id="summary-title">Round done</h2>
+          <p class="summary-line" id="summary-line"></p>
+          <p class="truth" id="summary-weak"></p>
+          <div class="summary-actions">
+            <button type="button" class="btn btn-primary" id="again">Another round</button>
+          </div>
+        </div>
+
+        <!--
+          Where an honest failure lands: a mode that cannot ask says so here
+          instead of the page showing an invented question.
+        -->
+        <div class="stuck" id="stuck-view" tabindex="-1" hidden>
+          <p class="verdict">Nothing to ask just yet</p>
+          <p class="truth" id="stuck-why"></p>
+          <button type="button" class="btn btn-primary" id="retry">Try again</button>
         </div>
       </section>
 
@@ -53,6 +112,11 @@
         <span><strong id="stat-streak">0</strong> in a row</span>
         <span class="separator">·</span>
         <span><strong id="stat-attempts">0</strong> tried</span>
+      </section>
+
+      <section class="bands" id="bands" hidden>
+        <h2 class="bands-title">Where you are strong</h2>
+        <ul class="band-list" id="band-list"></ul>
       </section>
 
       <p class="rate-note" id="rate-note"></p>

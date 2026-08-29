@@ -1,0 +1,29 @@
+PracticeRateTest
+└── rateRecall
+    ├── it identifies itself as the rate mode
+    ├── it picks the question shape with the injected picker
+    ├── it attaches no item id, since it asks about no item
+    ├── given no held rate
+    │   └── it asks nothing rather than drilling spot
+    ├── given the held rate cannot reach the currency
+    │   └── it asks nothing
+    ├── given a corrupted peg
+    │   └── it asks nothing
+    ├── when asking how many ZEC a round amount is
+    │   ├── it asks about a round amount, never an arbitrary one
+    │   ├── it scales the round amount to the currency
+    │   ├── it answers in ZEC at the held rate
+    │   └── it bands by the ZEC quantity
+    ├── when asking what one ZEC is worth
+    │   ├── it asks for a figure in the user's currency
+    │   ├── it answers with the fiat value of one ZEC
+    │   └── it bands by the one ZEC being valued, not the fiat figure
+    ├── when offering four rates an order of magnitude apart
+    │   ├── it offers four options, each ten times the one before
+    │   ├── it puts the right answer in the drawn slot
+    │   └── it scores against the drawn option
+    └── explaining the answer
+        ├── it states the held rate
+        ├── it says how far above the held rate spot sits
+        ├── it says how far below the held rate spot sits
+        └── it reports no movement it cannot round to a whole percent

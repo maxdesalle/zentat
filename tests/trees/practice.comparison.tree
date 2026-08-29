@@ -1,0 +1,47 @@
+ComparisonModeTest
+├── the mode itself
+│   ├── it is registered under the comparison id
+│   └── it says what it trains
+├── given fewer than two items
+│   └── it asks nothing
+├── which is more
+│   ├── given two items far enough apart
+│   │   ├── it offers the ZEC amount against the named item
+│   │   ├── it marks the ZEC side correct when it outweighs the item
+│   │   ├── it marks the item correct when the item outweighs the ZEC amount
+│   │   ├── it records the named item as what was asked about
+│   │   └── it files the question under the band of the ZEC amount
+│   ├── given a held rate
+│   │   └── it prices the ZEC side at the rate the pages are showing
+│   ├── given two items priced too close together
+│   │   └── it asks nothing
+│   ├── given no rate for the ZEC side
+│   │   └── it asks nothing
+│   ├── given no rate for the item it names
+│   │   └── it asks nothing
+│   └── given a price that cannot be valued
+│       ├── it asks nothing for a price too large to be real
+│       └── it asks nothing for a price of nothing
+├── how many of the cheaper
+│   ├── given a pair inside the teaching range
+│   │   ├── it asks for the ratio and answers with it
+│   │   ├── it names the dearer item whichever way the pair was drawn
+│   │   ├── it records the dearer item as what was asked about
+│   │   └── it explains that the ratio survives a move in the rate
+│   ├── given no rate at all
+│   │   ├── it still asks, because a ratio needs no rate
+│   │   └── it files the question under the everyday band
+│   ├── given a rate for the dearer item
+│   │   └── it files the question under its band
+│   ├── given a pair too close to teach anything
+│   │   └── it asks nothing
+│   ├── given a ratio too large to hold in mind
+│   │   └── it asks nothing
+│   ├── given two items priced in different currencies
+│   │   └── it asks nothing
+│   └── given a price that cannot be valued
+│       ├── it asks nothing when the first drawn price is unusable
+│       └── it asks nothing when the second drawn price is unusable
+└── drawing the pair
+    ├── it never compares an item with itself
+    └── it draws within the bounds it is given

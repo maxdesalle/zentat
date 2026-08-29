@@ -28,6 +28,19 @@ export interface Settings extends SiteFilterSettings {
    */
   liabilities: Liability[];
   /**
+   * Whether practice may use prices the user has actually seen converted,
+   * instead of only a generic catalogue.
+   *
+   * OFF by default, and it stays off unless someone deliberately turns it on.
+   * A record of prices a person has looked at is browsing history wearing a
+   * different hat, and this extension's audience has a real threat model. What
+   * is kept is deliberately too little to reconstruct a session: a label, an
+   * amount and a currency, capped and local, with no hostname, no URL and no
+   * ordering in time. See src/lib/practice/seen.ts, where those limits are
+   * enforced by the shape of the data rather than by policy.
+   */
+  practiceFromSeen: boolean;
+  /**
    * Advanced mode: no fiat anywhere — not on hover, not in the popup. You
    * cannot claim to think in a unit you can escape with one hover, so this is
    * the switch that makes the claim real. Off by default; it is a commitment,
@@ -73,6 +86,8 @@ export const DEFAULT_SETTINGS: Settings = {
   rateSource: 'auto',
   anchors: [],
   liabilities: [],
+  // A commitment, not a default: see the field's own note.
+  practiceFromSeen: false,
   // Held by default: the whole product depends on the number being memorable,
   // and spot is not.
   rateMode: 'held',

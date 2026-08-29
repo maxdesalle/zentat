@@ -1,0 +1,7 @@
+PracticeModes
+└── MODES
+    ├── given the registry
+    │   ├── it offers every mode exactly once
+    │   └── it gives every mode something to show the user
+    └── given a context nothing can be asked from
+        └── it lets every mode decline rather than invent a question

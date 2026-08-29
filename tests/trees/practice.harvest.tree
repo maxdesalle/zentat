@@ -1,0 +1,22 @@
+PracticeHarvest
+├── labelFor
+│   ├── given a name beside the price
+│   │   ├── it reads the nearest one
+│   │   ├── it reads it from an image when that is where it is written
+│   │   └── it collapses the whitespace a page wrapped it in
+│   ├── given the only name is far above the price
+│   │   └── it gives up rather than reading the page itself
+│   └── given no name anywhere
+│       └── it reports none
+└── harvestSeenPrices
+    ├── given a named price
+    │   ├── it keeps the label, the amount and the currency
+    │   └── it keeps nothing else about it
+    ├── given a price with no name beside it
+    │   └── it drops it
+    ├── given a span we never recorded an original for
+    │   └── it drops it rather than reading back our own output
+    ├── given an original that is not a price
+    │   └── it drops it
+    └── given a page with nothing converted
+        └── it finds nothing

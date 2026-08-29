@@ -1,0 +1,30 @@
+JudgementModeTest
+├── ask
+│   ├── given no rate for the item's currency
+│   │   └── it asks nothing rather than inventing a price
+│   ├── given a held rate that cannot cover the currency
+│   │   └── it asks nothing
+│   ├── given no items
+│   │   └── it asks nothing
+│   ├── given an item that costs nothing
+│   │   └── it leaves out an item no offer can be wrong about
+│   ├── given a mixed-currency pool
+│   │   └── it keeps only the items it can price
+│   ├── given a held rate
+│   │   └── it prices at the held rate rather than spot
+│   ├── given no held rate
+│   │   └── it prices at spot
+│   ├── when the true price is offered
+│   │   └── it marks about right as correct
+│   ├── when a bargain is offered
+│   │   └── it halves the real price and marks cheap as correct
+│   ├── when an overcharge is offered
+│   │   └── it doubles the real price and marks steep as correct
+│   ├── it keeps fiat out of the prompt
+│   ├── it says which item it asked about
+│   ├── it offers exactly the three judgements, freshly each time
+│   ├── it names the real price in both units afterwards
+│   ├── it bands by the real price rather than the offer
+│   └── it picks the item first and the offer second
+└── identity
+    └── it is the judgement mode

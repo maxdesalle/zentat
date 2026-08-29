@@ -1,0 +1,9 @@
+PracticeStorage
+└── practice material storage
+    ├── given nothing has been stored
+    │   └── it reads as empty
+    ├── given prices have been stored
+    │   ├── it reads them back
+    │   └── it empties on clear
+    └── given the local area is used
+        └── it never writes to sync storage

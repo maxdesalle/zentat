@@ -1,0 +1,44 @@
+PracticeProgressTest
+├── EMPTY_PRACTICE_PROGRESS
+│   ├── it starts every band and every mode at no attempts
+│   └── it starts with no streak and nothing due
+├── record
+│   ├── it counts the attempt against both the band and the mode
+│   ├── given a good answer
+│   │   ├── it continues the streak, whether spot on or close
+│   │   └── it takes the item off the miss queue
+│   ├── given a poor answer
+│   │   ├── it breaks the streak
+│   │   └── it puts the item on the miss queue
+│   ├── it remembers the best streak reached
+│   ├── when the same item is missed twice
+│   │   └── it keeps one entry and moves it to the back
+│   ├── when more items are missed than the queue holds
+│   │   └── it drops the oldest miss
+│   └── it leaves the progress it was given untouched
+├── bandAccuracy
+│   ├── it reports mean points for the band
+│   └── given no attempts in the band
+│       └── it reports nothing rather than zero
+├── modeAccuracy
+│   ├── it reports mean points for the mode
+│   └── given no attempts in the mode
+│       └── it reports nothing rather than zero
+├── weakestBand
+│   ├── given no attempts at all
+│   │   └── it names no band
+│   ├── given every band short of the attempt minimum
+│   │   └── it names no band
+│   ├── given two bands past the minimum
+│   │   └── it names the one scoring lowest
+│   ├── when a band scores badly but is barely attempted
+│   │   └── it ignores that band until the minimum is met
+│   ├── when two bands score the same
+│   │   └── it names the smaller band, so the answer does not flicker
+│   ├── when the caller sets its own minimum
+│   │   └── it judges on that many attempts
+│   └── when the caller asks for a minimum of none
+│       └── it still ignores a band never attempted
+└── dueItems
+    ├── it lists the missed items oldest first
+    └── it hands back a copy, so a caller cannot edit stored progress

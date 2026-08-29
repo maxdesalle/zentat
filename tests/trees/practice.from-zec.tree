@@ -1,0 +1,37 @@
+PracticeFromZecTest
+└── fromZec.ask
+    ├── given no items
+    │   └── it asks nothing
+    ├── given a spot rate
+    │   ├── it asks which of four things the amount buys
+    │   ├── it marks the real item as the correct choice
+    │   ├── it moves the answer out of first place
+    │   ├── it says what the thing costs in both units
+    │   ├── it records which item it asked about
+    │   └── it takes the band from the ZEC value
+    ├── given a held rate
+    │   ├── it prices the question at the held rate
+    │   └── given the held rate cannot cover the item's currency
+    │       └── it asks nothing
+    ├── given no rate for the item's currency
+    │   └── it asks nothing
+    ├── given a garbage rate
+    │   └── it asks nothing
+    ├── given an item priced at nothing
+    │   └── it asks nothing
+    ├── given items priced in different currencies
+    │   ├── it prices the item in its own currency
+    │   └── it leaves out an item whose currency has no rate
+    ├── given a second entry for the same thing
+    │   └── it offers the thing once
+    ├── given too few items to fill four options
+    │   └── it asks nothing
+    ├── given a pool clustered inside the narrow separation
+    │   └── it asks nothing
+    ├── given a pool spanning orders of magnitude
+    │   └── it separates every option by an order of magnitude
+    ├── given a pool too tight for an order of magnitude
+    │   └── it falls back to the narrower separation
+    └── given the picker strands the search
+        ├── it asks nothing rather than backtracking
+        └── it would have found a set from another starting point

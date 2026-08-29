@@ -9,6 +9,7 @@ import {
   type Liability,
   MAX_LIABILITIES,
 } from '../../lib/liabilities';
+import { clearSeenPrices, getSeenPrices } from '../../lib/storage/practice';
 import { getRates } from '../../lib/storage/rates';
 import {
   DEFAULT_SETTINGS,
@@ -33,6 +34,9 @@ const siteModeRadios = () => document.querySelectorAll<HTMLInputElement>('input[
 const weanCheckbox = document.getElementById('weanFromFiat') as HTMLInputElement;
 const weanStageLine = document.getElementById('wean-stage')!;
 const hideFiatCheckbox = document.getElementById('hideFiat') as HTMLInputElement;
+const practiceSeenCheckbox = document.getElementById('practiceFromSeen') as HTMLInputElement;
+const practiceClear = document.getElementById('practice-clear')!;
+const practiceCount = document.getElementById('practice-count')!;
 const nymEnabledCheckbox = document.getElementById('nymEnabled') as HTMLInputElement;
 const nymPill = document.getElementById('nym-pill') as HTMLSpanElement;
 const blockedSitesTextarea = document.getElementById('blockedSites') as HTMLTextAreaElement;
@@ -223,6 +227,7 @@ function populateForm(settings: Settings) {
   updateSiteListVisibility();
 
   hideFiatCheckbox.checked = settings.hideFiat;
+  practiceSeenCheckbox.checked = settings.practiceFromSeen;
   weanCheckbox.checked = settings.weanFromFiat;
   for (const radio of document.querySelectorAll<HTMLInputElement>('input[name="rateMode"]')) {
     radio.checked = radio.value === settings.rateMode;
@@ -278,6 +283,7 @@ function getFormValues(): Partial<Settings> {
     rateSource: rateSourceSelect.value as Settings['rateSource'],
     nymTimeoutMs: parseInt(nymTimeoutSelect.value, 10) || 60000,
     hideFiat: hideFiatCheckbox.checked,
+    practiceFromSeen: practiceSeenCheckbox.checked,
     weanFromFiat: weanCheckbox.checked,
     // Starting the clock on the first enable is what makes the schedule mean
     // anything; re-enabling later must not silently reset progress.
@@ -528,3 +534,29 @@ function renderLiabilities(liabilities: Liability[]) {
     ? 'Start with your rent and your salary. The popup then shows your month in ZEC.'
     : '';
 }
+
+// ---------------------------------------------------------------------------
+// Practice material
+// ---------------------------------------------------------------------------
+
+async function showPracticeCount(): Promise<void> {
+  const kept = await getSeenPrices();
+  practiceCount.textContent = kept.length === 0
+    ? 'Nothing kept yet.'
+    : `${kept.length} price${kept.length === 1 ? '' : 's'} kept.`;
+}
+
+// Turning it off empties the store. PRIVACY.md says so in as many words, and a
+// promise in that file has to be literally true of the code — a setting that
+// merely stops ADDING to a list the user asked to be rid of would make it a lie.
+practiceSeenCheckbox.addEventListener('change', async () => {
+  if (!practiceSeenCheckbox.checked) await clearSeenPrices();
+  await showPracticeCount();
+});
+
+practiceClear.addEventListener('click', async () => {
+  await clearSeenPrices();
+  await showPracticeCount();
+});
+
+void showPracticeCount();

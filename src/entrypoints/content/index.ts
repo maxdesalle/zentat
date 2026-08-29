@@ -1,10 +1,13 @@
 import { setDisplayLocale } from '../../lib/conversion/format';
+import { remember } from '../../lib/practice/seen';
 import type { HeldRate } from '../../lib/rates/held';
+import { getSeenPrices, setSeenPrices } from '../../lib/storage/practice';
 import { type RatesData, watchHeldRate, watchRates } from '../../lib/storage/rates';
 import { isSiteAllowed, type Settings, watchSettings } from '../../lib/storage/settings';
 import { readStartupState } from '../../lib/storage/startup';
 import { installCopyHandler } from './converter';
 import { convertPricesInDocument, revertConversions } from './converter';
+import { harvestSeenPrices } from './harvest';
 import { startObserver, stopObserver, updateObserverConfig } from './observer';
 
 /**
@@ -150,6 +153,36 @@ function start(): void {
   convertPricesInDocument(currentRates, currentSettings, heldForDisplay());
   startObserver(currentRates, currentSettings, heldForDisplay());
   uninstallCopy = installCopyHandler();
+  void keepPracticeMaterial();
+}
+
+/**
+ * Keep a few of this page's prices as practice material, if the user asked us
+ * to.
+ *
+ * After the conversion pass rather than during it: the converter is on the hot
+ * path of every page load, and a storage write does not belong there. Reading
+ * our own spans afterwards costs one query on a page that has already settled.
+ *
+ * Off unless `practiceFromSeen` is on. What survives of each price is decided
+ * by lib/practice/seen.ts, and PRIVACY.md states the same limits.
+ */
+async function keepPracticeMaterial(): Promise<void> {
+  if (!currentSettings?.practiceFromSeen) return;
+
+  const found = harvestSeenPrices(
+    document.body,
+    currentSettings.currencies,
+    window.location.hostname,
+    document.documentElement.lang || undefined,
+  );
+  if (found.length === 0) return;
+
+  // Read-modify-write, so a page opened in two tabs cannot lose one tab's
+  // material. The store is small and this runs once per page.
+  let store = await getSeenPrices();
+  for (const price of found) store = remember(store, price);
+  await setSeenPrices(store);
 }
 
 function stop(): void {

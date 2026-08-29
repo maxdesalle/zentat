@@ -1,0 +1,40 @@
+PracticePoolTest
+├── buildPool
+│   ├── it puts the user's own prices ahead of the catalogue
+│   ├── it keeps each source in the order it was given
+│   ├── given an anchor
+│   │   ├── it becomes an item priced in the anchor's own currency
+│   │   ├── it namespaces the id away from the catalogue
+│   │   └── it upper-cases the currency
+│   ├── given a liability
+│   │   ├── it says the cadence aloud in the label
+│   │   ├── it marks money coming in differently from money going out
+│   │   └── it namespaces the id away from the catalogue
+│   ├── given an amount that cannot become a question
+│   │   ├── it drops an anchor with no positive amount
+│   │   ├── it drops a liability with no positive amount
+│   │   ├── it drops an amount that is not a number
+│   │   └── it drops an amount that is not finite
+│   ├── given the same id twice
+│   │   ├── it keeps the first occurrence
+│   │   ├── it keeps a seen price over the catalogue copy
+│   │   └── it lets a usable copy in after an unusable one
+│   └── given nothing at all
+│       └── it returns an empty pool
+└── chooseItem
+    ├── it returns an item from the pool
+    ├── it avoids the ids asked recently
+    ├── it honours only the last MAX_RECENT ids
+    ├── given items the user got wrong
+    │   ├── it gives them extra draws
+    │   └── it still reaches the items they got right
+    ├── given nothing is due
+    │   └── it draws from the whole pool once each
+    ├── given avoiding the recent ids would leave nothing
+    │   └── it falls back to the whole pool
+    ├── given a picker that answers out of range
+    │   ├── it still answers for an index past the end
+    │   ├── it still answers for a negative index
+    │   └── it still answers for a fractional index
+    └── given an empty pool
+        └── it returns null

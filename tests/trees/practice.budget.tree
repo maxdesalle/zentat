@@ -1,0 +1,43 @@
+BudgetModeTest
+├── it names itself budget, because progress is recorded per mode
+├── given no liabilities
+│   └── it asks nothing rather than inventing a salary
+├── when the affordability shape is picked
+│   ├── it asks whether the month's net covers an item
+│   ├── it counts an item costing exactly the net as affordable
+│   ├── it marks an item the month cannot cover as unaffordable
+│   ├── it says which item it asked about, so a miss can be re-asked
+│   ├── given a liability nothing can price
+│   │   └── it asks nothing, because the net would be understated
+│   ├── given a month that leaves nothing
+│   │   └── it asks nothing
+│   └── given no item that can be priced
+│       ├── it asks nothing when the currency has no rate
+│       ├── it asks nothing when the held rate cannot carry the currency
+│       ├── it asks nothing when the amount is not positive
+│       └── it asks nothing when the arithmetic overflows
+├── when the months-of shape is picked
+│   ├── it asks how many months of an obligation an item costs
+│   ├── it normalises a yearly obligation to a month
+│   ├── it steps over an obligation it cannot price and asks about one it can
+│   ├── it says which item it asked about, so a miss can be re-asked
+│   ├── given nothing going out
+│   │   └── it asks nothing
+│   ├── given every obligation unpriced
+│   │   └── it asks nothing
+│   └── given no item that can be priced
+│       └── it asks nothing
+├── when the what-is-left shape is picked
+│   ├── it asks for the net and names what takes it
+│   ├── it names a single obligation without a list
+│   ├── it names three obligations and counts the rest
+│   ├── it names no item, because a liability is not something to practise
+│   ├── given nothing going out
+│   │   └── it asks nothing
+│   ├── given obligations bigger than income
+│   │   └── it asks nothing, because there is no positive number to score
+│   └── given a liability nothing can price
+│       └── it asks nothing
+└── given a held rate
+    ├── it prices the month at the held rate rather than spot
+    └── it prices the item at the held rate rather than spot

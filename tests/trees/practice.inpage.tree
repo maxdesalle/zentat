@@ -1,0 +1,41 @@
+PracticeInPageTest
+└── practice where the user actually is
+    ├── deciding whether to interrupt
+    │   ├── given the user has not begun weaning
+    │   │   └── it never asks
+    │   ├── given the page has already asked its one question
+    │   │   └── it does not ask again
+    │   ├── given one of the first prices on the page
+    │   │   └── it leaves the page alone
+    │   ├── given a price past the warm-up
+    │   │   ├── it asks when the roll falls under the rate
+    │   │   └── it stays quiet when the roll does not
+    │   └── as a page piles up more prices
+    │       └── it asks less often per price
+    └── asking in place
+        ├── given an ordinary converted price
+        │   ├── it hides the value and asks for the fiat it came from
+        │   ├── it opens a named panel without taking focus from the page
+        │   ├── it pins the panel to a corner without covering the page
+        │   ├── it keeps the converter out of its own question
+        │   ├── it scores a guess and restores the converter's own text
+        │   ├── it names which side of the answer the guess fell on
+        │   ├── it accepts the guess from the keyboard
+        │   ├── it reveals without a verdict when the guess is blank
+        │   └── it reports the result once, not again on close
+        ├── when the question is dismissed
+        │   ├── it restores the price on skip
+        │   ├── it restores the price on Escape and leaves other keys to the page
+        │   └── it restores the price when closed from outside
+        ├── when the page removes the price
+        │   └── it tears down on the next click and not before
+        ├── given a price inside a checkout control
+        │   └── it refuses to ask
+        ├── given an element with markup of its own
+        │   └── it refuses to ask
+        ├── given a price the page has already detached
+        │   └── it refuses to ask
+        ├── given a value that cannot be scored
+        │   └── it refuses to ask
+        └── given a question already open
+            └── it replaces it rather than stacking

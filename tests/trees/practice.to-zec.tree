@@ -1,0 +1,28 @@
+PracticeToZecTest
+└── toZec
+    ├── it announces itself to the picker with an id, a title and a blurb
+    ├── it says which item it asked about, so a miss can be re-asked
+    ├── given a price the user could recall unaided
+    │   ├── it can show the price, leaving the mapping as the only unknown
+    │   ├── it can withhold the price, which is the skill being trained
+    │   └── it answers with the item's value in ZEC either way
+    ├── given a price the user merely walked past
+    │   └── it always shows the price, because nobody could recall it
+    ├── given items in a currency other than the user's
+    │   └── it prices each item in its own currency
+    ├── when the currency is written in lower case
+    │   └── it still finds the rate
+    ├── given a held rate
+    │   └── it asks at the rate the pages are showing
+    ├── given a held rate that cannot cover the currency
+    │   └── it asks nothing
+    ├── given no rate for the currency
+    │   └── it asks nothing
+    ├── given a rate that is not a positive number
+    │   └── it asks nothing
+    ├── given an item carrying no real price
+    │   └── it never draws it
+    ├── given nothing to ask about
+    │   └── it asks nothing
+    ├── it explains the answer in both units
+    └── it bands the answer by magnitude

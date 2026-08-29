@@ -1,0 +1,62 @@
+PracticeChoicesTest
+├── shuffle
+│   ├── it moves items with a picker that says so
+│   ├── it keeps every item exactly once
+│   ├── it leaves the input untouched
+│   ├── given a single item
+│   │   └── it returns it unchanged
+│   ├── given an empty list
+│   │   └── it returns an empty list
+│   └── given a picker that returns nonsense
+│       └── it never drops an item
+├── numericChoices
+│   ├── it returns the requested number of options
+│   ├── it includes the truth exactly once
+│   ├── it spaces distractors multiplicatively
+│   ├── it never renders two options identically
+│   ├── it never offers a zero or negative option
+│   ├── it puts the correct answer in different slots for different draws
+│   ├── it numbers ids by final position
+│   ├── when a format is given
+│   │   └── it renders every option through it
+│   ├── when a spread is given
+│   │   └── it steps by that factor instead
+│   ├── given a nonsense spread
+│   │   └── it falls back to the default step
+│   ├── given the draw picks the other direction first
+│   │   └── it offers the smaller distractor first
+│   ├── given a truth of zero or less
+│   │   └── it refuses rather than inventing options
+│   ├── given a truth that is not finite
+│   │   └── it refuses
+│   ├── given a count below two
+│   │   └── it refuses
+│   ├── given a count that is not a whole number
+│   │   └── it refuses
+│   ├── given more options than can be generated
+│   │   └── it returns every distinct one that exists
+│   ├── given a count that fills mid-pair
+│   │   └── it stops rather than overshooting
+│   ├── given offsets that overflow
+│   │   └── it drops them
+│   ├── given offsets that underflow to zero
+│   │   └── it drops them
+│   └── given a format that collapses every option
+│       └── it refuses rather than asking a one-option question
+└── labelledChoices
+    ├── it offers every label once, with the correct id
+    ├── it shuffles the labels
+    ├── given duplicate labels
+    │   └── it keeps the first and drops the rest
+    ├── given the correct label is itself a duplicate
+    │   └── it credits the surviving copy
+    ├── given a correct index past the end
+    │   └── it refuses
+    ├── given a negative correct index
+    │   └── it refuses
+    ├── given a correct index that is not a whole number
+    │   └── it refuses
+    ├── given no labels
+    │   └── it refuses
+    └── given only one distinct label
+        └── it refuses
