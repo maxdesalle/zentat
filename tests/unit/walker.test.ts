@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
-import { SPAN_CLASS } from '../../src/entrypoints/content/markers';
+import { rememberSpan, SPAN_CLASS } from '../../src/entrypoints/content/markers';
 import { textLengthOf } from '../../src/lib/detection/dom';
 import {
   accessibleCopyCovers,
   accessiblePriceText,
+  authoredTextOfNode,
   isConvertible,
   isInteractiveControl,
   isNonPriceText,
@@ -365,6 +366,37 @@ describe('looksConcatenated', () => {
       render('<div id="p"><span>49</span><span>99</span></div>');
       expect(looksConcatenated(document.getElementById('p')!, '$4999/mo')).toBe(true);
     });
+  });
+});
+
+describe('authoredTextOfNode', () => {
+  // Every rule that reads the page has to give the same answer on the second
+  // pass as the first. Read raw, a converted price says "12,360 ZEC" where the
+  // page said "$10 million" — so a rule that looks at what follows an element
+  // would lose the magnitude and convert on pass two what it refused on pass
+  // one.
+  it('reads a text node as written', () => {
+    document.body.innerHTML = 'plain';
+    expect(authoredTextOfNode(document.body.firstChild!)).toBe('plain');
+  });
+
+  it('reads nothing from a node that is neither', () => {
+    document.body.innerHTML = '<!-- note -->';
+    expect(authoredTextOfNode(document.body.firstChild!)).toBe('');
+  });
+
+  it('reads one of our spans as the price it replaced', () => {
+    document.body.innerHTML = `<span class="${SPAN_CLASS}">12,360 ZEC</span>`;
+    const span = document.body.firstElementChild!;
+    rememberSpan(span, '$10 million');
+    expect(authoredTextOfNode(span)).toBe('$10 million');
+  });
+
+  it('reads an element with our output inside it as the page wrote it', () => {
+    document.body.innerHTML = `<p>was <span class="${SPAN_CLASS}">12,360 ZEC</span> then</p>`;
+    const span = document.querySelector(`.${SPAN_CLASS}`)!;
+    rememberSpan(span, '$10 million');
+    expect(authoredTextOfNode(document.body.firstElementChild!)).toBe('was $10 million then');
   });
 });
 

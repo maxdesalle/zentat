@@ -297,6 +297,22 @@ export function indexAccessibleText(roots: ParentNode[]): Map<Element, Element[]
   return owners;
 }
 
+/**
+ * One node's text as the PAGE wrote it, with our own conversions put back to
+ * the prices they replaced.
+ *
+ * Every rule that reads the page has to give the same answer on the second
+ * pass as the first. A rule that looked at raw text would see "12,360 ZEC"
+ * where the page said "$10 million", lose the magnitude, and convert on pass
+ * two something it correctly refused on pass one.
+ */
+export function authoredTextOfNode(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) return node.nodeValue ?? '';
+  if (!(node instanceof Element)) return '';
+  if (node.classList.contains(SPAN_CLASS)) return spanOriginalText(node) ?? '';
+  return withOwnOutputRestored(node);
+}
+
 export function accessiblePriceText(
   el: Element,
   /** When given, the copies each element owns, already gathered. */

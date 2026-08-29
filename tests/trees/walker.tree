@@ -88,6 +88,11 @@ WalkerTest
 │   │   └── it compares the digits
 │   └── given there is no copy
 │       └── it reports nothing
+├── authoredTextOfNode
+│   ├── it reads a text node as written
+│   ├── it reads nothing from a node that is neither
+│   ├── it reads one of our spans as the price it replaced
+│   └── it reads an element with our output inside it as the page wrote it
 ├── accessiblePriceText
 │   ├── given an aria-label holding a price
 │   │   └── it uses the label

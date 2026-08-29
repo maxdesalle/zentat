@@ -128,6 +128,33 @@ describe('an abbreviated range converts both bounds or neither', () => {
   });
 });
 
+describe('a magnitude stated once governs the price beside it', () => {
+  // A headline read "Omacom Foundation launches with $8 $10 million", the $8
+  // struck through — a correction, where "million" belongs to both. Reading the
+  // $8 literally printed 0.00989 ZEC next to 12,360 ZEC: the same figure, shown
+  // a millionfold apart, on the same line. The magnitude cannot be established
+  // from the text, so the unmarked price is left alone rather than guessed at.
+  it.each([
+    ['Omacom Foundation launches with $8 $10 million', [10_000_000]],
+    ['$8 $10 million', [10_000_000]],
+    ['between $5 and $10 million', [10_000_000]],
+    ['from $5 to $10 million', [10_000_000]],
+  ])('drops the unmarked price in %j', (text, expected) => {
+    expect(amounts(text)).toEqual(expected);
+  });
+
+  it.each([
+    // Both state their own magnitude, so neither is in doubt.
+    ['$8 million $10 million', [8_000_000, 10_000_000]],
+    // No magnitude anywhere: two ordinary prices.
+    ['shirts $8 $10', [8, 10]],
+    // A sentence ends between them, so they are not one statement.
+    ['Coffee $8. The fund raised $10 million', [8, 10_000_000]],
+  ])('leaves %j alone', (text, expected) => {
+    expect(amounts(text)).toEqual(expected);
+  });
+});
+
 describe('a currency code written after a price beats the symbol', () => {
   // Airbnb quotes "$1,257 CAD". Taking the glyph and discarding the code
   // converted at the USD rate and left the code beside the result, so the page

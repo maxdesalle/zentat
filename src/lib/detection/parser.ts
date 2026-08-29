@@ -399,6 +399,7 @@ function readPrices(
 
   expandAbbreviatedRanges(results, text, documentLang);
   expandLeadingRanges(results, text, documentLang);
+  refuseSharedMagnitude(results, text);
 
   // No second dedup pass. There used to be one that collapsed matches sharing
   // the same ORIGINAL TEXT, which dropped legitimate repeats: "Buy 2 for
@@ -454,6 +455,42 @@ const BOUND_MULTIPLIER =
   /^[\s\u00a0]*(?:[kmbt](?![a-z])|million|billion|trillion|thousand|mil|mn|bn)\b/i;
 
 /**
+ * Nothing between two prices but space, or one word that joins them.
+ *
+ * "$8 $10 million" is a correction; "between $5 and $10 million" is a range
+ * written out. Either way the two are one statement, and the magnitude at the
+ * end governs both.
+ */
+export const JOINS_TWO_PRICES = /^[\s\u00a0]*(?:and|or|to|[–—−-])?[\s\u00a0]*$/i;
+
+/**
+ * Refuse a price whose magnitude is stated by the price beside it.
+ *
+ * A headline read "Omacom Foundation launches with $8 $10 million", the $8
+ * struck through — a correction, where "million" belongs to both. We took the
+ * $8 literally and printed 0.00989 ZEC next to 12,360 ZEC: the same figure,
+ * shown a millionfold apart, on the same line.
+ *
+ * The magnitude cannot be established from the text, so it is not guessed. The
+ * range rule already answers this exact ambiguity the same way — "$5-10
+ * million" converts nothing — and this is that shape with the dash left out.
+ * Only the unmarked price is dropped: it keeps its own currency symbol and so
+ * stays legible as fiat, unlike a bare range bound, which is why that rule has
+ * to take both.
+ */
+function refuseSharedMagnitude(prices: ParsedPrice[], text: string): void {
+  for (let index = prices.length - 2; index >= 0; index--) {
+    const earlier = prices[index];
+    const later = prices[index + 1];
+    if (earlier.currency !== later.currency) continue;
+    if (!JOINS_TWO_PRICES.test(text.slice(earlier.endIndex, later.startIndex))) continue;
+    if (!CARRIES_MULTIPLIER.test(later.original)) continue;
+    if (CARRIES_MULTIPLIER.test(earlier.original)) continue;
+    prices.splice(index, 1);
+  }
+}
+
+/**
  * "20-25 EUR": a range whose LOWER bound leans on the code after the upper one.
  * The bound must be bare digits — a bound with its own symbol is a price the
  * patterns already found.
@@ -468,7 +505,7 @@ const LEADING_RANGE = /(\d[\d.,]*)[\s\u00a0]*(?:[–—−-]|to)[\s\u00a0]*$/;
  * The letter form must sit directly against the digits, or the "M" of a trailing
  * "MXN" would read as millions.
  */
-const CARRIES_MULTIPLIER =
+export const CARRIES_MULTIPLIER =
   /\d[\s\u00a0]*(?:[kmbt](?![a-z])|million|billion|trillion|thousand|mil|mn|bn)\b/i;
 
 /**

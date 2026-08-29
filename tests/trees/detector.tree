@@ -23,5 +23,13 @@ DetectorTest
     ├── given the claim lands on our own output
     │   ├── it does not read the span back as a price
     │   └── it does not read an element holding one back either
+    ├── given the price after it states the magnitude
+    │   ├── it leaves the unmarked price alone
+    │   ├── it does the same for a price struck through with styling
+    │   ├── it reads both when each states its own magnitude
+    │   ├── it reads both when no magnitude is stated at all
+    │   ├── it reads both when a sentence ends between them
+    │   ├── it reads both when the magnitude belongs to another currency
+    │   └── it reads it when nothing follows the element at all
     └── given a page with no prices
         └── it reports nothing

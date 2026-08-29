@@ -16,7 +16,25 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// The settings module defines storage items at import time, and there is no
+// extension runtime here. Unmocked it threw an unhandled rejection that vitest
+// warns can produce false positives — from a file whose whole job is to be
+// believed.
+vi.mock('wxt/utils/storage', () => ({
+  storage: {
+    defineItem: () => ({
+      getValue: async () => null,
+      setValue: async () => {},
+      watch: () => () => {},
+    }),
+    getItem: async () => null,
+    setItem: async () => {},
+    removeItem: async () => {},
+    watch: () => () => {},
+  },
+}));
 
 import { parsePrice, parsePriceExhaustive } from '../../src/lib/detection/parser';
 import { DEFAULT_SETTINGS } from '../../src/lib/storage/settings';

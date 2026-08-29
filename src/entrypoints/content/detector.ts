@@ -1,11 +1,16 @@
 import { textOf } from '../../lib/detection/dom';
-import { type ParsedPrice, parsePrice } from '../../lib/detection/parser';
+import {
+  CARRIES_MULTIPLIER,
+  JOINS_TWO_PRICES,
+  type ParsedPrice,
+  parsePrice,
+} from '../../lib/detection/parser';
 import {
   documentCurrency,
   locatePrices,
   readStructuredPrices,
 } from '../../lib/detection/structured';
-import { walkPriceElements } from '../../lib/detection/walker';
+import { authoredTextOfNode, walkPriceElements } from '../../lib/detection/walker';
 import { SPAN_CLASS } from './markers';
 
 export interface DetectionResult {
@@ -74,12 +79,62 @@ export function detectPrices(
       pageCurrency,
       inPriceContainer,
     );
+    // The last price in this element may have its magnitude stated by the price
+    // AFTER it, in a sibling the parser never sees.
+    const last = prices[prices.length - 1];
+    if (
+      last !== undefined && !CARRIES_MULTIPLIER.test(last.original)
+      && magnitudeStatedAfter(node, last, enabledCurrencies, hostname, documentLang, pageCurrency)
+    ) {
+      prices.pop();
+    }
+
     if (prices.length > 0) {
       results.push({ node, text, prices, directTextOnly });
     }
   }
 
   return results;
+}
+
+/** Enough of what follows to hold a price and the word that joins it. */
+const TAIL_CHARS = 48;
+
+/**
+ * Whether the price after this element states the magnitude for the one inside
+ * it.
+ *
+ * A headline read "launches with <del>$8</del> $10 million" — a correction,
+ * where "million" belongs to both. Struck through, the $8 is its own element,
+ * so the parser sees "$8" alone with nothing to relate it to and reads it
+ * literally: 0.00989 ZEC printed beside 12,360 ZEC, the same figure a
+ * millionfold apart on one line.
+ *
+ * The parser refuses this when both prices share a text node. Across elements
+ * the relation has to be found again in the DOM, which is what this does.
+ */
+function magnitudeStatedAfter(
+  node: Element,
+  price: ParsedPrice,
+  enabledCurrencies: string[],
+  hostname: string,
+  documentLang: string | undefined,
+  pageCurrency: string | null,
+): boolean {
+  let tail = '';
+  for (let sibling = node.nextSibling; sibling !== null && tail.length < TAIL_CHARS;) {
+    tail += authoredTextOfNode(sibling);
+    sibling = sibling.nextSibling;
+  }
+  // Cheap first: almost no element is followed by a stated magnitude, and this
+  // runs for every price on the page.
+  if (!CARRIES_MULTIPLIER.test(tail)) return false;
+
+  const next = parsePrice(tail, enabledCurrencies, hostname, documentLang, pageCurrency)[0];
+  return next !== undefined
+    && next.currency === price.currency
+    && CARRIES_MULTIPLIER.test(next.original)
+    && JOINS_TWO_PRICES.test(tail.slice(0, next.startIndex));
 }
 
 /**

@@ -159,6 +159,53 @@ describe('detectPrices', () => {
     });
   });
 
+  describe('given the price after it states the magnitude', () => {
+    // A headline read "launches with <del>$8</del> $10 million" — a correction,
+    // where "million" belongs to both. Struck through, the $8 is its own
+    // element, so the parser sees it alone and reads it literally: 0.00989 ZEC
+    // printed beside 12,360 ZEC, the same figure a millionfold apart.
+    // Sorted, because these cases are about WHICH prices survive: results are
+    // grouped by element, so a price in a child and one in its parent come back
+    // in element order rather than reading order.
+    const amounts = (html: string) =>
+      detectPrices(render(html), ['USD', 'EUR'], 'example.com')
+        .flatMap((result) => result.prices.map((price) => price.amount))
+        .sort((a, b) => a - b);
+
+    it('leaves the unmarked price alone', () => {
+      expect(amounts('<h1>launches with <del>$8</del> $10 million</h1>'))
+        .toEqual([10_000_000]);
+    });
+
+    it('does the same for a price struck through with styling', () => {
+      expect(
+        amounts('<h1>with <span style="text-decoration:line-through">$8</span> $10 million</h1>'),
+      ).toEqual([10_000_000]);
+    });
+
+    it('reads both when each states its own magnitude', () => {
+      expect(amounts('<h1>was <del>$8 million</del> now $10 million</h1>'))
+        .toEqual([8_000_000, 10_000_000]);
+    });
+
+    it('reads both when no magnitude is stated at all', () => {
+      expect(amounts('<p>a shirt is <b>$8</b> and a hat is $10</p>')).toEqual([8, 10]);
+    });
+
+    it('reads both when a sentence ends between them', () => {
+      expect(amounts('<p>Tickets <b>$8</b>. The fund raised $10 million</p>'))
+        .toEqual([8, 10_000_000]);
+    });
+
+    it('reads both when the magnitude belongs to another currency', () => {
+      expect(amounts('<p>a shirt is <b>$8</b> €10 million</p>')).toEqual([8, 10_000_000]);
+    });
+
+    it('reads it when nothing follows the element at all', () => {
+      expect(amounts('<p><b>$8</b></p>')).toEqual([8]);
+    });
+  });
+
   describe('given a page with no prices', () => {
     it('reports nothing', () => {
       render('<p>Just some words.</p>');
